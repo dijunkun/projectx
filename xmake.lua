@@ -7,6 +7,7 @@ set_languages("c++17")
 add_rules("mode.release", "mode.debug")
 
 add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0")
+add_requires("libjuice", {system = false})
 
 add_defines("JUICE_STATIC")
 add_defines("ASIO_STANDALONE","_WEBSOCKETPP_CPP11_INTERNAL_", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_PTR", 
@@ -17,15 +18,15 @@ add_links("ws2_32", "Bcrypt")
 add_cxflags("-MD")
 add_packages("spdlog")
 
+includes("thirdparty")
+
 target("ice")
     set_kind("static")
     add_deps("log", "ws")
-    add_packages("asio", "nlohmann_json")
+    add_packages("asio", "nlohmann_json", "libjuice")
     add_files("src/ice/*.cpp")
-    add_links("juice")
     add_includedirs("src/ws")
     add_includedirs("thirdparty/libjuice/include", {public = true})
-    add_linkdirs("thirdparty/libjuice/lib")
 
 target("ws")
     set_kind("static")
