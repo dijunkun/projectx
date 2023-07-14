@@ -10,9 +10,13 @@ add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0")
 add_requires("libjuice", {system = false})
 
 add_defines("JUICE_STATIC")
-add_defines("ASIO_STANDALONE","_WEBSOCKETPP_CPP11_INTERNAL_", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_PTR", 
+add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_PTR", 
     "ASIO_HAS_STD_ADDRESSOF", "ASIO_HAS_STD_ATOMIC", "ASIO_HAS_STD_CHRONO", "ASIO_HAS_CSTDINT", "ASIO_HAS_STD_ARRAY",
     "ASIO_HAS_STD_SYSTEM_ERROR")
+
+if is_plat("windows") then
+    add_defines("_WEBSOCKETPP_CPP11_INTERNAL_")
+end
 
 add_links("ws2_32", "Bcrypt")
 add_cxflags("-MD")
