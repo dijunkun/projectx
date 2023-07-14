@@ -131,6 +131,6 @@ void WsCore::OnPong(websocketpp::connection_hdl, std::string msg) {}
 
 void WsCore::OnPongTimeout(websocketpp::connection_hdl, std::string msg) {}
 
-void WsCore::OnMessage(websocketpp::connection_hdl, client::message_ptr &msg) {
+void WsCore::OnMessage(websocketpp::connection_hdl, client::message_ptr msg) {
   OnReceiveMessage(msg->get_payload());
 }

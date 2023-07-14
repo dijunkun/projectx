@@ -16,10 +16,12 @@ add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_
 
 if is_plat("windows") then
     add_defines("_WEBSOCKETPP_CPP11_INTERNAL_")
+    add_links("ws2_32", "Bcrypt")
+elseif is_plat("linux") then 
+    add_links("pthread")
+    set_config("cxxflags", "-fPIC")
 end
 
-add_links("ws2_32", "Bcrypt")
-add_cxflags("-MD")
 add_packages("spdlog")
 
 includes("thirdparty")

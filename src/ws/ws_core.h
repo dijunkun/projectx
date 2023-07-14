@@ -39,7 +39,7 @@ class WsCore {
 
   void OnPongTimeout(websocketpp::connection_hdl, std::string msg);
 
-  void OnMessage(websocketpp::connection_hdl, client::message_ptr &msg);
+  void OnMessage(websocketpp::connection_hdl, client::message_ptr msg);
 
   virtual void OnReceiveMessage(const std::string &msg) = 0;
 
