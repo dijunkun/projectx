@@ -14,10 +14,10 @@ add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_
     "ASIO_HAS_STD_ADDRESSOF", "ASIO_HAS_STD_ATOMIC", "ASIO_HAS_STD_CHRONO", "ASIO_HAS_CSTDINT", "ASIO_HAS_STD_ARRAY",
     "ASIO_HAS_STD_SYSTEM_ERROR")
 
-if is_plat("windows") then
+if is_os("windows") then
     add_defines("_WEBSOCKETPP_CPP11_INTERNAL_")
     add_links("ws2_32", "Bcrypt")
-elseif is_plat("linux") then 
+elseif is_os("linux") then 
     add_links("pthread")
     set_config("cxxflags", "-fPIC")
 end
@@ -72,13 +72,6 @@ target("signal_server")
     add_files("tests/signal_server/*.cpp")
     add_packages("asio", "nlohmann_json", "spdlog")
     add_includedirs("thirdparty/websocketpp/include")
-
--- target("signal_client")
---     set_kind("binary")
---     add_deps("ws")
---     add_files("tests/signal_client/signal_client.cpp")
---     add_packages("asio")
---     add_includedirs("src/ws", "thirdparty/websocketpp/include")
 
 target("Offer")
     set_kind("binary")

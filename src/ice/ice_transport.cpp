@@ -63,6 +63,8 @@ int IceTransport::InitIceTransport() {
 int IceTransport::InitIceTransport(std::string const &id) {
   transport_id_ = id;
 
+  ice_agent_ = new IceAgent();
+
   ice_agent_->CreateIceAgent(
       [](juice_agent_t *agent, juice_state_t state, void *user_ptr) {
         LOG_INFO("state_change: {}", ice_status[state]);
