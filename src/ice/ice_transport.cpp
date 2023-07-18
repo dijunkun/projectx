@@ -27,8 +27,8 @@ IceTransport::IceTransport(
 
 IceTransport::~IceTransport() {}
 
-int IceTransport::InitIceTransport() {
-  ice_agent_ = new IceAgent();
+int IceTransport::InitIceTransport(std::string &ip, int port) {
+  ice_agent_ = new IceAgent(ip, port);
 
   ice_agent_->CreateIceAgent(
       [](juice_agent_t *agent, juice_state_t state, void *user_ptr) {
@@ -60,10 +60,11 @@ int IceTransport::InitIceTransport() {
   return 0;
 }
 
-int IceTransport::InitIceTransport(std::string const &id) {
+int IceTransport::InitIceTransport(std::string &ip, int port,
+                                   std::string const &id) {
   transport_id_ = id;
 
-  ice_agent_ = new IceAgent();
+  ice_agent_ = new IceAgent(ip, port);
 
   ice_agent_->CreateIceAgent(
       [](juice_agent_t *agent, juice_state_t state, void *user_ptr) {

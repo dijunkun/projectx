@@ -12,16 +12,26 @@ using nlohmann::json;
 
 static PeerConnection *peer_connection;
 
-int CreatePeerConnection(const char *uri) {
+int CreatePeerConnection(Params params) {
+  PeerConnection::Params pc_params;
+  pc_params.cfg_path = params.cfg_path;
+  pc_params.on_receive_buffer = params.on_receive_buffer;
+  pc_params.net_status_report = params.net_status_report;
+
   peer_connection = new PeerConnection();
-  peer_connection->Init(uri);
+  peer_connection->Init(pc_params);
 
   return 0;
 }
 
-int CreatePeerConnectionWithID(const char *uri, const char *id) {
+int CreatePeerConnectionWithID(Params params, const char *id) {
+  PeerConnection::Params pc_params;
+  pc_params.cfg_path = params.cfg_path;
+  pc_params.on_receive_buffer = params.on_receive_buffer;
+  pc_params.net_status_report = params.net_status_report;
+
   peer_connection = new PeerConnection();
-  peer_connection->Init(uri, id);
+  peer_connection->Init(pc_params, id);
 
   return 0;
 }

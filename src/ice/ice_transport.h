@@ -13,8 +13,8 @@ class IceTransport {
 
   ~IceTransport();
 
-  int InitIceTransport();
-  int InitIceTransport(std::string const &id);
+  int InitIceTransport(std::string &ip, int port);
+  int InitIceTransport(std::string &ip, int port, std::string const &id);
 
   int DestroyIceTransport();
 

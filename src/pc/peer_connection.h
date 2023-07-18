@@ -10,12 +10,24 @@ enum SignalStatus { Connecting = 0, Connected, Closed };
 
 class PeerConnection {
  public:
+  typedef void (*OnReceiveBuffer)(unsigned char *, size_t, const char *,
+                                  const size_t);
+
+  typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
+
+  typedef struct {
+    const char *cfg_path;
+    OnReceiveBuffer on_receive_buffer;
+    NetStatusReport net_status_report;
+  } Params;
+
+ public:
   PeerConnection();
   ~PeerConnection();
 
  public:
-  int Init(std::string const &uri);
-  int Init(std::string const &uri, std::string const &id);
+  int Init(Params params);
+  int Init(Params params, std::string const &id);
   int Destroy();
 
   SignalStatus GetSignalStatus();
@@ -23,6 +35,7 @@ class PeerConnection {
   int SendData(const char *data, size_t size);
 
  private:
+  std::string uri_ = "";
   WsTransport *ws_transport_ = nullptr;
   IceTransport *ice_transport_ = nullptr;
   std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;

@@ -1,8 +1,10 @@
 #include "peer_connection.h"
 
-#include <nlohmann/json.hpp>
+#include <regex>
 
+#include "INIReader.h"
 #include "log.h"
+#include "nlohmann/json.hpp"
 
 using nlohmann::json;
 
@@ -17,7 +19,20 @@ PeerConnection::PeerConnection() {}
 
 PeerConnection::~PeerConnection() {}
 
-int PeerConnection::Init(std::string const &uri) {
+int PeerConnection::Init(Params params) {
+  INIReader reader(params.cfg_path);
+  std::string cfg_signal_server_ip = reader.Get("signal server", "ip", "-1");
+  std::string cfg_signal_server_port =
+      reader.Get("signal server", "port", "-1");
+  std::string cfg_stun_server_ip = reader.Get("stun server", "ip", "-1");
+  std::string cfg_stun_server_port = reader.Get("stun server", "port", "-1");
+  std::regex regex("\n");
+
+  LOG_INFO("Read config success");
+
+  int signal_server_port = stoi(cfg_signal_server_port);
+  int stun_server_port = stoi(cfg_signal_server_port);
+
   on_receive_ws_msg_ = [this](const std::string &msg) {
     do {
     } while (!ice_transport_);
@@ -47,12 +62,13 @@ int PeerConnection::Init(std::string const &uri) {
   };
 
   ws_transport_ = new WsTransport(on_receive_ws_msg_);
+  uri_ = "ws://" + cfg_signal_server_ip + ":" + cfg_signal_server_port;
   if (ws_transport_) {
-    ws_transport_->Connect(uri);
+    ws_transport_->Connect(uri_);
   }
 
   ice_transport_ = new IceTransport(ws_transport_, on_receive_ice_msg_);
-  ice_transport_->InitIceTransport();
+  ice_transport_->InitIceTransport(cfg_stun_server_ip, stun_server_port);
 
   do {
     LOG_INFO("GetSignalStatus = {}", GetSignalStatus());
@@ -62,7 +78,18 @@ int PeerConnection::Init(std::string const &uri) {
   return 0;
 }
 
-int PeerConnection::Init(std::string const &uri, std::string const &id) {
+int PeerConnection::Init(Params params, std::string const &id) {
+  INIReader reader(params.cfg_path);
+  std::string cfg_signal_server_ip = reader.Get("signal server", "ip", "-1");
+  std::string cfg_signal_server_port =
+      reader.Get("signal server", "port", "-1");
+  std::string cfg_stun_server_ip = reader.Get("stun server", "ip", "-1");
+  std::string cfg_stun_server_port = reader.Get("stun server", "port", "-1");
+  std::regex regex("\n");
+
+  int signal_server_port = stoi(cfg_signal_server_port);
+  int stun_server_port = stoi(cfg_signal_server_port);
+
   on_receive_ws_msg_ = [this](const std::string &msg) {
     do {
     } while (!ice_transport_);
@@ -94,12 +121,13 @@ int PeerConnection::Init(std::string const &uri, std::string const &id) {
   transport_id_ = id;
 
   ws_transport_ = new WsTransport(on_receive_ws_msg_);
+  uri_ = "ws://" + cfg_signal_server_ip + ":" + cfg_signal_server_port;
   if (ws_transport_) {
-    ws_transport_->Connect(uri);
+    ws_transport_->Connect(uri_);
   }
 
   ice_transport_ = new IceTransport(ws_transport_, on_receive_ice_msg_);
-  ice_transport_->InitIceTransport(id);
+  ice_transport_->InitIceTransport(cfg_stun_server_ip, stun_server_port, id);
 
   do {
     LOG_INFO("GetSignalStatus = {}", GetSignalStatus());

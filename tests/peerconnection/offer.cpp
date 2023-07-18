@@ -3,7 +3,9 @@
 #include "rtc.h"
 
 int main(int argc, char **argv) {
-  CreatePeerConnection("ws://localhost:9002");
+  Params params;
+  params.cfg_path = "config\config.ini";
+  CreatePeerConnection(params);
 
   getchar();
   return 0;

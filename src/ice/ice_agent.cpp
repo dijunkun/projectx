@@ -6,7 +6,7 @@
 
 #include "log.h"
 
-IceAgent::IceAgent() {}
+IceAgent::IceAgent(std::string &ip, uint16_t port) : ip_(ip), port_(port) {}
 
 IceAgent::~IceAgent() {}
 
@@ -20,8 +20,8 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
   memset(&config, 0, sizeof(config));
 
   // STUN server example
-  config.stun_server_host = "120.77.216.215";
-  config.stun_server_port = 3478;
+  config.stun_server_host = ip_.c_str();
+  config.stun_server_port = port_;
 
   config.cb_state_changed = on_state_changed;
   config.cb_candidate = on_candidate;

@@ -3,7 +3,9 @@
 #include "rtc.h"
 
 int main(int argc, char **argv) {
-  CreatePeerConnectionWithID("ws://localhost:9002", "000000");
+  Params params;
+  params.cfg_path = "config\config.ini";
+  CreatePeerConnectionWithID(params, "000000");
 
   std::cout << "Finish CreatePeerConnectionWithID" << std::endl;
 
