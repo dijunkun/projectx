@@ -20,6 +20,8 @@ class PeerConnection {
 
   SignalStatus GetSignalStatus();
 
+  int SendData(const char *data, size_t size);
+
  private:
   WsTransport *ws_transport_ = nullptr;
   IceTransport *ice_transport_ = nullptr;

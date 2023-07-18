@@ -41,7 +41,10 @@ int PeerConnection::Init(std::string const &uri) {
     }
   };
 
-  on_receive_ice_msg_ = [this](const char *data, size_t size) {};
+  on_receive_ice_msg_ = [this](const char *data, size_t size) {
+    std::string msg(data, size);
+    LOG_INFO("Receive data: [{}]", msg.c_str());
+  };
 
   ws_transport_ = new WsTransport(on_receive_ws_msg_);
   if (ws_transport_) {
@@ -83,7 +86,10 @@ int PeerConnection::Init(std::string const &uri, std::string const &id) {
     }
   };
 
-  on_receive_ice_msg_ = [this](const char *data, size_t size) {};
+  on_receive_ice_msg_ = [this](const char *data, size_t size) {
+    std::string msg(data, size);
+    LOG_INFO("Receive data: [{}]", msg.c_str());
+  };
 
   transport_id_ = id;
 
@@ -111,3 +117,8 @@ int PeerConnection::Destroy() {
 }
 
 SignalStatus PeerConnection::GetSignalStatus() { return signal_status_; }
+
+int PeerConnection::SendData(const char *data, size_t size) {
+  ice_transport_->SendData(data, size);
+  return 0;
+}

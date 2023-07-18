@@ -11,17 +11,11 @@ int CreatePeerConnection(const char* uri);
 
 int CreatePeerConnectionWithID(const char* uri, const char* id);
 
+int SendData(const char* data, size_t size);
+
 int rtc();
 
-int ConnectToServer(const char* uri);
-
 int RegisterPeer();
-
-int CreateWsClient(const char* uri);
-
-int WsSendMsg(const char* message);
-
-ws_status GetWsStatus();
 
 #ifdef __cplusplus
 }
