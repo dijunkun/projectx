@@ -4,7 +4,7 @@
 
 int main(int argc, char **argv) {
   Params params;
-  params.cfg_path = "/home/zjlab/data/djk/projectx/config/config.ini";
+  params.cfg_path = "../../../../config/config.ini";
   CreatePeerConnectionWithID(params, "000000");
 
   std::cout << "Finish CreatePeerConnectionWithID" << std::endl;

@@ -4,7 +4,7 @@
 
 int main(int argc, char **argv) {
   Params params;
-  params.cfg_path = "/home/zjlab/data/djk/projectx/config/config.ini";
+  params.cfg_path = "../../../../config/config.ini";
   CreatePeerConnection(params);
 
   getchar();
