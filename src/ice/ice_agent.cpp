@@ -19,6 +19,8 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
   juice_config_t config;
   memset(&config, 0, sizeof(config));
 
+  LOG_INFO("stun server ip[{}] port[{}]", ip_, port_);
+
   // STUN server example
   config.stun_server_host = ip_.c_str();
   config.stun_server_port = port_;

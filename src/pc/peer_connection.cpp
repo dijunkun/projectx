@@ -31,7 +31,7 @@ int PeerConnection::Init(Params params) {
   LOG_INFO("Read config success");
 
   int signal_server_port = stoi(cfg_signal_server_port);
-  int stun_server_port = stoi(cfg_signal_server_port);
+  int stun_server_port = stoi(cfg_stun_server_port);
 
   on_receive_ws_msg_ = [this](const std::string &msg) {
     do {
