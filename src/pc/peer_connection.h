@@ -8,26 +8,25 @@
 
 enum SignalStatus { Connecting = 0, Connected, Closed };
 
+typedef void (*OnReceiveBuffer)(unsigned char *, size_t, const char *,
+                                const size_t);
+
+typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
+
+typedef struct {
+  const char *cfg_path;
+  OnReceiveBuffer on_receive_buffer;
+  NetStatusReport net_status_report;
+} PeerConnectionParams;
+
 class PeerConnection {
- public:
-  typedef void (*OnReceiveBuffer)(unsigned char *, size_t, const char *,
-                                  const size_t);
-
-  typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
-
-  typedef struct {
-    const char *cfg_path;
-    OnReceiveBuffer on_receive_buffer;
-    NetStatusReport net_status_report;
-  } Params;
-
  public:
   PeerConnection();
   ~PeerConnection();
 
  public:
-  int Init(Params params);
-  int Init(Params params, std::string const &id);
+  int Init(PeerConnectionParams params);
+  int Init(PeerConnectionParams params, std::string const &id);
   int Destroy();
 
   SignalStatus GetSignalStatus();

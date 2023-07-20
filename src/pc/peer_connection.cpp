@@ -19,7 +19,7 @@ PeerConnection::PeerConnection() {}
 
 PeerConnection::~PeerConnection() {}
 
-int PeerConnection::Init(Params params) {
+int PeerConnection::Init(PeerConnectionParams params) {
   INIReader reader(params.cfg_path);
   std::string cfg_signal_server_ip = reader.Get("signal server", "ip", "-1");
   std::string cfg_signal_server_port =
@@ -78,7 +78,7 @@ int PeerConnection::Init(Params params) {
   return 0;
 }
 
-int PeerConnection::Init(Params params, std::string const &id) {
+int PeerConnection::Init(PeerConnectionParams params, std::string const &id) {
   INIReader reader(params.cfg_path);
   std::string cfg_signal_server_ip = reader.Get("signal server", "ip", "-1");
   std::string cfg_signal_server_port =

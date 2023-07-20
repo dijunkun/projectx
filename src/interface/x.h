@@ -1,5 +1,5 @@
-#ifndef _RTC_H_
-#define _RTC_H_
+#ifndef _X_H_
+#define _X_H_
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -9,6 +9,8 @@ enum ws_status { WS_CONNECTING = 0, WS_OPEN, WS_FAILED, WS_CLOSED, WS_UNKNOWN };
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+typedef struct Peer PeerPtr;
 
 typedef void (*OnReceiveBuffer)(unsigned char*, size_t, const char*,
                                 const size_t);
@@ -21,15 +23,13 @@ typedef struct {
   NetStatusReport net_status_report;
 } Params;
 
-int CreatePeerConnection(Params params);
+PeerPtr* CreatePeer(const Params* params);
 
-int CreatePeerConnectionWithID(Params params, const char* id);
+int CreateConnection(PeerPtr* peer_ptr);
 
-int SendData(const char* data, size_t size);
+int JoinConnection(PeerPtr* peer_ptr, const char* connection_id);
 
-int rtc();
-
-int RegisterPeer();
+int SendData(PeerPtr* peer_ptr, const char* data, size_t size);
 
 #ifdef __cplusplus
 }

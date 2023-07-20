@@ -1,11 +1,13 @@
 #include <iostream>
 
-#include "rtc.h"
+#include "x.h"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Params params;
   params.cfg_path = "../../../../config/config.ini";
-  CreatePeerConnection(params);
+
+  PeerPtr* peer = CreatePeer(&params);
+  CreateConnection(peer);
 
   getchar();
   return 0;

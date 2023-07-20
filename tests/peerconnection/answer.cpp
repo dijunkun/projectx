@@ -1,13 +1,13 @@
 #include <iostream>
 
-#include "rtc.h"
+#include "x.h"
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   Params params;
   params.cfg_path = "../../../../config/config.ini";
-  CreatePeerConnectionWithID(params, "000000");
 
-  std::cout << "Finish CreatePeerConnectionWithID" << std::endl;
+  PeerPtr* peer = CreatePeer(&params);
+  JoinConnection(peer, "000000");
 
   std::string msg = "Hello world";
 
@@ -15,7 +15,7 @@ int main(int argc, char **argv) {
   while (i--) {
     getchar();
     std::cout << "Send data: [" << msg << "]" << std::endl;
-    SendData(msg.data(), msg.size());
+    SendData(peer, msg.data(), msg.size());
   }
 
   getchar();
