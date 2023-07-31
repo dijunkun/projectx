@@ -2,6 +2,7 @@
 
 #include <map>
 #include <nlohmann/json.hpp>
+#include <thread>
 
 #include "log.h"
 
@@ -123,6 +124,7 @@ int IceTransport::CreateTransport() {
 int IceTransport::CreateTransport(std::string transport_id) {
   LOG_INFO("Join transport");
   offer_peer_ = false;
+  transport_id_ = transport_id;
 
   // if (SignalStatus::Connected != signal_status_) {
   //   LOG_ERROR("Not connect to signalserver");
@@ -247,11 +249,19 @@ void IceTransport::OnReceiveMessage(const std::string &msg) {
       }
       case 4: {
         remote_sdp_ = j["sdp"].get<std::string>();
-        LOG_INFO("Receive remote sdp [{}]", remote_sdp_);
-        SetRemoteSdp(remote_sdp_);
 
-        if (!offer_peer_) {
-          GatherCandidates();
+        if (remote_sdp_.empty()) {
+          LOG_INFO(
+              "Offer peer not ready, wait 1 second and requery remote sdp");
+          std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+          QueryRemoteSdp(transport_id_);
+        } else {
+          LOG_INFO("Receive remote sdp [{}]", remote_sdp_);
+          SetRemoteSdp(remote_sdp_);
+
+          if (!offer_peer_) {
+            GatherCandidates();
+          }
         }
         break;
       }
