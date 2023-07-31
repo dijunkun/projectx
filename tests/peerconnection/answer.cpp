@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   PeerPtr* peer = CreatePeer(&params);
   JoinConnection(peer, "000000");
 
-  std::string msg = "Hello world";
+  std::string msg = "Offer peer";
 
   int i = 100;
   while (i--) {

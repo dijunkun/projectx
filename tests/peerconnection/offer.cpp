@@ -9,6 +9,15 @@ int main(int argc, char** argv) {
   PeerPtr* peer = CreatePeer(&params);
   CreateConnection(peer);
 
+  std::string msg = "Answer peer";
+
+  int i = 100;
+  while (i--) {
+    getchar();
+    std::cout << "Send data: [" << msg << "]" << std::endl;
+    SendData(peer, msg.data(), msg.size());
+  }
+
   getchar();
   return 0;
 }

@@ -88,7 +88,7 @@ int PeerConnection::Init(PeerConnectionParams params, std::string const &id) {
   std::regex regex("\n");
 
   int signal_server_port = stoi(cfg_signal_server_port);
-  int stun_server_port = stoi(cfg_signal_server_port);
+  int stun_server_port = stoi(cfg_stun_server_port);
 
   on_receive_ws_msg_ = [this](const std::string &msg) {
     do {

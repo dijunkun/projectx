@@ -84,7 +84,6 @@ int IceTransport::InitIceTransport(std::string &ip, int port,
         }
       },
       [](juice_agent_t *agent, const char *data, size_t size, void *user_ptr) {
-        LOG_INFO("on_recv");
         if (user_ptr &&
             static_cast<IceTransport *>(user_ptr)->on_receive_ice_msg_cb_) {
           static_cast<IceTransport *>(user_ptr)->on_receive_ice_msg_cb_(data,
