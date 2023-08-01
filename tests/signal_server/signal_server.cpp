@@ -118,7 +118,7 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
       }
       case 3: {
         std::string transport_id = j["transport_id"];
-        std::string sdp = offer_sdp_map_[transport_id_];
+        std::string sdp = offer_sdp_map_[transport_id];
         LOG_INFO("send offer sdp [{}]", sdp.c_str());
         json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
         send_msg(hdl, message);
