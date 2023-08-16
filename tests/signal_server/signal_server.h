@@ -8,6 +8,9 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
+#include "sdp_manager.h"
+#include "ws_handle_manager.h"
+
 using nlohmann::json;
 
 typedef websocketpp::server<websocketpp::config::asio> server;
@@ -37,14 +40,17 @@ class SignalServer {
   server server_;
   std::map<websocketpp::connection_hdl, connection_id,
            std::owner_less<websocketpp::connection_hdl>>
-      connections_;
+      ws_connections_;
   std::map<room_id, connection_id> rooms_;
-  unsigned int connection_id_ = 0;
+  unsigned int ws_connection_id_ = 0;
   std::string transport_id_ = "000000";
   std::map<std::string, std::string> offer_sdp_map_;
   std::map<std::string, std::string> answer_sdp_map_;
   std::map<std::string, websocketpp::connection_hdl> offer_hdl_map_;
   std::map<std::string, websocketpp::connection_hdl> answer_hdl_map_;
+
+  WsHandleManager ws_handle_manager_;
+  SdpManager sdp_manager_;
 };
 
 #endif

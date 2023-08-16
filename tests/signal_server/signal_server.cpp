@@ -2,9 +2,17 @@
 
 #include "log.h"
 
-static const std::map<std::string, unsigned int> siganl_types{
-    {"create_transport", 1}, {"offer", 2},           {"query_remote_sdp", 3},
-    {"answer", 4},           {"offer_candidate", 5}, {"answer_candidate", 6}};
+constexpr size_t HASH_STRING_PIECE(const char* string_piece) {
+  std::size_t result = 0;
+  while (*string_piece) {
+    result = (result * 131) + *string_piece++;
+  }
+  return result;
+}
+
+constexpr size_t operator"" _H(const char* string_piece, size_t) {
+  return HASH_STRING_PIECE(string_piece);
+}
 
 std::string gen_random_6() {
   static const char alphanum[] = "0123456789";
@@ -15,7 +23,6 @@ std::string gen_random_6() {
     tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
   }
 
-  //   return tmp_s;
   return "000000";
 }
 
@@ -47,18 +54,19 @@ SignalServer::SignalServer() {
 SignalServer::~SignalServer() {}
 
 bool SignalServer::on_open(websocketpp::connection_hdl hdl) {
-  connections_[hdl] = connection_id_;
-  LOG_INFO("New connection [{}] established", connection_id_++);
+  ws_connections_[hdl] = ws_connection_id_++;
+  LOG_INFO("New websocket connection [{}] established", ws_connection_id_);
 
-  json message = {{"type", "connection_id"}, {"connection_id", connection_id_}};
+  json message = {{"type", "ws_connection_id"},
+                  {"ws_connection_id", ws_connection_id_}};
   server_.send(hdl, message.dump(), websocketpp::frame::opcode::text);
 
   return true;
 }
 
 bool SignalServer::on_close(websocketpp::connection_hdl hdl) {
-  LOG_INFO("Connection [{}] closed", connection_id_++);
-  connections_.erase(hdl);
+  LOG_INFO("Websocket onnection [{}] closed", ws_connection_id_++);
+  ws_connections_.erase(hdl);
   return true;
 }
 
@@ -94,67 +102,63 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
   std::string payload = msg->get_payload();
 
   auto j = json::parse(payload);
-
   std::string type = j["type"];
-  auto itr = siganl_types.find(type);
-  if (itr != siganl_types.end()) {
-    LOG_INFO("msg type: {}", itr->first);
-    switch (itr->second) {
-      case 1: {
-        transport_id_ = gen_random_6();
-        LOG_INFO("Generate transport_id [{}]", transport_id_);
-        json message = {{"type", "transport_id"},
-                        {"transport_id", transport_id_}};
-        send_msg(hdl, message);
-        break;
-      }
-      case 2: {
-        std::string transport_id = j["transport_id"];
-        std::string sdp = j["sdp"];
-        LOG_INFO("Save transport_id[{}] with offer sdp[{}]", transport_id, sdp);
-        offer_sdp_map_[transport_id] = sdp;
-        offer_hdl_map_[transport_id] = hdl;
-        break;
-      }
-      case 3: {
-        std::string transport_id = j["transport_id"];
-        std::string sdp = offer_sdp_map_[transport_id];
-        LOG_INFO("send offer sdp [{}]", sdp.c_str());
-        json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
-        send_msg(hdl, message);
-        break;
-      }
-      case 4: {
-        std::string transport_id = j["transport_id"];
-        std::string sdp = j["sdp"];
-        LOG_INFO("Save transport_id[{}] with answer sdp[{}]", transport_id,
-                 sdp);
-        answer_sdp_map_[transport_id] = sdp;
-        answer_hdl_map_[transport_id] = hdl;
-        LOG_INFO("send answer sdp [{}]", sdp.c_str());
-        json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
-        send_msg(offer_hdl_map_[transport_id], message);
-        break;
-      }
-      case 5: {
-        std::string transport_id = j["transport_id"];
-        std::string candidate = j["sdp"];
-        LOG_INFO("send candidate [{}]", candidate.c_str());
-        json message = {{"type", "candidate"}, {"sdp", candidate}};
-        send_msg(answer_hdl_map_[transport_id], message);
-        break;
-      }
-      case 6: {
-        std::string transport_id = j["transport_id"];
-        std::string candidate = j["sdp"];
-        LOG_INFO("send candidate [{}]", candidate.c_str());
-        json message = {{"type", "candidate"}, {"sdp", candidate}};
-        send_msg(offer_hdl_map_[transport_id], message);
-        break;
-      }
-      default:
-        break;
+
+  switch (HASH_STRING_PIECE(type.c_str())) {
+    case "create_transport"_H: {
+      transport_id_ = gen_random_6();
+      LOG_INFO("Generate transport_id [{}]", transport_id_);
+      json message = {{"type", "transport_id"},
+                      {"transport_id", transport_id_}};
+      send_msg(hdl, message);
+      break;
     }
+    case "offer"_H: {
+      std::string transport_id = j["transport_id"];
+      std::string sdp = j["sdp"];
+      LOG_INFO("Save transport_id[{}] with offer sdp[{}]", transport_id, sdp);
+      // ws_handle_manager_.BindHandleToConnection(hdl, );
+      offer_sdp_map_[transport_id] = sdp;
+      offer_hdl_map_[transport_id] = hdl;
+      break;
+    }
+    case "query_remote_sdp"_H: {
+      std::string transport_id = j["transport_id"];
+      std::string sdp = offer_sdp_map_[transport_id];
+      LOG_INFO("send offer sdp [{}]", sdp.c_str());
+      json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
+      send_msg(hdl, message);
+      break;
+    }
+    case "answer"_H: {
+      std::string transport_id = j["transport_id"];
+      std::string sdp = j["sdp"];
+      LOG_INFO("Save transport_id[{}] with answer sdp[{}]", transport_id, sdp);
+      answer_sdp_map_[transport_id] = sdp;
+      answer_hdl_map_[transport_id] = hdl;
+      LOG_INFO("send answer sdp [{}]", sdp.c_str());
+      json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
+      send_msg(offer_hdl_map_[transport_id], message);
+      break;
+    }
+    case "offer_candidate"_H: {
+      std::string transport_id = j["transport_id"];
+      std::string candidate = j["sdp"];
+      LOG_INFO("send candidate [{}]", candidate.c_str());
+      json message = {{"type", "candidate"}, {"sdp", candidate}};
+      send_msg(answer_hdl_map_[transport_id], message);
+      break;
+    }
+    case "answer_candidate"_H: {
+      std::string transport_id = j["transport_id"];
+      std::string candidate = j["sdp"];
+      LOG_INFO("send candidate [{}]", candidate.c_str());
+      json message = {{"type", "candidate"}, {"sdp", candidate}};
+      send_msg(offer_hdl_map_[transport_id], message);
+      break;
+    }
+    default:
+      break;
   }
 
   // std::string sdp = j["sdp"];

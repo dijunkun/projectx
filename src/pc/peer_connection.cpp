@@ -9,7 +9,7 @@
 using nlohmann::json;
 
 static const std::map<std::string, unsigned int> siganl_types{
-    {"connection_id", 1},
+    {"ws_connection_id", 1},
     {"offer", 2},
     {"transport_id", 3},
     {"remote_sdp", 4},
@@ -43,8 +43,9 @@ int PeerConnection::Init(PeerConnectionParams params) {
       LOG_INFO("msg type :{}", itr->first);
       switch (itr->second) {
         case 1: {
-          connection_id_ = j["connection_id"].get<unsigned int>();
-          LOG_INFO("Receive local peer connection_id [{}]", connection_id_);
+          ws_connection_id_ = j["ws_connection_id"].get<unsigned int>();
+          LOG_INFO("Receive local peer websocket connection id [{}]",
+                   ws_connection_id_);
           signal_status_ = SignalStatus::Connected;
           break;
         }
@@ -100,8 +101,9 @@ int PeerConnection::Init(PeerConnectionParams params, std::string const &id) {
       LOG_INFO("msg type :{}", itr->first);
       switch (itr->second) {
         case 1: {
-          connection_id_ = j["connection_id"].get<unsigned int>();
-          LOG_INFO("Receive local peer connection_id [{}]", connection_id_);
+          ws_connection_id_ = j["ws_connection_id"].get<unsigned int>();
+          LOG_INFO("Receive local peer websocket connection id [{}]",
+                   ws_connection_id_);
           signal_status_ = SignalStatus::Connected;
           break;
         }

@@ -39,7 +39,7 @@ class PeerConnection {
   IceTransport *ice_transport_ = nullptr;
   std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;
   std::function<void(const char *, size_t)> on_receive_ice_msg_ = nullptr;
-  unsigned int connection_id_ = 0;
+  unsigned int ws_connection_id_ = 0;
   std::string transport_id_ = "";
   SignalStatus signal_status_ = SignalStatus::Closed;
 };
