@@ -2,6 +2,7 @@
 #define _PEER_CONNECTION_H_
 
 #include <iostream>
+#include <map>
 
 #include "ice_transmission.h"
 #include "ws_transmission.h"
@@ -35,8 +36,15 @@ class PeerConnection {
 
  private:
   std::string uri_ = "";
+  std::string cfg_signal_server_ip_;
+  std::string cfg_signal_server_port_;
+  std::string cfg_stun_server_ip_;
+  std::string cfg_stun_server_port_;
+  int signal_server_port_ = 0;
+  int stun_server_port_ = 0;
   WsTransmission *ws_transport_ = nullptr;
   IceTransmission *ice_transmission_ = nullptr;
+  std::map<std::string, IceTransmission *> ice_transmission_list_;
   std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;
   std::function<void(const char *, size_t)> on_receive_ice_msg_ = nullptr;
   unsigned int ws_connection_id_ = 0;

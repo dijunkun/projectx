@@ -8,13 +8,12 @@
 
 class IceTransmission {
  public:
-  IceTransmission(WsTransmission *ice_ws_transmission,
+  IceTransmission(bool offer_peer, WsTransmission *ice_ws_transmission,
                   std::function<void(const char *, size_t)> on_receive_ice_msg);
 
   ~IceTransmission();
 
   int InitIceTransmission(std::string &ip, int port);
-  int InitIceTransmission(std::string &ip, int port, std::string const &id);
 
   int DestroyIceTransmission();
 
@@ -27,7 +26,7 @@ class IceTransmission {
 
   void OnReceiveMessage(const std::string &msg);
 
- private:
+ public:
   int GatherCandidates();
 
   int GetLocalSdp();
@@ -56,6 +55,7 @@ class IceTransmission {
   std::function<void(const char *, size_t)> on_receive_ice_msg_cb_ = nullptr;
   std::string local_sdp_;
   std::string remote_sdp_;
+  std::string remote_ice_username_;
   std::string local_candidates_;
   std::string remote_candidates_;
   unsigned int connection_id_ = 0;

@@ -1,8 +1,12 @@
+
+#include <iostream>
+
 #include "signal_server.h"
 
-int main() {
-    SignalServer s;
-    // connect ws://localhost:9002
-    s.run();
-    return 0;
+int main(int argc, char* argv[]) {
+  SignalServer s;
+  std::string port = argv[1];
+  std::cout << "Port: " << port << std::endl;
+  s.run(std::stoi(port));
+  return 0;
 }

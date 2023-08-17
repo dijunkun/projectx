@@ -1,20 +1,9 @@
 #include "signal_server.h"
 
+#include "common.h"
 #include "log.h"
 
-constexpr size_t HASH_STRING_PIECE(const char* string_piece) {
-  std::size_t result = 0;
-  while (*string_piece) {
-    result = (result * 131) + *string_piece++;
-  }
-  return result;
-}
-
-constexpr size_t operator"" _H(const char* string_piece, size_t) {
-  return HASH_STRING_PIECE(string_piece);
-}
-
-const std::string gen_random_6() {
+const std::string GenerateTransmissionId() {
   static const char alphanum[] = "0123456789";
   std::string random_id;
   random_id.reserve(6);
@@ -65,7 +54,7 @@ bool SignalServer::on_open(websocketpp::connection_hdl hdl) {
 }
 
 bool SignalServer::on_close(websocketpp::connection_hdl hdl) {
-  LOG_INFO("Websocket onnection [{}] closed", ws_connection_id_++);
+  LOG_INFO("Websocket onnection [{}] closed", ws_connection_id_);
   ws_connections_.erase(hdl);
   return true;
 }
@@ -82,9 +71,9 @@ bool SignalServer::on_pong(websocketpp::connection_hdl hdl, std::string s) {
   return true;
 }
 
-void SignalServer::run() {
-  // Listen on port 9002
-  server_.listen(9002);
+void SignalServer::run(uint16_t port) {
+  // Listen on port 9093
+  server_.listen(port);
 
   // Queues a connection accept operation
   server_.start_accept();
@@ -102,36 +91,38 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
   std::string payload = msg->get_payload();
 
   auto j = json::parse(payload);
-  std::string type = j["type"];
+  std::string type = j["type"].get<std::string>();
 
   switch (HASH_STRING_PIECE(type.c_str())) {
     case "create_transmission"_H: {
-      transmission_id_ = j["transmission_id"];
+      std::string transmission_id = j["transmission_id"].get<std::string>();
       LOG_INFO("Receive create transmission request with id [{}]",
-               transmission_id_);
-      if (transmission_list_.find(transmission_id_) ==
+               transmission_id);
+      if (transmission_list_.find(transmission_id) ==
           transmission_list_.end()) {
-        if (transmission_id_.empty()) {
-          transmission_id_ = gen_random_6();
-          while (transmission_list_.find(transmission_id_) !=
+        if (transmission_id.empty()) {
+          transmission_id = GenerateTransmissionId();
+          while (transmission_list_.find(transmission_id) !=
                  transmission_list_.end()) {
-            transmission_id_ = gen_random_6();
+            transmission_id = GenerateTransmissionId();
           }
           LOG_INFO(
               "Transmission id is empty, generate a new one for this request "
               "[{}]",
-              transmission_id_);
+              transmission_id);
         }
-        transmission_list_.insert(transmission_id_);
-        LOG_INFO("Create transmission id [{}]", transmission_id_);
+        transmission_list_.insert(transmission_id);
+        transmission_manager_.BindHostToTransmission(hdl, transmission_id);
+
+        LOG_INFO("Create transmission id [{}]", transmission_id);
         json message = {{"type", "transmission_id"},
-                        {"transmission_id", transmission_id_},
+                        {"transmission_id", transmission_id},
                         {"status", "success"}};
         send_msg(hdl, message);
       } else {
-        LOG_INFO("Transmission id [{}] already exist", transmission_id_);
+        LOG_INFO("Transmission id [{}] already exist", transmission_id);
         json message = {{"type", "transmission_id"},
-                        {"transmission_id", transmission_id_},
+                        {"transmission_id", transmission_id},
                         {"status", "fail"},
                         {"reason", "Transmission id exist"}};
         send_msg(hdl, message);
@@ -140,49 +131,52 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
       break;
     }
     case "offer"_H: {
-      std::string transmission_id = j["transmission_id"];
-      std::string sdp = j["sdp"];
-      LOG_INFO("Save transmission_id[{}] with offer sdp[{}]", transmission_id,
-               sdp);
-      // ws_handle_manager_.BindHandleToConnection(hdl, );
-      offer_sdp_map_[transmission_id] = sdp;
-      offer_hdl_map_[transmission_id] = hdl;
-      break;
-    }
-    case "query_remote_sdp"_H: {
-      std::string transmission_id = j["transmission_id"];
-      std::string sdp = offer_sdp_map_[transmission_id];
+      std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::string sdp = j["sdp"].get<std::string>();
+      LOG_INFO("Receive transmission id [{}] with offer sdp [{}]",
+               transmission_id, sdp);
+      transmission_manager_.BindGuestToTransmission(hdl, transmission_id);
+
+      websocketpp::connection_hdl host_hdl =
+          transmission_manager_.GetHostOfTransmission(transmission_id);
+
+      std::string ice_username = GetIceUsername(sdp);
+      transmission_manager_.BindGuestUsernameToWsHandle(ice_username, hdl);
+
       LOG_INFO("send offer sdp [{}]", sdp.c_str());
-      json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
-      send_msg(hdl, message);
+      json message = {{"type", "offer"}, {"sdp", sdp}, {"guest", ice_username}};
+      send_msg(host_hdl, message);
       break;
     }
     case "answer"_H: {
-      std::string transmission_id = j["transmission_id"];
-      std::string sdp = j["sdp"];
-      LOG_INFO("Save transmission_id[{}] with answer sdp[{}]", transmission_id,
-               sdp);
-      answer_sdp_map_[transmission_id] = sdp;
-      answer_hdl_map_[transmission_id] = hdl;
+      std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::string sdp = j["sdp"].get<std::string>();
+      std::string guest_ice_username = j["guest"].get<std::string>();
+      LOG_INFO("Receive transmission id [{}] with answer sdp [{}]",
+               transmission_id, sdp);
+
+      websocketpp::connection_hdl guest_hdl =
+          transmission_manager_.GetGuestWsHandle(guest_ice_username);
+
       LOG_INFO("send answer sdp [{}]", sdp.c_str());
       json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
-      send_msg(offer_hdl_map_[transmission_id], message);
+      send_msg(guest_hdl, message);
       break;
     }
     case "offer_candidate"_H: {
-      std::string transmission_id = j["transmission_id"];
-      std::string candidate = j["sdp"];
+      std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::string candidate = j["sdp"].get<std::string>();
       LOG_INFO("send candidate [{}]", candidate.c_str());
       json message = {{"type", "candidate"}, {"sdp", candidate}};
-      send_msg(answer_hdl_map_[transmission_id], message);
+      // send_msg(answer_hdl_map_[transmission_id], message);
       break;
     }
     case "answer_candidate"_H: {
-      std::string transmission_id = j["transmission_id"];
-      std::string candidate = j["sdp"];
+      std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::string candidate = j["sdp"].get<std::string>();
       LOG_INFO("send candidate [{}]", candidate.c_str());
       json message = {{"type", "candidate"}, {"sdp", candidate}};
-      send_msg(offer_hdl_map_[transmission_id], message);
+      // send_msg(offer_hdl_map_[transmission_id], message);
       break;
     }
     default:

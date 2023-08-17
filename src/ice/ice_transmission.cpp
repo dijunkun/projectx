@@ -4,21 +4,10 @@
 #include <nlohmann/json.hpp>
 #include <thread>
 
+#include "common.h"
 #include "log.h"
 
 using nlohmann::json;
-
-constexpr size_t HASH_STRING_PIECE(const char *string_piece) {
-  std::size_t result = 0;
-  while (*string_piece) {
-    result = (result * 131) + *string_piece++;
-  }
-  return result;
-}
-
-constexpr size_t operator"" _H(const char *string_piece, size_t) {
-  return HASH_STRING_PIECE(string_piece);
-}
 
 const std::vector<std::string> ice_status = {
     "JUICE_STATE_DISCONNECTED", "JUICE_STATE_GATHERING",
@@ -26,9 +15,10 @@ const std::vector<std::string> ice_status = {
     "JUICE_STATE_COMPLETED",    "JUICE_STATE_FAILED"};
 
 IceTransmission::IceTransmission(
-    WsTransmission *ice_ws_transmission,
+    bool offer_peer, WsTransmission *ice_ws_transmission,
     std::function<void(const char *, size_t)> on_receive_ice_msg)
-    : ice_ws_transport_(ice_ws_transmission),
+    : offer_peer_(offer_peer),
+      ice_ws_transport_(ice_ws_transmission),
       on_receive_ice_msg_cb_(on_receive_ice_msg) {}
 
 IceTransmission::~IceTransmission() {}
@@ -50,43 +40,15 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
         LOG_INFO("gather_done");
         // non-trickle
         if (user_ptr) {
-          static_cast<IceTransmission *>(user_ptr)->GetLocalSdp();
-          static_cast<IceTransmission *>(user_ptr)->SendOffer();
-        }
-      },
-      [](juice_agent_t *agent, const char *data, size_t size, void *user_ptr) {
-        if (user_ptr &&
-            static_cast<IceTransmission *>(user_ptr)->on_receive_ice_msg_cb_) {
-          static_cast<IceTransmission *>(user_ptr)->on_receive_ice_msg_cb_(
-              data, size);
-        }
-      },
-      this);
-  return 0;
-}
-
-int IceTransmission::InitIceTransmission(std::string &ip, int port,
-                                         std::string const &id) {
-  transmission_id_ = id;
-
-  ice_agent_ = new IceAgent(ip, port);
-
-  ice_agent_->CreateIceAgent(
-      [](juice_agent_t *agent, juice_state_t state, void *user_ptr) {
-        LOG_INFO("state_change: {}", ice_status[state]);
-      },
-      [](juice_agent_t *agent, const char *sdp, void *user_ptr) {
-        LOG_INFO("candadite: {}", sdp);
-        // trickle
-        // static_cast<PeerConnection
-        // *>(user_ptr)->SendAnswerLocalCandidate(sdp);
-      },
-      [](juice_agent_t *agent, void *user_ptr) {
-        LOG_INFO("gather_done");
-        // non-trickle
-        if (user_ptr) {
-          static_cast<IceTransmission *>(user_ptr)->CreateAnswer();
-          static_cast<IceTransmission *>(user_ptr)->SendAnswer();
+          IceTransmission *ice_transmission_obj =
+              static_cast<IceTransmission *>(user_ptr);
+          if (ice_transmission_obj->offer_peer_) {
+            ice_transmission_obj->GetLocalSdp();
+            ice_transmission_obj->SendOffer();
+          } else {
+            ice_transmission_obj->CreateAnswer();
+            ice_transmission_obj->SendAnswer();
+          }
         }
       },
       [](juice_agent_t *agent, const char *data, size_t size, void *user_ptr) {
@@ -109,7 +71,8 @@ int IceTransmission::DestroyIceTransmission() {
 
 int IceTransmission::CreateTransmission(const std::string &transmission_id) {
   LOG_INFO("Create transport");
-  offer_peer_ = true;
+  offer_peer_ = false;
+  transmission_id_ = transmission_id;
 
   // if (SignalStatus::Connected != signal_status_) {
   //   LOG_ERROR("Not connect to signalserver");
@@ -129,7 +92,7 @@ int IceTransmission::CreateTransmission(const std::string &transmission_id) {
 
 int IceTransmission::JoinTransmission(const std::string &transmission_id) {
   LOG_INFO("Join transport");
-  offer_peer_ = false;
+  offer_peer_ = true;
   transmission_id_ = transmission_id;
 
   // if (SignalStatus::Connected != signal_status_) {
@@ -154,6 +117,7 @@ int IceTransmission::GetLocalSdp() {
 
 int IceTransmission::SetRemoteSdp(const std::string &remote_sdp) {
   ice_agent_->SetRemoteSdp(remote_sdp.c_str());
+  remote_ice_username_ = GetIceUsername(remote_sdp);
   return 0;
 }
 
@@ -199,7 +163,8 @@ int IceTransmission::CreateAnswer() {
 int IceTransmission::SendAnswer() {
   json message = {{"type", "answer"},
                   {"transmission_id", transmission_id_},
-                  {"sdp", local_sdp_}};
+                  {"sdp", local_sdp_},
+                  {"guest", remote_ice_username_}};
   LOG_INFO("Send answer:\n{}", message.dump().c_str());
 
   if (ice_ws_transport_) {
@@ -247,6 +212,16 @@ void IceTransmission::OnReceiveMessage(const std::string &msg) {
 
   switch (HASH_STRING_PIECE(type.c_str())) {
     case "offer"_H: {
+      remote_sdp_ = j["sdp"].get<std::string>();
+
+      if (remote_sdp_.empty()) {
+        LOG_INFO("Invalid remote sdp");
+      } else {
+        LOG_INFO("Receive remote sdp [{}]", remote_sdp_);
+        SetRemoteSdp(remote_sdp_);
+
+        GatherCandidates();
+      }
       break;
     }
     case "transmission_id"_H: {
