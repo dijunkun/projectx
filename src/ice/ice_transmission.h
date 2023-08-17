@@ -1,25 +1,25 @@
-#ifndef _ICE_TRANSPORT_H_
-#define _ICE_TRANSPORT_H_
+#ifndef _ICE_TRANSMISSION_H_
+#define _ICE_TRANSMISSION_H_
 
 #include <iostream>
 
 #include "ice_agent.h"
-#include "ws_transport.h"
+#include "ws_transmission.h"
 
-class IceTransport {
+class IceTransmission {
  public:
-  IceTransport(WsTransport *ice_ws_transport,
-               std::function<void(const char *, size_t)> on_receive_ice_msg);
+  IceTransmission(WsTransmission *ice_ws_transmission,
+                  std::function<void(const char *, size_t)> on_receive_ice_msg);
 
-  ~IceTransport();
+  ~IceTransmission();
 
-  int InitIceTransport(std::string &ip, int port);
-  int InitIceTransport(std::string &ip, int port, std::string const &id);
+  int InitIceTransmission(std::string &ip, int port);
+  int InitIceTransmission(std::string &ip, int port, std::string const &id);
 
-  int DestroyIceTransport();
+  int DestroyIceTransmission();
 
-  int CreateTransport();
-  int CreateTransport(std::string transport_id);
+  int CreateTransmission(const std::string &transmission_id);
+  int JoinTransmission(const std::string &transmission_id);
 
   int SendData(const char *data, size_t size);
 
@@ -32,7 +32,7 @@ class IceTransport {
 
   int GetLocalSdp();
 
-  int QueryRemoteSdp(std::string transport_id);
+  int QueryRemoteSdp(std::string transmission_id);
 
   int SetRemoteSdp(const std::string &remote_sdp);
 
@@ -52,14 +52,14 @@ class IceTransport {
 
  private:
   IceAgent *ice_agent_ = nullptr;
-  WsTransport *ice_ws_transport_ = nullptr;
+  WsTransmission *ice_ws_transport_ = nullptr;
   std::function<void(const char *, size_t)> on_receive_ice_msg_cb_ = nullptr;
   std::string local_sdp_;
   std::string remote_sdp_;
   std::string local_candidates_;
   std::string remote_candidates_;
   unsigned int connection_id_ = 0;
-  std::string transport_id_ = "";
+  std::string transmission_id_ = "";
   bool offer_peer_ = true;
 };
 

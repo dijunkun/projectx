@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "ice_transport.h"
-#include "ws_transport.h"
+#include "ice_transmission.h"
+#include "ws_transmission.h"
 
 enum SignalStatus { Connecting = 0, Connected, Closed };
 
@@ -25,8 +25,8 @@ class PeerConnection {
   ~PeerConnection();
 
  public:
-  int Init(PeerConnectionParams params);
-  int Init(PeerConnectionParams params, std::string const &id);
+  int Create(PeerConnectionParams params, const std::string &id = "");
+  int Join(PeerConnectionParams params, const std::string &id);
   int Destroy();
 
   SignalStatus GetSignalStatus();
@@ -35,12 +35,12 @@ class PeerConnection {
 
  private:
   std::string uri_ = "";
-  WsTransport *ws_transport_ = nullptr;
-  IceTransport *ice_transport_ = nullptr;
+  WsTransmission *ws_transport_ = nullptr;
+  IceTransmission *ice_transmission_ = nullptr;
   std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;
   std::function<void(const char *, size_t)> on_receive_ice_msg_ = nullptr;
   unsigned int ws_connection_id_ = 0;
-  std::string transport_id_ = "";
+  std::string transmission_id_ = "";
   SignalStatus signal_status_ = SignalStatus::Closed;
 };
 

@@ -6,8 +6,12 @@ int main(int argc, char** argv) {
   Params params;
   params.cfg_path = "../../../../config/config.ini";
 
+  std::string transmission_id = "000000";
+  // std::cout << "Please input which transmisson want to join: ";
+  // std::cin >> transmission_id;
+
   PeerPtr* peer = CreatePeer(&params);
-  JoinConnection(peer, "000000");
+  JoinConnection(peer, transmission_id.c_str());
 
   std::string msg = "Offer peer";
 

@@ -1,14 +1,14 @@
-#include "ws_transport.h"
+#include "ws_transmission.h"
 
 #include "log.h"
 
-WsTransport::WsTransport(
+WsTransmission::WsTransmission(
     std::function<void(const std::string &)> on_receive_msg_cb)
     : on_receive_msg_(on_receive_msg_cb) {}
 
-WsTransport::~WsTransport() {}
+WsTransmission::~WsTransmission() {}
 
-void WsTransport::OnReceiveMessage(const std::string &msg) {
+void WsTransmission::OnReceiveMessage(const std::string &msg) {
   LOG_INFO("Receive msg: {}", msg);
   if (on_receive_msg_) {
     on_receive_msg_(msg);

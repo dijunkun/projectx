@@ -5,7 +5,7 @@
 
 #include "ice_agent.h"
 #include "log.h"
-#include "ws_transport.h"
+#include "ws_transmission.h"
 #include "x.h"
 
 using nlohmann::json;
@@ -23,12 +23,17 @@ PeerPtr *CreatePeer(const Params *params) {
 }
 
 int CreateConnection(PeerPtr *peer_ptr) {
-  peer_ptr->peer_connection->Init(peer_ptr->pc_params);
+  peer_ptr->peer_connection->Create(peer_ptr->pc_params);
+  return 0;
+}
+
+int CreateConnection(PeerPtr *peer_ptr, const char *connection_id) {
+  peer_ptr->peer_connection->Create(peer_ptr->pc_params, connection_id);
   return 0;
 }
 
 int JoinConnection(PeerPtr *peer_ptr, const char *connection_id) {
-  peer_ptr->peer_connection->Init(peer_ptr->pc_params, connection_id);
+  peer_ptr->peer_connection->Join(peer_ptr->pc_params, connection_id);
   return 0;
 }
 

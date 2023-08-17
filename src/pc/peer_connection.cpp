@@ -11,7 +11,7 @@ using nlohmann::json;
 static const std::map<std::string, unsigned int> siganl_types{
     {"ws_connection_id", 1},
     {"offer", 2},
-    {"transport_id", 3},
+    {"transmission_id", 3},
     {"remote_sdp", 4},
     {"candidate", 5}};
 
@@ -19,7 +19,7 @@ PeerConnection::PeerConnection() {}
 
 PeerConnection::~PeerConnection() {}
 
-int PeerConnection::Init(PeerConnectionParams params) {
+int PeerConnection::Create(PeerConnectionParams params, const std::string &id) {
   INIReader reader(params.cfg_path);
   std::string cfg_signal_server_ip = reader.Get("signal server", "ip", "-1");
   std::string cfg_signal_server_port =
@@ -35,7 +35,7 @@ int PeerConnection::Init(PeerConnectionParams params) {
 
   on_receive_ws_msg_ = [this](const std::string &msg) {
     do {
-    } while (!ice_transport_);
+    } while (!ice_transmission_);
     auto j = json::parse(msg);
     std::string type = j["type"];
     auto itr = siganl_types.find(type);
@@ -50,7 +50,7 @@ int PeerConnection::Init(PeerConnectionParams params) {
           break;
         }
         default: {
-          ice_transport_->OnReceiveMessage(msg);
+          ice_transmission_->OnReceiveMessage(msg);
           break;
         }
       }
@@ -62,24 +62,24 @@ int PeerConnection::Init(PeerConnectionParams params) {
     LOG_INFO("Receive data: [{}]", msg.c_str());
   };
 
-  ws_transport_ = new WsTransport(on_receive_ws_msg_);
+  ws_transport_ = new WsTransmission(on_receive_ws_msg_);
   uri_ = "ws://" + cfg_signal_server_ip + ":" + cfg_signal_server_port;
   if (ws_transport_) {
     ws_transport_->Connect(uri_);
   }
 
-  ice_transport_ = new IceTransport(ws_transport_, on_receive_ice_msg_);
-  ice_transport_->InitIceTransport(cfg_stun_server_ip, stun_server_port);
+  ice_transmission_ = new IceTransmission(ws_transport_, on_receive_ice_msg_);
+  ice_transmission_->InitIceTransmission(cfg_stun_server_ip, stun_server_port);
 
   do {
     LOG_INFO("GetSignalStatus = {}", GetSignalStatus());
   } while (SignalStatus::Connected != GetSignalStatus());
 
-  ice_transport_->CreateTransport();
+  ice_transmission_->CreateTransmission(id);
   return 0;
 }
 
-int PeerConnection::Init(PeerConnectionParams params, std::string const &id) {
+int PeerConnection::Join(PeerConnectionParams params, const std::string &id) {
   INIReader reader(params.cfg_path);
   std::string cfg_signal_server_ip = reader.Get("signal server", "ip", "-1");
   std::string cfg_signal_server_port =
@@ -93,7 +93,7 @@ int PeerConnection::Init(PeerConnectionParams params, std::string const &id) {
 
   on_receive_ws_msg_ = [this](const std::string &msg) {
     do {
-    } while (!ice_transport_);
+    } while (!ice_transmission_);
     auto j = json::parse(msg);
     std::string type = j["type"];
     auto itr = siganl_types.find(type);
@@ -108,7 +108,7 @@ int PeerConnection::Init(PeerConnectionParams params, std::string const &id) {
           break;
         }
         default: {
-          ice_transport_->OnReceiveMessage(msg);
+          ice_transmission_->OnReceiveMessage(msg);
           break;
         }
       }
@@ -120,22 +120,23 @@ int PeerConnection::Init(PeerConnectionParams params, std::string const &id) {
     LOG_INFO("Receive data: [{}]", msg.c_str());
   };
 
-  transport_id_ = id;
+  transmission_id_ = id;
 
-  ws_transport_ = new WsTransport(on_receive_ws_msg_);
+  ws_transport_ = new WsTransmission(on_receive_ws_msg_);
   uri_ = "ws://" + cfg_signal_server_ip + ":" + cfg_signal_server_port;
   if (ws_transport_) {
     ws_transport_->Connect(uri_);
   }
 
-  ice_transport_ = new IceTransport(ws_transport_, on_receive_ice_msg_);
-  ice_transport_->InitIceTransport(cfg_stun_server_ip, stun_server_port, id);
+  ice_transmission_ = new IceTransmission(ws_transport_, on_receive_ice_msg_);
+  ice_transmission_->InitIceTransmission(cfg_stun_server_ip, stun_server_port,
+                                         id);
 
   do {
     LOG_INFO("GetSignalStatus = {}", GetSignalStatus());
   } while (SignalStatus::Connected != GetSignalStatus());
 
-  ice_transport_->CreateTransport(transport_id_);
+  ice_transmission_->JoinTransmission(transmission_id_);
   return 0;
 }
 
@@ -149,6 +150,6 @@ int PeerConnection::Destroy() {
 SignalStatus PeerConnection::GetSignalStatus() { return signal_status_; }
 
 int PeerConnection::SendData(const char *data, size_t size) {
-  ice_transport_->SendData(data, size);
+  ice_transmission_->SendData(data, size);
   return 0;
 }

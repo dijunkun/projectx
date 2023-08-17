@@ -14,13 +14,13 @@ constexpr size_t operator"" _H(const char* string_piece, size_t) {
   return HASH_STRING_PIECE(string_piece);
 }
 
-std::string gen_random_6() {
+const std::string gen_random_6() {
   static const char alphanum[] = "0123456789";
-  std::string tmp_s;
-  tmp_s.reserve(6);
+  std::string random_id;
+  random_id.reserve(6);
 
   for (int i = 0; i < 6; ++i) {
-    tmp_s += alphanum[rand() % (sizeof(alphanum) - 1)];
+    random_id += alphanum[rand() % (sizeof(alphanum) - 1)];
   }
 
   return "000000";
@@ -105,56 +105,84 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
   std::string type = j["type"];
 
   switch (HASH_STRING_PIECE(type.c_str())) {
-    case "create_transport"_H: {
-      transport_id_ = gen_random_6();
-      LOG_INFO("Generate transport_id [{}]", transport_id_);
-      json message = {{"type", "transport_id"},
-                      {"transport_id", transport_id_}};
-      send_msg(hdl, message);
+    case "create_transmission"_H: {
+      transmission_id_ = j["transmission_id"];
+      LOG_INFO("Receive create transmission request with id [{}]",
+               transmission_id_);
+      if (transmission_list_.find(transmission_id_) ==
+          transmission_list_.end()) {
+        if (transmission_id_.empty()) {
+          transmission_id_ = gen_random_6();
+          while (transmission_list_.find(transmission_id_) !=
+                 transmission_list_.end()) {
+            transmission_id_ = gen_random_6();
+          }
+          LOG_INFO(
+              "Transmission id is empty, generate a new one for this request "
+              "[{}]",
+              transmission_id_);
+        }
+        transmission_list_.insert(transmission_id_);
+        LOG_INFO("Create transmission id [{}]", transmission_id_);
+        json message = {{"type", "transmission_id"},
+                        {"transmission_id", transmission_id_},
+                        {"status", "success"}};
+        send_msg(hdl, message);
+      } else {
+        LOG_INFO("Transmission id [{}] already exist", transmission_id_);
+        json message = {{"type", "transmission_id"},
+                        {"transmission_id", transmission_id_},
+                        {"status", "fail"},
+                        {"reason", "Transmission id exist"}};
+        send_msg(hdl, message);
+      }
+
       break;
     }
     case "offer"_H: {
-      std::string transport_id = j["transport_id"];
+      std::string transmission_id = j["transmission_id"];
       std::string sdp = j["sdp"];
-      LOG_INFO("Save transport_id[{}] with offer sdp[{}]", transport_id, sdp);
+      LOG_INFO("Save transmission_id[{}] with offer sdp[{}]", transmission_id,
+               sdp);
       // ws_handle_manager_.BindHandleToConnection(hdl, );
-      offer_sdp_map_[transport_id] = sdp;
-      offer_hdl_map_[transport_id] = hdl;
+      offer_sdp_map_[transmission_id] = sdp;
+      offer_hdl_map_[transmission_id] = hdl;
       break;
     }
     case "query_remote_sdp"_H: {
-      std::string transport_id = j["transport_id"];
-      std::string sdp = offer_sdp_map_[transport_id];
+      std::string transmission_id = j["transmission_id"];
+      std::string sdp = offer_sdp_map_[transmission_id];
       LOG_INFO("send offer sdp [{}]", sdp.c_str());
       json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
       send_msg(hdl, message);
       break;
     }
     case "answer"_H: {
-      std::string transport_id = j["transport_id"];
+      std::string transmission_id = j["transmission_id"];
       std::string sdp = j["sdp"];
-      LOG_INFO("Save transport_id[{}] with answer sdp[{}]", transport_id, sdp);
-      answer_sdp_map_[transport_id] = sdp;
-      answer_hdl_map_[transport_id] = hdl;
+      LOG_INFO("Save transmission_id[{}] with answer sdp[{}]", transmission_id,
+               sdp);
+      answer_sdp_map_[transmission_id] = sdp;
+      answer_hdl_map_[transmission_id] = hdl;
       LOG_INFO("send answer sdp [{}]", sdp.c_str());
       json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
-      send_msg(offer_hdl_map_[transport_id], message);
+      send_msg(offer_hdl_map_[transmission_id], message);
       break;
     }
     case "offer_candidate"_H: {
-      std::string transport_id = j["transport_id"];
+      std::string transmission_id = j["transmission_id"];
       std::string candidate = j["sdp"];
       LOG_INFO("send candidate [{}]", candidate.c_str());
       json message = {{"type", "candidate"}, {"sdp", candidate}};
-      send_msg(answer_hdl_map_[transport_id], message);
+      send_msg(answer_hdl_map_[transmission_id], message);
       break;
     }
     case "answer_candidate"_H: {
-      std::string transport_id = j["transport_id"];
+      std::string transmission_id = j["transmission_id"];
       std::string candidate = j["sdp"];
       LOG_INFO("send candidate [{}]", candidate.c_str());
       json message = {{"type", "candidate"}, {"sdp", candidate}};
-      send_msg(offer_hdl_map_[transport_id], message);
+      send_msg(offer_hdl_map_[transmission_id], message);
       break;
     }
     default:
