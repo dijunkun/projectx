@@ -31,7 +31,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
         LOG_INFO("state_change: {}", ice_status[state]);
       },
       [](juice_agent_t *agent, const char *sdp, void *user_ptr) {
-        LOG_INFO("candadite: {}", sdp);
+        // LOG_INFO("candadite: {}", sdp);
         // trickle
         // static_cast<IceTransmission
         // *>(user_ptr)->SendOfferLocalCandidate(sdp);
@@ -136,7 +136,8 @@ int IceTransmission::SendOffer() {
   json message = {{"type", "offer"},
                   {"transmission_id", transmission_id_},
                   {"sdp", local_sdp_}};
-  LOG_INFO("Send offer:\n{}", message.dump().c_str());
+  // LOG_INFO("Send offer:\n{}", message.dump().c_str());
+  LOG_INFO("Send offer");
 
   if (ice_ws_transport_) {
     ice_ws_transport_->Send(message.dump());
@@ -165,7 +166,9 @@ int IceTransmission::SendAnswer() {
                   {"transmission_id", transmission_id_},
                   {"sdp", local_sdp_},
                   {"guest", remote_ice_username_}};
-  LOG_INFO("Send answer:\n{}", message.dump().c_str());
+  // LOG_INFO("Send answer:\n{}", message.dump().c_str());
+  LOG_INFO("[{}] Send answer to [{}]", GetIceUsername(local_sdp_),
+           remote_ice_username_);
 
   if (ice_ws_transport_) {
     ice_ws_transport_->Send(message.dump());
@@ -178,7 +181,8 @@ int IceTransmission::SendOfferLocalCandidate(
   json message = {{"type", "offer_candidate"},
                   {"transmission_id", transmission_id_},
                   {"sdp", remote_candidate}};
-  LOG_INFO("Send candidate:\n{}", message.dump().c_str());
+  // LOG_INFO("Send candidate:\n{}", message.dump().c_str());
+  LOG_INFO("Send candidate");
 
   if (ice_ws_transport_) {
     ice_ws_transport_->Send(message.dump());
@@ -191,7 +195,8 @@ int IceTransmission::SendAnswerLocalCandidate(
   json message = {{"type", "answer_candidate"},
                   {"transmission_id", transmission_id_},
                   {"sdp", remote_candidate}};
-  LOG_INFO("Send candidate:\n{}", message.dump().c_str());
+  // LOG_INFO("Send candidate:\n{}", message.dump().c_str());
+  LOG_INFO("Send candidate");
 
   if (ice_ws_transport_) {
     ice_ws_transport_->Send(message.dump());
@@ -206,7 +211,7 @@ int IceTransmission::SendData(const char *data, size_t size) {
 
 void IceTransmission::OnReceiveMessage(const std::string &msg) {
   auto j = json::parse(msg);
-  LOG_INFO("msg: {}", msg.c_str());
+  // LOG_INFO("msg: {}", msg.c_str());
 
   std::string type = j["type"];
 
@@ -217,7 +222,8 @@ void IceTransmission::OnReceiveMessage(const std::string &msg) {
       if (remote_sdp_.empty()) {
         LOG_INFO("Invalid remote sdp");
       } else {
-        LOG_INFO("Receive remote sdp [{}]", remote_sdp_);
+        // LOG_INFO("Receive remote sdp [{}]", remote_sdp_);
+        LOG_INFO("Receive remote sdp");
         SetRemoteSdp(remote_sdp_);
 
         GatherCandidates();
@@ -243,7 +249,8 @@ void IceTransmission::OnReceiveMessage(const std::string &msg) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         QueryRemoteSdp(transmission_id_);
       } else {
-        LOG_INFO("Receive remote sdp [{}]", remote_sdp_);
+        // LOG_INFO("Receive remote sdp [{}]", remote_sdp_);
+        LOG_INFO("Receive remote sdp");
         SetRemoteSdp(remote_sdp_);
 
         if (!offer_peer_) {
@@ -254,7 +261,8 @@ void IceTransmission::OnReceiveMessage(const std::string &msg) {
     }
     case "candidate"_H: {
       std::string candidate = j["sdp"].get<std::string>();
-      LOG_INFO("Receive candidate [{}]", candidate);
+      // LOG_INFO("Receive candidate [{}]", candidate);
+      LOG_INFO("Receive candidate");
       AddRemoteCandidate(candidate);
       break;
     }

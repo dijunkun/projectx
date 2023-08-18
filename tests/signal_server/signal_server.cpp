@@ -72,7 +72,6 @@ bool SignalServer::on_pong(websocketpp::connection_hdl hdl, std::string s) {
 }
 
 void SignalServer::run(uint16_t port) {
-  // Listen on port 9093
   server_.listen(port);
 
   // Queues a connection accept operation
@@ -133,32 +132,64 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
     case "offer"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::string sdp = j["sdp"].get<std::string>();
-      LOG_INFO("Receive transmission id [{}] with offer sdp [{}]",
-               transmission_id, sdp);
+      // LOG_INFO("Receive transmission id [{}] with offer sdp [{}]",
+      //          transmission_id, sdp);
       transmission_manager_.BindGuestToTransmission(hdl, transmission_id);
+      std::string guest_username = GetIceUsername(sdp);
+      transmission_manager_.BindGuestUsernameToWsHandle(guest_username, hdl);
 
       websocketpp::connection_hdl host_hdl =
           transmission_manager_.GetHostOfTransmission(transmission_id);
+      std::vector<websocketpp::connection_hdl> guest_hdl_list =
+          transmission_manager_.GetAllGuestsOfTransmission(transmission_id);
 
-      std::string ice_username = GetIceUsername(sdp);
-      transmission_manager_.BindGuestUsernameToWsHandle(ice_username, hdl);
+      // LOG_INFO("send offer sdp [{}]", sdp);
+      json message = {
+          {"type", "offer"}, {"sdp", sdp}, {"guest", guest_username}};
 
-      LOG_INFO("send offer sdp [{}]", sdp.c_str());
-      json message = {{"type", "offer"}, {"sdp", sdp}, {"guest", ice_username}};
+      LOG_INFO("[{}] send offer sdp to host", guest_username);
       send_msg(host_hdl, message);
+
+      LOG_INFO("Size of guest_hdl_list: {}", guest_hdl_list.size());
+      for (auto guest_hdl : guest_hdl_list) {
+        if (guest_hdl.lock().get() != hdl.lock().get()) {
+          LOG_INFO("[{}] send offer sdp to [{}]", guest_username,
+                   transmission_manager_.GetGuestUsername(guest_hdl));
+          send_msg(guest_hdl, message);
+        }
+      }
+      break;
+    }
+    case "query_members"_H: {
+      std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::vector<std::string> member_list =
+          transmission_manager_.GetAllMembersOfTransmission(transmission_id);
+
+      json message = {{"type", "transmission_members"},
+                      {"transmission_id", transmission_id},
+                      {"transmission_members", member_list},
+                      {"status", "success"}};
+      send_msg(hdl, message);
       break;
     }
     case "answer"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::string sdp = j["sdp"].get<std::string>();
       std::string guest_ice_username = j["guest"].get<std::string>();
-      LOG_INFO("Receive transmission id [{}] with answer sdp [{}]",
-               transmission_id, sdp);
+      std::string host_ice_username = GetIceUsername(sdp);
+      if (transmission_manager_.GetHostUsername(hdl).empty()) {
+        transmission_manager_.BindHostUsernameToWsHandle(host_ice_username,
+                                                         hdl);
+      }
+      // LOG_INFO("Receive transmission id [{}] with answer sdp [{}]",
+      //          transmission_id, sdp);
 
       websocketpp::connection_hdl guest_hdl =
           transmission_manager_.GetGuestWsHandle(guest_ice_username);
 
-      LOG_INFO("send answer sdp [{}]", sdp.c_str());
+      // LOG_INFO("send answer sdp [{}]", sdp);
+      LOG_INFO("[{}] send answer sdp to [{}]", host_ice_username,
+               guest_ice_username);
       json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
       send_msg(guest_hdl, message);
       break;

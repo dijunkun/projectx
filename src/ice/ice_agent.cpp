@@ -49,7 +49,8 @@ char *IceAgent::GenerateLocalSdp() {
   }
 
   juice_get_local_description(agent_, local_sdp_, JUICE_MAX_SDP_STRING_LEN);
-  LOG_INFO("Generate local sdp:[\n{}]", local_sdp_);
+  // LOG_INFO("Generate local sdp:[\n{}]", local_sdp_);
+  LOG_INFO("Generate local sdp");
 
   return local_sdp_;
 }
@@ -57,13 +58,13 @@ char *IceAgent::GenerateLocalSdp() {
 int IceAgent::SetRemoteSdp(const char *remote_sdp) {
   LOG_INFO("Set remote sdp");
   juice_set_remote_description(agent_, remote_sdp);
-  LOG_INFO("Remote description:[\n{}]", remote_sdp);
+  // LOG_INFO("Remote description:[\n{}]", remote_sdp);
 
   return 0;
 }
 
 int IceAgent::GatherCandidates() {
-  LOG_INFO("Gather candidates");
+  LOG_INFO("[{}] Gather candidates", (void *)this);
   juice_gather_candidates(agent_);
 
   return 0;

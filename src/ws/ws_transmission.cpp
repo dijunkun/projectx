@@ -9,7 +9,7 @@ WsTransmission::WsTransmission(
 WsTransmission::~WsTransmission() {}
 
 void WsTransmission::OnReceiveMessage(const std::string &msg) {
-  LOG_INFO("Receive msg: {}", msg);
+  // LOG_INFO("Receive msg: {}", msg);
   if (on_receive_msg_) {
     on_receive_msg_(msg);
   }
