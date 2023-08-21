@@ -56,7 +56,7 @@ char *IceAgent::GenerateLocalSdp() {
 }
 
 int IceAgent::SetRemoteSdp(const char *remote_sdp) {
-  LOG_INFO("Set remote sdp");
+  LOG_INFO("[{}] Set remote sdp", (void *)this);
   juice_set_remote_description(agent_, remote_sdp);
   // LOG_INFO("Remote description:[\n{}]", remote_sdp);
 

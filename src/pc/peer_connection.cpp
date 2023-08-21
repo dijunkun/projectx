@@ -21,7 +21,10 @@ PeerConnection::PeerConnection() {}
 PeerConnection::~PeerConnection() {}
 
 int PeerConnection::Create(PeerConnectionParams params,
-                           const std::string &transmission_id) {
+                           const std::string &transmission_id,
+                           const std::string &user_id) {
+  user_id_ = user_id;
+
   INIReader reader(params.cfg_path);
   cfg_signal_server_ip_ = reader.Get("signal server", "ip", "-1");
   cfg_signal_server_port_ = reader.Get("signal server", "port", "-1");
@@ -70,10 +73,14 @@ int PeerConnection::Create(PeerConnectionParams params,
           // IceTransmission *ice_transmission =
           //     new IceTransmission(false, ws_transport_, on_receive_ice_msg_);
 
-          ice_transmission_list_[ice_username] =
-              new IceTransmission(false, ws_transport_, on_receive_ice_msg_);
+          ice_transmission_list_[ice_username] = new IceTransmission(
+              false, ice_username, ws_transport_, on_receive_ice_msg_);
+
           ice_transmission_list_[ice_username]->InitIceTransmission(
               cfg_stun_server_ip_, stun_server_port_);
+
+          ice_transmission_list_[ice_username]->SetTransmissionId(
+              transmission_id_);
 
           ice_transmission_list_[ice_username]->SetRemoteSdp(remote_sdp);
 
@@ -103,9 +110,8 @@ int PeerConnection::Create(PeerConnectionParams params,
     LOG_INFO("GetSignalStatus = {}", GetSignalStatus());
   } while (SignalStatus::Connected != GetSignalStatus());
 
-  // ice_transmission_->CreateTransmission(transmission_id);
-
   json message = {{"type", "create_transmission"},
+                  {"user_id", user_id},
                   {"transmission_id", transmission_id}};
   if (ws_transport_) {
     ws_transport_->Send(message.dump());
@@ -115,7 +121,11 @@ int PeerConnection::Create(PeerConnectionParams params,
 }
 
 int PeerConnection::Join(PeerConnectionParams params,
-                         const std::string &transmission_id) {
+                         const std::string &transmission_id,
+                         const std::string &user_id) {
+  // Todo: checkout user_id unique or not
+  user_id_ = user_id;
+
   INIReader reader(params.cfg_path);
   cfg_signal_server_ip_ = reader.Get("signal server", "ip", "-1");
   cfg_signal_server_port_ = reader.Get("signal server", "port", "-1");
@@ -129,12 +139,43 @@ int PeerConnection::Join(PeerConnectionParams params,
   stun_server_port_ = stoi(cfg_stun_server_port_);
 
   on_receive_ws_msg_ = [this](const std::string &msg) {
-    do {
-    } while (ice_transmission_list_.empty());
+    // do {
+    // } while (ice_transmission_list_.empty());
     auto j = json::parse(msg);
     std::string type = j["type"];
-    LOG_INFO("msg type :{}", type.c_str());
+    LOG_INFO("msg type :{}", type);
     switch (HASH_STRING_PIECE(type.c_str())) {
+      case "transmission_members"_H: {
+        transmission_member_list_ = j["transmission_members"];
+        std::string transmission_id = j["transmission_id"];
+
+        LOG_INFO("Transmission [{}] members: [", transmission_id);
+        for (auto member : transmission_member_list_) {
+          LOG_INFO("{}", member);
+        }
+        LOG_INFO("]");
+
+        if (transmission_member_list_.size() == 1 &&
+            transmission_member_list_[0] == "host") {
+          ice_transmission_list_["host"] = new IceTransmission(
+              true, "host", ws_transport_, on_receive_ice_msg_);
+          ice_transmission_list_["host"]->InitIceTransmission(
+              cfg_stun_server_ip_, stun_server_port_);
+          ice_transmission_list_["host"]->JoinTransmission(transmission_id,
+                                                           user_id_);
+        } else {
+          for (auto &member : transmission_member_list_) {
+            ice_transmission_list_[member] = new IceTransmission(
+                true, member, ws_transport_, on_receive_ice_msg_);
+            ice_transmission_list_[member]->InitIceTransmission(
+                cfg_stun_server_ip_, stun_server_port_);
+            ice_transmission_list_[member]->JoinTransmission(transmission_id,
+                                                             user_id_);
+          }
+        }
+
+        break;
+      }
       case "ws_connection_id"_H: {
         ws_connection_id_ = j["ws_connection_id"].get<unsigned int>();
         LOG_INFO("Receive local peer websocket connection id [{}]",
@@ -154,8 +195,8 @@ int PeerConnection::Join(PeerConnectionParams params,
           // IceTransmission *ice_transmission =
           //     new IceTransmission(false, ws_transport_, on_receive_ice_msg_);
 
-          ice_transmission_list_[ice_username] =
-              new IceTransmission(false, ws_transport_, on_receive_ice_msg_);
+          ice_transmission_list_[ice_username] = new IceTransmission(
+              false, ice_username, ws_transport_, on_receive_ice_msg_);
           ice_transmission_list_[ice_username]->InitIceTransmission(
               cfg_stun_server_ip_, stun_server_port_);
 
@@ -174,15 +215,23 @@ int PeerConnection::Join(PeerConnectionParams params,
           LOG_INFO("Receive remote sdp from [{}]", ice_username);
           // LOG_INFO("Receive remote sdp [{}]", remote_sdp);
 
+          // if (ice_transmission_list_.size() == 1 &&
+          //     ice_transmission_list_.begin()->first == "host") {
+          //   ice_transmission_list_["host"]->SetRemoteSdp(remote_sdp);
+          // } else if (ice_transmission_list_.find(ice_username) ==
+          //            ice_transmission_list_.end()) {
+          //   ice_transmission_list_[ice_username] = new IceTransmission(
+          //       false, ice_username, ws_transport_, on_receive_ice_msg_);
+          //   ice_transmission_list_[ice_username]->InitIceTransmission(
+          //       cfg_stun_server_ip_, stun_server_port_);
+          //   ice_transmission_list_[ice_username]->SetRemoteSdp(remote_sdp);
+          // }
+
           if (ice_transmission_list_.size() == 1 &&
-              ice_transmission_list_.begin()->first == "self") {
-            ice_transmission_list_["self"]->SetRemoteSdp(remote_sdp);
-          } else if (ice_transmission_list_.find(ice_username) ==
+              ice_transmission_list_.begin()->first == "host") {
+            ice_transmission_list_["host"]->SetRemoteSdp(remote_sdp);
+          } else if (ice_transmission_list_.find(ice_username) !=
                      ice_transmission_list_.end()) {
-            ice_transmission_list_[ice_username] =
-                new IceTransmission(false, ws_transport_, on_receive_ice_msg_);
-            ice_transmission_list_[ice_username]->InitIceTransmission(
-                cfg_stun_server_ip_, stun_server_port_);
             ice_transmission_list_[ice_username]->SetRemoteSdp(remote_sdp);
           }
 
@@ -222,10 +271,10 @@ int PeerConnection::Join(PeerConnectionParams params,
     ws_transport_->Connect(uri_);
   }
 
-  ice_transmission_list_["self"] =
-      new IceTransmission(true, ws_transport_, on_receive_ice_msg_);
-  ice_transmission_list_["self"]->InitIceTransmission(cfg_stun_server_ip_,
-                                                      stun_server_port_);
+  // ice_transmission_list_["self"] =
+  //     new IceTransmission(true, ws_transport_, on_receive_ice_msg_);
+  // ice_transmission_list_["self"]->InitIceTransmission(cfg_stun_server_ip_,
+  //                                                     stun_server_port_);
   // ice_transmission_ =
   //     new IceTransmission(true, ws_transport_, on_receive_ice_msg_);
   // ice_transmission_->InitIceTransmission(cfg_stun_server_ip,
@@ -235,8 +284,22 @@ int PeerConnection::Join(PeerConnectionParams params,
     // LOG_INFO("GetSignalStatus = {}", GetSignalStatus());
   } while (SignalStatus::Connected != GetSignalStatus());
 
+  RequestTransmissionMemberList(transmission_id_);
   // ice_transmission_->JoinTransmission(transmission_id_);
-  ice_transmission_list_["self"]->JoinTransmission(transmission_id_);
+  // ice_transmission_list_["self"]->JoinTransmission(transmission_id_);
+  return 0;
+}
+
+int PeerConnection::RequestTransmissionMemberList(
+    const std::string &transmission_id) {
+  LOG_INFO("Request member list");
+
+  json message = {{"type", "query_members"},
+                  {"transmission_id", transmission_id_}};
+
+  if (ws_transport_) {
+    ws_transport_->Send(message.dump());
+  }
   return 0;
 }
 

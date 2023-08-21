@@ -8,7 +8,8 @@
 
 class IceTransmission {
  public:
-  IceTransmission(bool offer_peer, WsTransmission *ice_ws_transmission,
+  IceTransmission(bool offer_peer, std::string remote_ice_username,
+                  WsTransmission *ice_ws_transmission,
                   std::function<void(const char *, size_t)> on_receive_ice_msg);
 
   ~IceTransmission();
@@ -18,7 +19,10 @@ class IceTransmission {
   int DestroyIceTransmission();
 
   int CreateTransmission(const std::string &transmission_id);
-  int JoinTransmission(const std::string &transmission_id);
+  int JoinTransmission(const std::string &transmission_id,
+                       const std::string &user_id);
+
+  int SetTransmissionId(const std::string &transmission_id);
 
   int SendData(const char *data, size_t size);
 
@@ -55,12 +59,13 @@ class IceTransmission {
   std::function<void(const char *, size_t)> on_receive_ice_msg_cb_ = nullptr;
   std::string local_sdp_;
   std::string remote_sdp_;
-  std::string remote_ice_username_;
   std::string local_candidates_;
   std::string remote_candidates_;
   unsigned int connection_id_ = 0;
   std::string transmission_id_ = "";
+  std::string user_id_ = "";
   bool offer_peer_ = true;
+  std::string remote_ice_username_ = "";
 };
 
 #endif

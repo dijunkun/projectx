@@ -27,7 +27,8 @@ PeerPtr* CreatePeer(const Params* params);
 
 int CreateConnection(PeerPtr* peer_ptr);
 
-int JoinConnection(PeerPtr* peer_ptr, const char* connection_id);
+int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
+                   const char* user_id);
 
 int SendData(PeerPtr* peer_ptr, const char* data, size_t size);
 

@@ -27,13 +27,17 @@ int CreateConnection(PeerPtr *peer_ptr) {
   return 0;
 }
 
-int CreateConnection(PeerPtr *peer_ptr, const char *connection_id) {
-  peer_ptr->peer_connection->Create(peer_ptr->pc_params, connection_id);
+int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id,
+                     const char *user_id) {
+  peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id,
+                                    user_id);
   return 0;
 }
 
-int JoinConnection(PeerPtr *peer_ptr, const char *connection_id) {
-  peer_ptr->peer_connection->Join(peer_ptr->pc_params, connection_id);
+int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
+                   const char *user_id) {
+  peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id,
+                                  user_id);
   return 0;
 }
 

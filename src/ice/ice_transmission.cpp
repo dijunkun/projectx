@@ -15,9 +15,11 @@ const std::vector<std::string> ice_status = {
     "JUICE_STATE_COMPLETED",    "JUICE_STATE_FAILED"};
 
 IceTransmission::IceTransmission(
-    bool offer_peer, WsTransmission *ice_ws_transmission,
+    bool offer_peer, std::string remote_ice_username,
+    WsTransmission *ice_ws_transmission,
     std::function<void(const char *, size_t)> on_receive_ice_msg)
     : offer_peer_(offer_peer),
+      remote_ice_username_(remote_ice_username),
       ice_ws_transport_(ice_ws_transmission),
       on_receive_ice_msg_cb_(on_receive_ice_msg) {}
 
@@ -45,6 +47,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
           if (ice_transmission_obj->offer_peer_) {
             ice_transmission_obj->GetLocalSdp();
             ice_transmission_obj->SendOffer();
+            LOG_INFO("[{}] SendOffer", (void *)ice_transmission_obj)
           } else {
             ice_transmission_obj->CreateAnswer();
             ice_transmission_obj->SendAnswer();
@@ -90,10 +93,18 @@ int IceTransmission::CreateTransmission(const std::string &transmission_id) {
   return 0;
 }
 
-int IceTransmission::JoinTransmission(const std::string &transmission_id) {
+int IceTransmission::SetTransmissionId(const std::string &transmission_id) {
+  transmission_id_ = transmission_id;
+
+  return 0;
+}
+
+int IceTransmission::JoinTransmission(const std::string &transmission_id,
+                                      const std::string &user_id) {
   LOG_INFO("Join transport");
   offer_peer_ = true;
   transmission_id_ = transmission_id;
+  user_id_ = user_id;
 
   // if (SignalStatus::Connected != signal_status_) {
   //   LOG_ERROR("Not connect to signalserver");
@@ -112,6 +123,7 @@ int IceTransmission::GatherCandidates() {
 
 int IceTransmission::GetLocalSdp() {
   local_sdp_ = ice_agent_->GenerateLocalSdp();
+  LOG_INFO("Local ice username: [{}]", GetIceUsername(local_sdp_));
   return 0;
 }
 
@@ -127,7 +139,7 @@ int IceTransmission::AddRemoteCandidate(const std::string &remote_candidate) {
 }
 
 int IceTransmission::CreateOffer() {
-  LOG_INFO("Create offer");
+  LOG_INFO("[{}] Create offer", (void *)this);
   GatherCandidates();
   return 0;
 }
@@ -135,6 +147,8 @@ int IceTransmission::CreateOffer() {
 int IceTransmission::SendOffer() {
   json message = {{"type", "offer"},
                   {"transmission_id", transmission_id_},
+                  {"user_id", user_id_},
+                  {"remote_peer", remote_ice_username_},
                   {"sdp", local_sdp_}};
   // LOG_INFO("Send offer:\n{}", message.dump().c_str());
   LOG_INFO("Send offer");
@@ -166,7 +180,7 @@ int IceTransmission::SendAnswer() {
                   {"transmission_id", transmission_id_},
                   {"sdp", local_sdp_},
                   {"guest", remote_ice_username_}};
-  // LOG_INFO("Send answer:\n{}", message.dump().c_str());
+
   LOG_INFO("[{}] Send answer to [{}]", GetIceUsername(local_sdp_),
            remote_ice_username_);
 
