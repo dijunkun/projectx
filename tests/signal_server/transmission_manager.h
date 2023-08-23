@@ -56,7 +56,8 @@ class TransmissionManager {
   bool UpdateUsernameToWsHandle(const std::string& username,
                                 websocketpp::connection_hdl hdl);
   std::string GetUsername(websocketpp::connection_hdl hdl);
-  websocketpp::connection_hdl GetWsHandle(const std::string& username);
+  //   websocketpp::connection_hdl GetWsHandle(const std::string& username);
+  websocketpp::connection_hdl GetWsHandle(const std::string& user_id);
 
  private:
   std::map<std::string, websocketpp::connection_hdl> transmission_host_list_;

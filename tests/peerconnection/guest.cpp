@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
   PeerPtr* peer = CreatePeer(&params);
   JoinConnection(peer, transmission_id.c_str(), user_id.c_str());
 
-  std::string msg = "Offer peer";
+  std::string msg = "[" + user_id + "] Offer peer";
 
   int i = 100;
   while (i--) {

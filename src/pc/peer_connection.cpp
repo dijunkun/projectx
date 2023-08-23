@@ -67,24 +67,24 @@ int PeerConnection::Create(PeerConnectionParams params,
         if (remote_sdp.empty()) {
           LOG_INFO("Invalid remote sdp");
         } else {
-          std::string ice_username = GetIceUsername(remote_sdp);
-          LOG_INFO("Receive remote sdp from [{}]", ice_username);
+          std::string transmission_id = j["transmission_id"].get<std::string>();
+          std::string sdp = j["sdp"].get<std::string>();
+          std::string remote_user_id = j["remote_user_id"].get<std::string>();
+          LOG_INFO("Receive remote sdp from [{}]", remote_user_id);
 
-          // IceTransmission *ice_transmission =
-          //     new IceTransmission(false, ws_transport_, on_receive_ice_msg_);
+          ice_transmission_list_[remote_user_id] = new IceTransmission(
+              false, transmission_id, user_id_, remote_user_id, ws_transport_,
+              on_receive_ice_msg_);
 
-          ice_transmission_list_[ice_username] = new IceTransmission(
-              false, ice_username, ws_transport_, on_receive_ice_msg_);
-
-          ice_transmission_list_[ice_username]->InitIceTransmission(
+          ice_transmission_list_[remote_user_id]->InitIceTransmission(
               cfg_stun_server_ip_, stun_server_port_);
 
-          ice_transmission_list_[ice_username]->SetTransmissionId(
+          ice_transmission_list_[remote_user_id]->SetTransmissionId(
               transmission_id_);
 
-          ice_transmission_list_[ice_username]->SetRemoteSdp(remote_sdp);
+          ice_transmission_list_[remote_user_id]->SetRemoteSdp(remote_sdp);
 
-          ice_transmission_list_[ice_username]->GatherCandidates();
+          ice_transmission_list_[remote_user_id]->GatherCandidates();
         }
         break;
       }
@@ -155,23 +155,32 @@ int PeerConnection::Join(PeerConnectionParams params,
         }
         LOG_INFO("]");
 
-        if (transmission_member_list_.size() == 1 &&
-            transmission_member_list_[0] == "host") {
-          ice_transmission_list_["host"] = new IceTransmission(
-              true, "host", ws_transport_, on_receive_ice_msg_);
-          ice_transmission_list_["host"]->InitIceTransmission(
+        // if (transmission_member_list_.size() == 1 &&
+        //     transmission_member_list_[0] == "host") {
+        //   ice_transmission_list_["host"] = new IceTransmission(
+        //       true, "host", ws_transport_, on_receive_ice_msg_);
+        //   ice_transmission_list_["host"]->InitIceTransmission(
+        //       cfg_stun_server_ip_, stun_server_port_);
+        //   ice_transmission_list_["host"]->JoinTransmission(transmission_id,
+        //                                                    user_id_);
+        // } else {
+        //   for (auto &member : transmission_member_list_) {
+        //     ice_transmission_list_[member] = new IceTransmission(
+        //         true, member, ws_transport_, on_receive_ice_msg_);
+        //     ice_transmission_list_[member]->InitIceTransmission(
+        //         cfg_stun_server_ip_, stun_server_port_);
+        //     ice_transmission_list_[member]->JoinTransmission(transmission_id,
+        //                                                      user_id_);
+        //   }
+        // }
+
+        for (auto &remote_user_id : transmission_member_list_) {
+          ice_transmission_list_[remote_user_id] = new IceTransmission(
+              true, transmission_id, user_id_, remote_user_id, ws_transport_,
+              on_receive_ice_msg_);
+          ice_transmission_list_[remote_user_id]->InitIceTransmission(
               cfg_stun_server_ip_, stun_server_port_);
-          ice_transmission_list_["host"]->JoinTransmission(transmission_id,
-                                                           user_id_);
-        } else {
-          for (auto &member : transmission_member_list_) {
-            ice_transmission_list_[member] = new IceTransmission(
-                true, member, ws_transport_, on_receive_ice_msg_);
-            ice_transmission_list_[member]->InitIceTransmission(
-                cfg_stun_server_ip_, stun_server_port_);
-            ice_transmission_list_[member]->JoinTransmission(transmission_id,
-                                                             user_id_);
-          }
+          ice_transmission_list_[remote_user_id]->JoinTransmission();
         }
 
         break;
@@ -189,20 +198,24 @@ int PeerConnection::Join(PeerConnectionParams params,
         if (remote_sdp.empty()) {
           LOG_INFO("Invalid remote sdp");
         } else {
-          std::string ice_username = GetIceUsername(remote_sdp);
-          LOG_INFO("Receive remote sdp from [{}]", ice_username);
+          std::string transmission_id = j["transmission_id"].get<std::string>();
+          std::string sdp = j["sdp"].get<std::string>();
+          std::string remote_user_id = j["remote_user_id"].get<std::string>();
+          LOG_INFO("Receive remote sdp from [{}]", remote_user_id);
 
-          // IceTransmission *ice_transmission =
-          //     new IceTransmission(false, ws_transport_, on_receive_ice_msg_);
+          ice_transmission_list_[remote_user_id] = new IceTransmission(
+              false, transmission_id, user_id_, remote_user_id, ws_transport_,
+              on_receive_ice_msg_);
 
-          ice_transmission_list_[ice_username] = new IceTransmission(
-              false, ice_username, ws_transport_, on_receive_ice_msg_);
-          ice_transmission_list_[ice_username]->InitIceTransmission(
+          ice_transmission_list_[remote_user_id]->InitIceTransmission(
               cfg_stun_server_ip_, stun_server_port_);
 
-          ice_transmission_list_[ice_username]->SetRemoteSdp(remote_sdp);
+          ice_transmission_list_[remote_user_id]->SetTransmissionId(
+              transmission_id_);
 
-          ice_transmission_list_[ice_username]->GatherCandidates();
+          ice_transmission_list_[remote_user_id]->SetRemoteSdp(remote_sdp);
+
+          ice_transmission_list_[remote_user_id]->GatherCandidates();
         }
         break;
       }
@@ -211,28 +224,16 @@ int PeerConnection::Join(PeerConnectionParams params,
         if (remote_sdp.empty()) {
           LOG_INFO("remote_sdp is empty");
         } else {
-          std::string ice_username = GetIceUsername(remote_sdp);
-          LOG_INFO("Receive remote sdp from [{}]", ice_username);
+          std::string transmission_id = j["transmission_id"].get<std::string>();
+          std::string sdp = j["sdp"].get<std::string>();
+          std::string remote_user_id = j["remote_user_id"].get<std::string>();
+
+          LOG_INFO("Receive remote sdp from [{}]", remote_user_id);
           // LOG_INFO("Receive remote sdp [{}]", remote_sdp);
 
-          // if (ice_transmission_list_.size() == 1 &&
-          //     ice_transmission_list_.begin()->first == "host") {
-          //   ice_transmission_list_["host"]->SetRemoteSdp(remote_sdp);
-          // } else if (ice_transmission_list_.find(ice_username) ==
-          //            ice_transmission_list_.end()) {
-          //   ice_transmission_list_[ice_username] = new IceTransmission(
-          //       false, ice_username, ws_transport_, on_receive_ice_msg_);
-          //   ice_transmission_list_[ice_username]->InitIceTransmission(
-          //       cfg_stun_server_ip_, stun_server_port_);
-          //   ice_transmission_list_[ice_username]->SetRemoteSdp(remote_sdp);
-          // }
-
-          if (ice_transmission_list_.size() == 1 &&
-              ice_transmission_list_.begin()->first == "host") {
-            ice_transmission_list_["host"]->SetRemoteSdp(remote_sdp);
-          } else if (ice_transmission_list_.find(ice_username) !=
-                     ice_transmission_list_.end()) {
-            ice_transmission_list_[ice_username]->SetRemoteSdp(remote_sdp);
+          if (ice_transmission_list_.find(remote_user_id) !=
+              ice_transmission_list_.end()) {
+            ice_transmission_list_[remote_user_id]->SetRemoteSdp(remote_sdp);
           }
 
           // if (!offer_peer_) {

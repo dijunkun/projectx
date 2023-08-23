@@ -15,11 +15,13 @@ const std::vector<std::string> ice_status = {
     "JUICE_STATE_COMPLETED",    "JUICE_STATE_FAILED"};
 
 IceTransmission::IceTransmission(
-    bool offer_peer, std::string remote_ice_username,
-    WsTransmission *ice_ws_transmission,
+    bool offer_peer, std::string &transmission_id, std::string &user_id,
+    std::string &remote_user_id, WsTransmission *ice_ws_transmission,
     std::function<void(const char *, size_t)> on_receive_ice_msg)
     : offer_peer_(offer_peer),
-      remote_ice_username_(remote_ice_username),
+      transmission_id_(transmission_id),
+      user_id_(user_id),
+      remote_user_id_(remote_user_id),
       ice_ws_transport_(ice_ws_transmission),
       on_receive_ice_msg_cb_(on_receive_ice_msg) {}
 
@@ -99,12 +101,8 @@ int IceTransmission::SetTransmissionId(const std::string &transmission_id) {
   return 0;
 }
 
-int IceTransmission::JoinTransmission(const std::string &transmission_id,
-                                      const std::string &user_id) {
+int IceTransmission::JoinTransmission() {
   LOG_INFO("Join transport");
-  offer_peer_ = true;
-  transmission_id_ = transmission_id;
-  user_id_ = user_id;
 
   // if (SignalStatus::Connected != signal_status_) {
   //   LOG_ERROR("Not connect to signalserver");
@@ -148,10 +146,10 @@ int IceTransmission::SendOffer() {
   json message = {{"type", "offer"},
                   {"transmission_id", transmission_id_},
                   {"user_id", user_id_},
-                  {"remote_peer", remote_ice_username_},
+                  {"remote_user_id", remote_user_id_},
                   {"sdp", local_sdp_}};
-  // LOG_INFO("Send offer:\n{}", message.dump().c_str());
-  LOG_INFO("Send offer");
+  LOG_INFO("Send offer:\n{}", message.dump());
+  // LOG_INFO("Send offer");
 
   if (ice_ws_transport_) {
     ice_ws_transport_->Send(message.dump());
@@ -179,7 +177,8 @@ int IceTransmission::SendAnswer() {
   json message = {{"type", "answer"},
                   {"transmission_id", transmission_id_},
                   {"sdp", local_sdp_},
-                  {"guest", remote_ice_username_}};
+                  {"user_id", user_id_},
+                  {"remote_user_id", remote_user_id_}};
 
   LOG_INFO("[{}] Send answer to [{}]", GetIceUsername(local_sdp_),
            remote_ice_username_);

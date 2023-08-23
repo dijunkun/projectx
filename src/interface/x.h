@@ -25,7 +25,8 @@ typedef struct {
 
 PeerPtr* CreatePeer(const Params* params);
 
-int CreateConnection(PeerPtr* peer_ptr);
+int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id,
+                     const char* user_id);
 
 int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
                    const char* user_id);

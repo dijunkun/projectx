@@ -97,8 +97,8 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
     case "create_transmission"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::string user_id = j["user_id"].get<std::string>();
-      LOG_INFO("Receive create transmission request with id [{}]",
-               transmission_id);
+      LOG_INFO("Receive user id [{}] create transmission request with id [{}]",
+               user_id, transmission_id);
       if (transmission_list_.find(transmission_id) ==
           transmission_list_.end()) {
         if (transmission_id.empty()) {
@@ -114,11 +114,12 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
         }
         transmission_list_.insert(transmission_id);
 
-        transmission_manager_.BindWsHandleToTransmission(hdl, transmission_id);
+        // transmission_manager_.BindWsHandleToTransmission(hdl,
+        // transmission_id);
         transmission_manager_.BindUserIdToTransmission(user_id,
                                                        transmission_id);
         transmission_manager_.BindUserIdToWsHandle(user_id, hdl);
-        transmission_manager_.BindUserNameToUserId("host", user_id);
+        // transmission_manager_.BindUserNameToUserId("host", user_id);
 
         // if (transmission_manager_.GetUsername(hdl).empty()) {
         //   transmission_manager_.BindUsernameToWsHandle("host", hdl);
@@ -157,19 +158,25 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
     case "offer"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::string sdp = j["sdp"].get<std::string>();
-      std::string remote_peer = j["remote_peer"].get<std::string>();
-      // LOG_INFO("Receive transmission id [{}] with offer sdp [{}]",
-      //          transmission_id, sdp);
-      transmission_manager_.BindWsHandleToTransmission(hdl, transmission_id);
-      std::string offer_peer = GetIceUsername(sdp);
-      transmission_manager_.BindUsernameToWsHandle(offer_peer, hdl);
+      std::string user_id = j["user_id"].get<std::string>();
+      std::string remote_user_id = j["remote_user_id"].get<std::string>();
+
+      // transmission_manager_.BindWsHandleToTransmission(hdl, transmission_id);
+      // std::string offer_peer = GetIceUsername(sdp);
+      // transmission_manager_.BindUsernameToWsHandle(offer_peer, hdl);
+
+      transmission_manager_.BindUserIdToTransmission(user_id, transmission_id);
+      transmission_manager_.BindUserIdToWsHandle(user_id, hdl);
 
       websocketpp::connection_hdl destination_hdl =
-          transmission_manager_.GetWsHandle(remote_peer);
+          transmission_manager_.GetWsHandle(remote_user_id);
 
-      json message = {{"type", "offer"}, {"sdp", sdp}};
+      json message = {{"type", "offer"},
+                      {"sdp", sdp},
+                      {"remote_user_id", user_id},
+                      {"transmission_id", transmission_id}};
 
-      LOG_INFO("[{}] send offer sdp to [{}]", offer_peer, remote_peer);
+      LOG_INFO("[{}] send offer sdp to [{}]", user_id, remote_user_id);
       send_msg(destination_hdl, message);
 
       break;
@@ -177,22 +184,33 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
     case "answer"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::string sdp = j["sdp"].get<std::string>();
-      std::string guest_ice_username = j["guest"].get<std::string>();
-      std::string host_ice_username = GetIceUsername(sdp);
-      if (transmission_manager_.GetUsername(hdl) == "host") {
-        LOG_INFO("Update transmission [{}] [host] to [{}]", transmission_id,
-                 host_ice_username);
-        transmission_manager_.UpdateUsernameToWsHandle(host_ice_username, hdl);
-      }
+      std::string user_id = j["user_id"].get<std::string>();
+      std::string remote_user_id = j["remote_user_id"].get<std::string>();
 
-      websocketpp::connection_hdl guest_hdl =
-          transmission_manager_.GetWsHandle(guest_ice_username);
+      // transmission_manager_.BindUserIdToTransmission(user_id,
+      // transmission_id); transmission_manager_.BindUserIdToWsHandle(user_id,
+      // hdl);
+
+      websocketpp::connection_hdl destination_hdl =
+          transmission_manager_.GetWsHandle(remote_user_id);
+
+      // if (transmission_manager_.GetUsername(hdl) == "host") {
+      //   LOG_INFO("Update transmission [{}] [host] to [{}]", transmission_id,
+      //            host_ice_username);
+      //   transmission_manager_.UpdateUsernameToWsHandle(host_ice_username,
+      //   hdl);
+      // }
+
+      // websocketpp::connection_hdl guest_hdl =
+      //     transmission_manager_.GetWsHandle(guest_ice_username);
 
       // LOG_INFO("send answer sdp [{}]", sdp);
-      LOG_INFO("[{}] send answer sdp to [{}]", host_ice_username,
-               guest_ice_username);
-      json message = {{"type", "remote_sdp"}, {"sdp", sdp}};
-      send_msg(guest_hdl, message);
+      LOG_INFO("[{}] send answer sdp to [{}]", user_id, remote_user_id);
+      json message = {{"type", "remote_sdp"},
+                      {"sdp", sdp},
+                      {"remote_user_id", user_id},
+                      {"transmission_id", transmission_id}};
+      send_msg(destination_hdl, message);
       break;
     }
     case "offer_candidate"_H: {

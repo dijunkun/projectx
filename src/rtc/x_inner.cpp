@@ -22,10 +22,10 @@ PeerPtr *CreatePeer(const Params *params) {
   return peer_ptr;
 }
 
-int CreateConnection(PeerPtr *peer_ptr) {
-  peer_ptr->peer_connection->Create(peer_ptr->pc_params);
-  return 0;
-}
+// int CreateConnection(PeerPtr *peer_ptr) {
+//   peer_ptr->peer_connection->Create(peer_ptr->pc_params);
+//   return 0;
+// }
 
 int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id,
                      const char *user_id) {

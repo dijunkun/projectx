@@ -132,13 +132,15 @@ websocketpp::connection_hdl TransmissionManager::GetGuestWsHandle(
 
 std::vector<std::string> TransmissionManager::GetAllMembersOfTransmission(
     const std::string& transmission_id) {
-  std::vector<std::string> member_list;
-
-  for (auto guest_hdl : GetAllGuestsOfTransmission(transmission_id)) {
-    member_list.push_back(GetUsername(guest_hdl));
+  // for (auto guest_hdl : GetAllGuestsOfTransmission(transmission_id)) {
+  //   member_list.push_back(GetUsername(guest_hdl));
+  // }
+  if (transmission_user_id_list_.find(transmission_id) !=
+      transmission_user_id_list_.end()) {
+    return transmission_user_id_list_[transmission_id];
   }
 
-  return member_list;
+  return std::vector<std::string>();
 }
 
 bool TransmissionManager::BindWsHandleToTransmission(
@@ -165,6 +167,7 @@ bool TransmissionManager::BindUserIdToTransmission(
     const std::string& user_id, const std::string& transmission_id) {
   if (transmission_user_id_list_.find(transmission_id) ==
       transmission_user_id_list_.end()) {
+    LOG_INFO("Add user id [{}] to transmission [{}]", user_id, transmission_id);
     transmission_user_id_list_[transmission_id].push_back(user_id);
     return true;
   } else {
@@ -177,6 +180,7 @@ bool TransmissionManager::BindUserIdToTransmission(
       }
     }
     transmission_user_id_list_[transmission_id].push_back(user_id);
+    LOG_INFO("Add user id [{}] to transmission [{}]", user_id, transmission_id);
   }
   return true;
 }
@@ -249,10 +253,20 @@ std::string TransmissionManager::GetUsername(websocketpp::connection_hdl hdl) {
   return "";
 }
 
+// websocketpp::connection_hdl TransmissionManager::GetWsHandle(
+//     const std::string& username) {
+//   if (username_ws_hdl_list_.find(username) != username_ws_hdl_list_.end()) {
+//     return username_ws_hdl_list_[username];
+//   } else {
+//     websocketpp::connection_hdl hdl;
+//     return hdl;
+//   }
+// }
+
 websocketpp::connection_hdl TransmissionManager::GetWsHandle(
-    const std::string& username) {
-  if (username_ws_hdl_list_.find(username) != username_ws_hdl_list_.end()) {
-    return username_ws_hdl_list_[username];
+    const std::string& user_id) {
+  if (user_id_ws_hdl_list_.find(user_id) != user_id_ws_hdl_list_.end()) {
+    return user_id_ws_hdl_list_[user_id];
   } else {
     websocketpp::connection_hdl hdl;
     return hdl;
