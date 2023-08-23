@@ -19,8 +19,6 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
   juice_config_t config;
   memset(&config, 0, sizeof(config));
 
-  LOG_INFO("stun server ip[{}] port[{}]", ip_, port_);
-
   // STUN server example
   config.stun_server_host = ip_.c_str();
   config.stun_server_port = port_;
@@ -38,7 +36,6 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
 
 int IceAgent::DestoryIceAgent() {
   juice_destroy(agent_);
-
   return 0;
 }
 
@@ -50,25 +47,15 @@ char *IceAgent::GenerateLocalSdp() {
 
   juice_get_local_description(agent_, local_sdp_, JUICE_MAX_SDP_STRING_LEN);
   // LOG_INFO("Generate local sdp:[\n{}]", local_sdp_);
-  LOG_INFO("Generate local sdp");
 
   return local_sdp_;
 }
 
 int IceAgent::SetRemoteSdp(const char *remote_sdp) {
-  LOG_INFO("[{}] Set remote sdp", (void *)this);
-  juice_set_remote_description(agent_, remote_sdp);
-  // LOG_INFO("Remote description:[\n{}]", remote_sdp);
-
-  return 0;
+  return juice_set_remote_description(agent_, remote_sdp);
 }
 
-int IceAgent::GatherCandidates() {
-  LOG_INFO("[{}] Gather candidates", (void *)this);
-  juice_gather_candidates(agent_);
-
-  return 0;
-}
+int IceAgent::GatherCandidates() { return juice_gather_candidates(agent_); }
 
 juice_state_t IceAgent::GetIceState() {
   state_ = juice_get_state(agent_);
@@ -110,18 +97,13 @@ bool IceAgent::GetSelectedAddresses() {
 }
 
 int IceAgent::AddRemoteCandidates(const char *remote_candidates) {
-  juice_add_remote_candidate(agent_, remote_candidates);
-
-  return 0;
+  return juice_add_remote_candidate(agent_, remote_candidates);
 }
 
 int IceAgent::SetRemoteGatheringDone() {
-  juice_set_remote_gathering_done(agent_);
-
-  return 0;
+  return juice_set_remote_gathering_done(agent_);
 }
 
 int IceAgent::Send(const char *data, size_t size) {
-  juice_send(agent_, data, size);
-  return 0;
+  return juice_send(agent_, data, size);
 }

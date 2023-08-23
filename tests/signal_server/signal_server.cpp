@@ -55,6 +55,7 @@ bool SignalServer::on_open(websocketpp::connection_hdl hdl) {
 
 bool SignalServer::on_close(websocketpp::connection_hdl hdl) {
   LOG_INFO("Websocket onnection [{}] closed", ws_connection_id_);
+  bool ret = transmission_manager_.ReleaseUserIdFromTransmission(hdl);
   ws_connections_.erase(hdl);
   return true;
 }
@@ -114,16 +115,9 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
         }
         transmission_list_.insert(transmission_id);
 
-        // transmission_manager_.BindWsHandleToTransmission(hdl,
-        // transmission_id);
         transmission_manager_.BindUserIdToTransmission(user_id,
                                                        transmission_id);
         transmission_manager_.BindUserIdToWsHandle(user_id, hdl);
-        // transmission_manager_.BindUserNameToUserId("host", user_id);
-
-        // if (transmission_manager_.GetUsername(hdl).empty()) {
-        //   transmission_manager_.BindUsernameToWsHandle("host", hdl);
-        // }
 
         LOG_INFO("Create transmission id [{}]", transmission_id);
         json message = {{"type", "transmission_id"},
@@ -141,17 +135,17 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
 
       break;
     }
-    case "query_members"_H: {
+    case "query_user_id_list"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
-      std::vector<std::string> member_list =
-          transmission_manager_.GetAllMembersOfTransmission(transmission_id);
+      std::vector<std::string> user_id_list =
+          transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
 
-      json message = {{"type", "transmission_members"},
+      json message = {{"type", "user_id_list"},
                       {"transmission_id", transmission_id},
-                      {"transmission_members", member_list},
+                      {"user_id_list", user_id_list},
                       {"status", "success"}};
 
-      LOG_INFO("Send member_list: [{}]", message.dump());
+      // LOG_INFO("Send member_list: [{}]", message.dump());
       send_msg(hdl, message);
       break;
     }
@@ -160,10 +154,6 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
       std::string sdp = j["sdp"].get<std::string>();
       std::string user_id = j["user_id"].get<std::string>();
       std::string remote_user_id = j["remote_user_id"].get<std::string>();
-
-      // transmission_manager_.BindWsHandleToTransmission(hdl, transmission_id);
-      // std::string offer_peer = GetIceUsername(sdp);
-      // transmission_manager_.BindUsernameToWsHandle(offer_peer, hdl);
 
       transmission_manager_.BindUserIdToTransmission(user_id, transmission_id);
       transmission_manager_.BindUserIdToWsHandle(user_id, hdl);
@@ -176,7 +166,7 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
                       {"remote_user_id", user_id},
                       {"transmission_id", transmission_id}};
 
-      LOG_INFO("[{}] send offer sdp to [{}]", user_id, remote_user_id);
+      LOG_INFO("[{}] send offer to [{}]", user_id, remote_user_id);
       send_msg(destination_hdl, message);
 
       break;
@@ -187,25 +177,11 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
       std::string user_id = j["user_id"].get<std::string>();
       std::string remote_user_id = j["remote_user_id"].get<std::string>();
 
-      // transmission_manager_.BindUserIdToTransmission(user_id,
-      // transmission_id); transmission_manager_.BindUserIdToWsHandle(user_id,
-      // hdl);
-
       websocketpp::connection_hdl destination_hdl =
           transmission_manager_.GetWsHandle(remote_user_id);
 
-      // if (transmission_manager_.GetUsername(hdl) == "host") {
-      //   LOG_INFO("Update transmission [{}] [host] to [{}]", transmission_id,
-      //            host_ice_username);
-      //   transmission_manager_.UpdateUsernameToWsHandle(host_ice_username,
-      //   hdl);
-      // }
-
-      // websocketpp::connection_hdl guest_hdl =
-      //     transmission_manager_.GetWsHandle(guest_ice_username);
-
       // LOG_INFO("send answer sdp [{}]", sdp);
-      LOG_INFO("[{}] send answer sdp to [{}]", user_id, remote_user_id);
+      LOG_INFO("[{}] send answer to [{}]", user_id, remote_user_id);
       json message = {{"type", "remote_sdp"},
                       {"sdp", sdp},
                       {"remote_user_id", user_id},
