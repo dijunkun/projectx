@@ -52,24 +52,7 @@ bool TransmissionManager::BindUserIdToWsHandle(
   return true;
 }
 
-bool TransmissionManager::ReleaseWsHandleFromTransmission(
-    websocketpp::connection_hdl hdl) {
-  for (auto trans_it = transmission_user_ws_hdl_list_.begin();
-       trans_it != transmission_user_ws_hdl_list_.end(); ++trans_it) {
-    auto hdl_list = trans_it->second;
-    for (auto it = hdl_list.begin(); it != hdl_list.end(); ++it) {
-      if (it->lock().get() == hdl.lock().get()) {
-        hdl_list.erase(it);
-        LOG_INFO("Remove ws handle [{}] from transmission [{}]",
-                 hdl.lock().get(), trans_it->first);
-        return true;
-      }
-    }
-  }
-  return false;
-}
-
-bool TransmissionManager::ReleaseUserIdFromTransmission(
+std::string TransmissionManager::ReleaseUserIdFromTransmission(
     websocketpp::connection_hdl hdl) {
   for (auto it = user_id_ws_hdl_list_.begin(); it != user_id_ws_hdl_list_.end();
        ++it) {
@@ -84,12 +67,12 @@ bool TransmissionManager::ReleaseUserIdFromTransmission(
           LOG_INFO("Remove user id [{}] from transmission [{}]", it->first,
                    trans_it->first);
           user_id_ws_hdl_list_.erase(it);
-          return true;
+          return trans_it->first;
         }
       }
     }
   }
-  return false;
+  return "";
 }
 
 websocketpp::connection_hdl TransmissionManager::GetWsHandle(
@@ -100,4 +83,12 @@ websocketpp::connection_hdl TransmissionManager::GetWsHandle(
     websocketpp::connection_hdl hdl;
     return hdl;
   }
+}
+
+std::string TransmissionManager::GetUserId(websocketpp::connection_hdl hdl) {
+  for (auto it = user_id_ws_hdl_list_.begin(); it != user_id_ws_hdl_list_.end();
+       ++it) {
+    if (it->second.lock().get() == hdl.lock().get()) return it->first;
+  }
+  return "";
 }
