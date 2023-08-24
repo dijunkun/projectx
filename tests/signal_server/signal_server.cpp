@@ -55,14 +55,16 @@ bool SignalServer::on_open(websocketpp::connection_hdl hdl) {
 
 bool SignalServer::on_close(websocketpp::connection_hdl hdl) {
   LOG_INFO("Websocket onnection [{}] closed", ws_connection_id_);
+  std::string user_id = transmission_manager_.GetUserId(hdl);
   std::string transmission_id =
       transmission_manager_.ReleaseUserIdFromTransmission(hdl);
 
-  std::vector<std::string> user_id_list =
-      transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
   json message = {{"type", "user_leave_transmission"},
                   {"transmission_id", transmission_id},
-                  {"user_id", transmission_manager_.GetUserId(hdl)}};
+                  {"user_id", user_id}};
+
+  std::vector<std::string> user_id_list =
+      transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
 
   for (const auto& user_id : user_id_list) {
     send_msg(transmission_manager_.GetWsHandle(user_id), message);

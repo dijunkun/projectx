@@ -64,6 +64,20 @@ int PeerConnection::Create(PeerConnectionParams params,
         }
         break;
       }
+      case "user_leave_transmission"_H: {
+        std::string user_id = j["user_id"];
+        LOG_INFO("Receive notification: user id [{}] leave transmission",
+                 user_id);
+        auto user_id_it = ice_transmission_list_.find(user_id);
+        if (user_id_it != ice_transmission_list_.end()) {
+          user_id_it->second->DestroyIceTransmission();
+          delete user_id_it->second;
+          user_id_it->second = nullptr;
+          ice_transmission_list_.erase(user_id_it);
+          LOG_INFO("Terminate transmission to user [{}]", user_id);
+        }
+        break;
+      }
       case "offer"_H: {
         std::string remote_sdp = j["sdp"].get<std::string>();
 
@@ -167,6 +181,20 @@ int PeerConnection::Join(PeerConnectionParams params,
           ice_transmission_list_[remote_user_id]->JoinTransmission();
         }
 
+        break;
+      }
+      case "user_leave_transmission"_H: {
+        std::string user_id = j["user_id"];
+        LOG_INFO("Receive notification: user id [{}] leave transmission",
+                 user_id);
+        auto user_id_it = ice_transmission_list_.find(user_id);
+        if (user_id_it != ice_transmission_list_.end()) {
+          user_id_it->second->DestroyIceTransmission();
+          delete user_id_it->second;
+          user_id_it->second = nullptr;
+          ice_transmission_list_.erase(user_id_it);
+          LOG_INFO("Terminate transmission to user [{}]", user_id);
+        }
         break;
       }
       case "ws_connection_id"_H: {

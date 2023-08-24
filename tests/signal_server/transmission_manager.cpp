@@ -88,6 +88,7 @@ websocketpp::connection_hdl TransmissionManager::GetWsHandle(
 std::string TransmissionManager::GetUserId(websocketpp::connection_hdl hdl) {
   for (auto it = user_id_ws_hdl_list_.begin(); it != user_id_ws_hdl_list_.end();
        ++it) {
+    LOG_INFO("[{}]", it->first);
     if (it->second.lock().get() == hdl.lock().get()) return it->first;
   }
   return "";

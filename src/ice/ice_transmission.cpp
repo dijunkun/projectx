@@ -25,7 +25,12 @@ IceTransmission::IceTransmission(
       ice_ws_transport_(ice_ws_transmission),
       on_receive_ice_msg_cb_(on_receive_ice_msg) {}
 
-IceTransmission::~IceTransmission() {}
+IceTransmission::~IceTransmission() {
+  if (ice_agent_) {
+    delete ice_agent_;
+    ice_agent_ = nullptr;
+  }
+}
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
   ice_agent_ = new IceAgent(ip, port);
@@ -75,21 +80,14 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
 }
 
 int IceTransmission::DestroyIceTransmission() {
-  if (ice_agent_) {
-    delete ice_agent_;
-  }
-  return 0;
+  LOG_INFO("[{}] Destroy ice transmission", user_id_);
+  return ice_agent_->DestoryIceAgent();
 }
 
 int IceTransmission::CreateTransmission(const std::string &transmission_id) {
-  LOG_INFO("Create transport");
+  LOG_INFO("[{}] Create transmission", user_id_);
   offer_peer_ = false;
   transmission_id_ = transmission_id;
-
-  // if (SignalStatus::Connected != signal_status_) {
-  //   LOG_ERROR("Not connect to signalserver");
-  //   return -1;
-  // }
 
   json message = {{"type", "create_transmission"},
                   {"transmission_id", transmission_id}};
@@ -98,7 +96,6 @@ int IceTransmission::CreateTransmission(const std::string &transmission_id) {
     LOG_INFO("Send msg: {}", message.dump().c_str());
   }
 
-  // CreateOffer();
   return 0;
 }
 
@@ -109,7 +106,7 @@ int IceTransmission::SetTransmissionId(const std::string &transmission_id) {
 }
 
 int IceTransmission::JoinTransmission() {
-  LOG_INFO("Join transport");
+  LOG_INFO("[{}] Join transmission", user_id_);
 
   CreateOffer();
   return 0;
