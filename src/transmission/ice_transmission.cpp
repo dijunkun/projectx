@@ -84,21 +84,6 @@ int IceTransmission::DestroyIceTransmission() {
   return ice_agent_->DestoryIceAgent();
 }
 
-int IceTransmission::CreateTransmission(const std::string &transmission_id) {
-  LOG_INFO("[{}] Create transmission", user_id_);
-  offer_peer_ = false;
-  transmission_id_ = transmission_id;
-
-  json message = {{"type", "create_transmission"},
-                  {"transmission_id", transmission_id}};
-  if (ice_ws_transport_) {
-    ice_ws_transport_->Send(message.dump());
-    LOG_INFO("Send msg: {}", message.dump().c_str());
-  }
-
-  return 0;
-}
-
 int IceTransmission::SetTransmissionId(const std::string &transmission_id) {
   transmission_id_ = transmission_id;
 
@@ -157,17 +142,6 @@ int IceTransmission::SendOffer() {
   return 0;
 }
 
-int IceTransmission::QueryRemoteSdp(std::string transmission_id) {
-  json message = {{"type", "query_remote_sdp"},
-                  {"transmission_id", transmission_id_}};
-  LOG_INFO("[{}] query remote sdp", user_id_);
-
-  if (ice_ws_transport_) {
-    ice_ws_transport_->Send(message.dump());
-  }
-  return 0;
-}
-
 int IceTransmission::CreateAnswer() {
   GetLocalSdp();
   return 0;
@@ -187,51 +161,7 @@ int IceTransmission::SendAnswer() {
   return 0;
 }
 
-int IceTransmission::SendOfferLocalCandidate(
-    const std::string &remote_candidate) {
-  json message = {{"type", "offer_candidate"},
-                  {"transmission_id", transmission_id_},
-                  {"sdp", remote_candidate}};
-  // LOG_INFO("Send candidate:\n{}", message.dump().c_str());
-  LOG_INFO("[{}] send candidate", user_id_);
-
-  if (ice_ws_transport_) {
-    ice_ws_transport_->Send(message.dump());
-  }
-  return 0;
-}
-
-int IceTransmission::SendAnswerLocalCandidate(
-    const std::string &remote_candidate) {
-  json message = {{"type", "answer_candidate"},
-                  {"transmission_id", transmission_id_},
-                  {"sdp", remote_candidate}};
-  // LOG_INFO("Send candidate:\n{}", message.dump().c_str());
-  LOG_INFO("[{}] send candidate", user_id_);
-
-  if (ice_ws_transport_) {
-    ice_ws_transport_->Send(message.dump());
-  }
-  return 0;
-}
-
 int IceTransmission::SendData(const char *data, size_t size) {
   ice_agent_->Send(data, size);
   return 0;
-}
-
-void IceTransmission::OnReceiveMessage(const std::string &msg) {
-  // auto j = json::parse(msg);
-  // LOG_INFO("msg: {}", msg.c_str());
-
-  // std::string type = j["type"];
-
-  // switch (HASH_STRING_PIECE(type.c_str())) {
-  //   case "offer"_H: {
-  //     remote_sdp_ = j["sdp"].get<std::string>();
-  //     break;
-  //   }
-  //   default:
-  //     break;
-  // }
 }

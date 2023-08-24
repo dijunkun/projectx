@@ -16,27 +16,21 @@ class IceTransmission {
 
   ~IceTransmission();
 
+ public:
   int InitIceTransmission(std::string &ip, int port);
 
   int DestroyIceTransmission();
 
-  int CreateTransmission(const std::string &transmission_id);
   int JoinTransmission();
 
   int SetTransmissionId(const std::string &transmission_id);
 
   int SendData(const char *data, size_t size);
 
-  void OnReceiveUserData(const char *data, size_t size);
-
-  void OnReceiveMessage(const std::string &msg);
-
  public:
   int GatherCandidates();
 
   int GetLocalSdp();
-
-  int QueryRemoteSdp(std::string transmission_id);
 
   int SetRemoteSdp(const std::string &remote_sdp);
 
@@ -49,10 +43,6 @@ class IceTransmission {
   int CreateAnswer();
 
   int SendAnswer();
-
-  int SendOfferLocalCandidate(const std::string &remote_candidate);
-
-  int SendAnswerLocalCandidate(const std::string &remote_candidate);
 
  private:
   IceAgent *ice_agent_ = nullptr;
