@@ -12,8 +12,7 @@ extern "C" {
 
 typedef struct Peer PeerPtr;
 
-typedef void (*OnReceiveBuffer)(unsigned char*, size_t, const char*,
-                                const size_t);
+typedef void (*OnReceiveBuffer)(const char*, size_t, const char*, size_t);
 
 typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
 

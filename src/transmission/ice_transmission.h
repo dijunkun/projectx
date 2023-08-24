@@ -9,10 +9,11 @@
 
 class IceTransmission {
  public:
-  IceTransmission(bool offer_peer, std::string &transmission_id,
-                  std::string &user_id, std::string &remote_user_id,
-                  WsTransmission *ice_ws_transmission,
-                  std::function<void(const char *, size_t)> on_receive_ice_msg);
+  IceTransmission(
+      bool offer_peer, std::string &transmission_id, std::string &user_id,
+      std::string &remote_user_id, WsTransmission *ice_ws_transmission,
+      std::function<void(const char *, size_t, const char *, size_t)>
+          on_receive_ice_msg);
 
   ~IceTransmission();
 
@@ -48,7 +49,8 @@ class IceTransmission {
   IceAgent *ice_agent_ = nullptr;
   WsTransmission *ice_ws_transport_ = nullptr;
   CongestionControl *congestion_control_ = nullptr;
-  std::function<void(const char *, size_t)> on_receive_ice_msg_cb_ = nullptr;
+  std::function<void(const char *, size_t, const char *, size_t)>
+      on_receive_ice_msg_cb_ = nullptr;
   std::string local_sdp_;
   std::string remote_sdp_;
   std::string local_candidates_;

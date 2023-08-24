@@ -14,7 +14,7 @@ static PeerConnection *peer_connection;
 
 PeerPtr *CreatePeer(const Params *params) {
   PeerPtr *peer_ptr = new PeerPtr;
-  peer_ptr->peer_connection = new PeerConnection();
+  peer_ptr->peer_connection = new PeerConnection(params->on_receive_buffer);
   peer_ptr->pc_params.cfg_path = params->cfg_path;
   peer_ptr->pc_params.on_receive_buffer = params->on_receive_buffer;
   peer_ptr->pc_params.net_status_report = params->net_status_report;

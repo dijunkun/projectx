@@ -9,7 +9,7 @@
 
 enum SignalStatus { Connecting = 0, Connected, Closed };
 
-typedef void (*OnReceiveBuffer)(unsigned char *, size_t, const char *,
+typedef void (*OnReceiveBuffer)(const char *, size_t, const char *,
                                 const size_t);
 
 typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
@@ -22,7 +22,7 @@ typedef struct {
 
 class PeerConnection {
  public:
-  PeerConnection();
+  PeerConnection(OnReceiveBuffer on_receive_buffer);
   ~PeerConnection();
 
  public:
@@ -59,12 +59,15 @@ class PeerConnection {
   IceTransmission *ice_transmission_ = nullptr;
   std::map<std::string, IceTransmission *> ice_transmission_list_;
   std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;
-  std::function<void(const char *, size_t)> on_receive_ice_msg_ = nullptr;
+  std::function<void(const char *, size_t, const char *, size_t)>
+      on_receive_ice_msg_ = nullptr;
   unsigned int ws_connection_id_ = 0;
   std::string user_id_ = "";
   std::string transmission_id_ = "";
   std::vector<std::string> user_id_list_;
   SignalStatus signal_status_ = SignalStatus::Closed;
+
+  OnReceiveBuffer on_receive_buffer_;
 };
 
 #endif

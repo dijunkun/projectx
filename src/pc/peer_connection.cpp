@@ -9,7 +9,8 @@
 
 using nlohmann::json;
 
-PeerConnection::PeerConnection() {}
+PeerConnection::PeerConnection(OnReceiveBuffer on_receive_buffer)
+    : on_receive_buffer_(on_receive_buffer) {}
 
 PeerConnection::~PeerConnection() {}
 
@@ -36,9 +37,9 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   on_receive_ws_msg_ = [this](const std::string &msg) { ProcessSignal(msg); };
 
-  on_receive_ice_msg_ = [this](const char *data, size_t size) {
-    std::string msg(data, size);
-    LOG_INFO("Receive data: [{}]", msg.c_str());
+  on_receive_ice_msg_ = [this](const char *data, size_t size,
+                               const char *user_id, size_t user_id_size) {
+    on_receive_buffer_(data, size, user_id, user_id_size);
   };
 
   ws_transport_ = new WsTransmission(on_receive_ws_msg_);
@@ -187,7 +188,6 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       break;
     }
     default: {
-      // ice_transmission_->OnReceiveMessage(msg);
       break;
     }
   }

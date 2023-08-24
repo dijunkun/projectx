@@ -17,7 +17,8 @@ const std::vector<std::string> ice_status = {
 IceTransmission::IceTransmission(
     bool offer_peer, std::string &transmission_id, std::string &user_id,
     std::string &remote_user_id, WsTransmission *ice_ws_transmission,
-    std::function<void(const char *, size_t)> on_receive_ice_msg)
+    std::function<void(const char *, size_t, const char *, size_t)>
+        on_receive_ice_msg)
     : offer_peer_(offer_peer),
       transmission_id_(transmission_id),
       user_id_(user_id),
@@ -69,10 +70,14 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
         }
       },
       [](juice_agent_t *agent, const char *data, size_t size, void *user_ptr) {
-        if (user_ptr &&
-            static_cast<IceTransmission *>(user_ptr)->on_receive_ice_msg_cb_) {
-          static_cast<IceTransmission *>(user_ptr)->on_receive_ice_msg_cb_(
-              data, size);
+        if (user_ptr) {
+          IceTransmission *ice_transmission_obj =
+              static_cast<IceTransmission *>(user_ptr);
+          if (ice_transmission_obj->on_receive_ice_msg_cb_) {
+            ice_transmission_obj->on_receive_ice_msg_cb_(
+                data, size, ice_transmission_obj->remote_user_id_.data(),
+                ice_transmission_obj->remote_user_id_.size());
+          }
         }
       },
       this);
