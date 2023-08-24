@@ -3,6 +3,7 @@
 
 #include <iostream>
 
+#include "congestion_control.h"
 #include "ice_agent.h"
 #include "ws_transmission.h"
 
@@ -56,6 +57,7 @@ class IceTransmission {
  private:
   IceAgent *ice_agent_ = nullptr;
   WsTransmission *ice_ws_transport_ = nullptr;
+  CongestionControl *congestion_control_ = nullptr;
   std::function<void(const char *, size_t)> on_receive_ice_msg_cb_ = nullptr;
   std::string local_sdp_;
   std::string remote_sdp_;

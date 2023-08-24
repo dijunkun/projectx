@@ -80,7 +80,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
 }
 
 int IceTransmission::DestroyIceTransmission() {
-  LOG_INFO("[{}] Destroy ice transmission", user_id_);
+  LOG_INFO("[{}->{}] Destroy ice transmission", user_id_, remote_user_id_);
   return ice_agent_->DestoryIceAgent();
 }
 
