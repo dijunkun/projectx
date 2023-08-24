@@ -25,6 +25,7 @@ end
 add_packages("spdlog")
 
 includes("thirdparty")
+includes("application/remote_desk")
 
 target("log")
     set_kind("headeronly")
