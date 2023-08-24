@@ -66,6 +66,12 @@ bool SignalServer::on_close(websocketpp::connection_hdl hdl) {
   std::vector<std::string> user_id_list =
       transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
 
+  if (user_id_list.empty()) {
+    transmission_list_.erase(transmission_id);
+    LOG_INFO("Release transmission [{}] due to no user in this transmission",
+             transmission_id);
+  }
+
   for (const auto& user_id : user_id_list) {
     send_msg(transmission_manager_.GetWsHandle(user_id), message);
   }
@@ -196,7 +202,7 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
 
       // LOG_INFO("send answer sdp [{}]", sdp);
       LOG_INFO("[{}] send answer to [{}]", user_id, remote_user_id);
-      json message = {{"type", "remote_sdp"},
+      json message = {{"type", "answer"},
                       {"sdp", sdp},
                       {"remote_user_id", user_id},
                       {"transmission_id", transmission_id}};

@@ -29,15 +29,23 @@ class PeerConnection {
   int Create(PeerConnectionParams params,
              const std::string &transmission_id = "",
              const std::string &user_id = "");
+
   int Join(PeerConnectionParams params, const std::string &transmission_id,
            const std::string &user_id = "");
-  int Destroy();
 
-  int RequestTransmissionMemberList(const std::string &transmission_id);
+  int Destroy();
 
   SignalStatus GetSignalStatus();
 
   int SendData(const char *data, size_t size);
+
+ private:
+  int Init(PeerConnectionParams params, const std::string &transmission_id,
+           const std::string &user_id);
+
+  void ProcessSignal(const std::string &signal);
+
+  int RequestTransmissionMemberList(const std::string &transmission_id);
 
  private:
   std::string uri_ = "";
