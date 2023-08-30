@@ -32,7 +32,7 @@ package("ffmpeg")
         add_configs("hardcoded-tables", {description = "Enable hardcoded tables.", default = true, type = "boolean"})
     end
 
-    add_links("avfilter", "avdevice", "avformat", "avcodec", "swscale", "swresample", "avutil")
+    -- add_links("avfilter", "avdevice", "avformat", "avcodec", "swscale", "swresample", "avutil")
     if is_plat("macosx") then
         add_frameworks("CoreFoundation", "Foundation", "CoreVideo", "CoreMedia", "AudioToolbox", "VideoToolbox", "Security")
     elseif is_plat("linux") then

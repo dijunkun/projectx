@@ -50,6 +50,7 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   do {
   } while (SignalStatus::Connected != GetSignalStatus());
+  VideoEncoder::Init();
 
   return 0;
 }
@@ -215,7 +216,35 @@ int PeerConnection::Destroy() {
 
 SignalStatus PeerConnection::GetSignalStatus() { return signal_status_; }
 
-int PeerConnection::SendData(const char *data, size_t size) {
+int PeerConnection::SendVideoData(const char *data, size_t size) {
+  int ret = Encode((uint8_t *)data, size);
+  if (0 != ret) {
+    LOG_ERROR("Encode failed");
+    return -1;
+  }
+
+  // for (auto ice_trans : ice_transmission_list_) {
+  //   ice_trans.second->SendData(data, size);
+  // }
+  return 0;
+}
+
+int PeerConnection::OnEncodedImage(char *encoded_packets, size_t size) {
+  for (auto ice_trans : ice_transmission_list_) {
+    ice_trans.second->SendData(encoded_packets, size);
+  }
+
+  return 0;
+}
+
+int PeerConnection::SendAudioData(const char *data, size_t size) {
+  for (auto ice_trans : ice_transmission_list_) {
+    ice_trans.second->SendData(data, size);
+  }
+  return 0;
+}
+
+int PeerConnection::SendUserData(const char *data, size_t size) {
   for (auto ice_trans : ice_transmission_list_) {
     ice_trans.second->SendData(data, size);
   }

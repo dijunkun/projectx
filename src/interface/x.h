@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 enum ws_status { WS_CONNECTING = 0, WS_OPEN, WS_FAILED, WS_CLOSED, WS_UNKNOWN };
+enum DATA_TYPE { VIDEO = 0, AUDIO, USER };
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,7 +31,8 @@ int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id,
 int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
                    const char* user_id);
 
-int SendData(PeerPtr* peer_ptr, const char* data, size_t size);
+int SendData(PeerPtr* peer_ptr, DATA_TYPE data_type, const char* data,
+             size_t size);
 
 #ifdef __cplusplus
 }

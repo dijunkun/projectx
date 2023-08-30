@@ -5,6 +5,8 @@
 #include <map>
 
 #include "ice_transmission.h"
+#include "nv_decoder.h"
+#include "nv_encoder.h"
 #include "ws_transmission.h"
 
 enum SignalStatus { Connecting = 0, Connected, Closed };
@@ -20,7 +22,7 @@ typedef struct {
   NetStatusReport net_status_report;
 } PeerConnectionParams;
 
-class PeerConnection {
+class PeerConnection : public VideoEncoder, VideoDecoder {
  public:
   PeerConnection(OnReceiveBuffer on_receive_buffer);
   ~PeerConnection();
@@ -37,7 +39,9 @@ class PeerConnection {
 
   SignalStatus GetSignalStatus();
 
-  int SendData(const char *data, size_t size);
+  int SendVideoData(const char *data, size_t size);
+  int SendAudioData(const char *data, size_t size);
+  int SendUserData(const char *data, size_t size);
 
  private:
   int Init(PeerConnectionParams params, const std::string &transmission_id,
@@ -46,6 +50,9 @@ class PeerConnection {
   void ProcessSignal(const std::string &signal);
 
   int RequestTransmissionMemberList(const std::string &transmission_id);
+
+ private:
+  int OnEncodedImage(char *encoded_packets, size_t size) override;
 
  private:
   std::string uri_ = "";
@@ -68,6 +75,8 @@ class PeerConnection {
   SignalStatus signal_status_ = SignalStatus::Closed;
 
   OnReceiveBuffer on_receive_buffer_;
+
+ private:
 };
 
 #endif

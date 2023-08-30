@@ -41,8 +41,15 @@ int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
   return 0;
 }
 
-int SendData(PeerPtr *peer_ptr, const char *data, size_t size) {
-  peer_ptr->peer_connection->SendData(data, size);
+int SendData(PeerPtr *peer_ptr, DATA_TYPE data_type, const char *data,
+             size_t size) {
+  if (DATA_TYPE::VIDEO == data_type) {
+    peer_ptr->peer_connection->SendVideoData(data, size);
+  } else if (DATA_TYPE::AUDIO == data_type) {
+    peer_ptr->peer_connection->SendAudioData(data, size);
+  } else if (DATA_TYPE::USER == data_type) {
+    peer_ptr->peer_connection->SendUserData(data, size);
+  }
   return 0;
 }
 

@@ -22,13 +22,16 @@ int main(int argc, char** argv) {
 
   std::string msg = "Hello world";
 
-  int i = 100;
-  while (i--) {
-    getchar();
-    std::cout << "Send msg: " << msg << std::endl;
-    SendData(peer, msg.data(), msg.size());
+  // int i = 100;
+  // while (i--) {
+  //   getchar();
+  //   std::cout << "Send msg: " << msg << std::endl;
+  //   SendData(peer, DATA_TYPE::USER, msg.data(), msg.size());
+  // }
+
+  // getchar();
+  while (1) {
   }
 
-  getchar();
   return 0;
 }

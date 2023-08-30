@@ -5,8 +5,8 @@
 
 #include "congestion_control.h"
 #include "ice_agent.h"
+#include "ikcp.h"
 #include "ws_transmission.h"
-
 class IceTransmission {
  public:
   IceTransmission(
@@ -61,6 +61,12 @@ class IceTransmission {
   std::string remote_user_id_ = "";
   bool offer_peer_ = true;
   std::string remote_ice_username_ = "";
+  juice_state_t state_ = JUICE_STATE_DISCONNECTED;
+
+ private:
+  ikcpcb *kcp_ = nullptr;
+  char kcp_complete_buffer_[2560 * 1440 * 4];
+  std::mutex mtx_;
 };
 
 #endif

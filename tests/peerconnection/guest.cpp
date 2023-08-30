@@ -4,10 +4,10 @@
 
 void GuestReceiveBuffer(const char* data, size_t size, const char* user_id,
                         size_t user_id_size) {
-  std::string msg(data, size);
-  std::string user(user_id, user_id_size);
+  // std::string msg(data, size);
+  // std::string user(user_id, user_id_size);
 
-  std::cout << "Receive: [" << user << "] " << msg << std::endl;
+  // std::cout << "Receive: [" << user << "] " << msg << std::endl;
 }
 
 int main(int argc, char** argv) {
@@ -26,12 +26,15 @@ int main(int argc, char** argv) {
   std::string msg = "Hello world";
 
   int i = 100;
-  while (i--) {
-    getchar();
-    std::cout << "Send msg: " << msg << std::endl;
-    SendData(peer, msg.data(), msg.size());
-  }
+  // while (i--) {
+  //   getchar();
+  //   std::cout << "Send msg: " << msg << std::endl;
+  //   SendData(peer, DATA_TYPE::USER, msg.data(), msg.size());
+  // }
 
-  getchar();
+  // getchar();
+
+  while (1) {
+  }
   return 0;
 }

@@ -1,5 +1,6 @@
 #include "ice_transmission.h"
 
+#include <chrono>
 #include <map>
 #include <nlohmann/json.hpp>
 #include <thread>
@@ -7,7 +8,57 @@
 #include "common.h"
 #include "log.h"
 
+#if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
+#include <windows.h>
+#elif !defined(__unix)
+#define __unix
+#endif
+
+#ifdef __unix
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
+
 using nlohmann::json;
+static int count = 1;
+
+static inline void itimeofday(long *sec, long *usec) {
+#if defined(__unix)
+  struct timeval time;
+  gettimeofday(&time, NULL);
+  if (sec) *sec = time.tv_sec;
+  if (usec) *usec = time.tv_usec;
+#else
+  static long mode = 0, addsec = 0;
+  BOOL retval;
+  static IINT64 freq = 1;
+  IINT64 qpc;
+  if (mode == 0) {
+    retval = QueryPerformanceFrequency((LARGE_INTEGER *)&freq);
+    freq = (freq == 0) ? 1 : freq;
+    retval = QueryPerformanceCounter((LARGE_INTEGER *)&qpc);
+    addsec = (long)time(NULL);
+    addsec = addsec - (long)((qpc / freq) & 0x7fffffff);
+    mode = 1;
+  }
+  retval = QueryPerformanceCounter((LARGE_INTEGER *)&qpc);
+  retval = retval * 2;
+  if (sec) *sec = (long)(qpc / freq) + addsec;
+  if (usec) *usec = (long)((qpc % freq) * 1000000 / freq);
+#endif
+}
+
+static inline IINT64 iclock64(void) {
+  long s, u;
+  IINT64 value;
+  itimeofday(&s, &u);
+  value = ((IINT64)s) * 1000 + (u / 1000);
+  return value;
+}
+
+static inline IUINT32 iclock() { return (IUINT32)(iclock64() & 0xfffffffful); }
 
 const std::vector<std::string> ice_status = {
     "JUICE_STATE_DISCONNECTED", "JUICE_STATE_GATHERING",
@@ -31,9 +82,45 @@ IceTransmission::~IceTransmission() {
     delete ice_agent_;
     ice_agent_ = nullptr;
   }
+  ikcp_release(kcp_);
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
+  kcp_ = ikcp_create(0x11223344, (void *)this);
+  ikcp_setoutput(kcp_,
+                 [](const char *buf, int len, ikcpcb *kcp, void *user) -> int {
+                   IceTransmission *ice_transmission_obj =
+                       static_cast<IceTransmission *>(user);
+                   LOG_ERROR("Real send size: {}", len);
+                   return ice_transmission_obj->ice_agent_->Send(buf, len);
+                 });
+  // ikcp_wndsize(kcp_, 1280, 1280);
+  ikcp_nodelay(kcp_, 0, 40, 0, 0);
+  ikcp_setmtu(kcp_, 4000);
+  // kcp_->rx_minrto = 10;
+  // kcp_->fastresend = 1;
+  std::thread kcp_update_thread([this]() {
+    while (1) {
+      auto clock = std::chrono::duration_cast<std::chrono::milliseconds>(
+                       std::chrono::system_clock::now().time_since_epoch())
+                       .count();
+      mtx_.lock();
+      ikcp_update(kcp_, iclock());
+
+      int len = 0;
+      int total_len = 0;
+      while (1) {
+        len = ikcp_recv(kcp_, kcp_complete_buffer_ + len, 1400);
+        total_len += len;
+        if (len <= 0) break;
+      }
+
+      mtx_.unlock();
+      std::this_thread::sleep_for(std::chrono::milliseconds(2));
+    }
+  });
+  kcp_update_thread.detach();
+
   ice_agent_ = new IceAgent(ip, port);
 
   ice_agent_->CreateIceAgent(
@@ -43,6 +130,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
               static_cast<IceTransmission *>(user_ptr);
           LOG_INFO("[{}->{}] state_change: {}", ice_transmission_obj->user_id_,
                    ice_transmission_obj->remote_user_id_, ice_status[state]);
+          ice_transmission_obj->state_ = state;
         } else {
           LOG_INFO("state_change: {}", ice_status[state]);
         }
@@ -74,9 +162,28 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
           IceTransmission *ice_transmission_obj =
               static_cast<IceTransmission *>(user_ptr);
           if (ice_transmission_obj->on_receive_ice_msg_cb_) {
-            ice_transmission_obj->on_receive_ice_msg_cb_(
-                data, size, ice_transmission_obj->remote_user_id_.data(),
-                ice_transmission_obj->remote_user_id_.size());
+            LOG_ERROR("[{}] Receive size: {}", (void *)user_ptr, size);
+            ice_transmission_obj->mtx_.lock();
+            int ret = ikcp_input(ice_transmission_obj->kcp_, data, size);
+            // ikcp_update(ice_transmission_obj->kcp_, iclock());
+            LOG_ERROR("ikcp_input {}", ret);
+            // auto clock =
+            //     std::chrono::duration_cast<std::chrono::milliseconds>(
+            //         std::chrono::system_clock::now().time_since_epoch())
+            //         .count();
+
+            // ikcp_update(ice_transmission_obj->kcp_, clock);
+
+            ice_transmission_obj->mtx_.unlock();
+
+            // ice_transmission_obj->on_receive_ice_msg_cb_(
+            //     ice_transmission_obj->kcp_complete_buffer_, total_len,
+            //     ice_transmission_obj->remote_user_id_.data(),
+            //     ice_transmission_obj->remote_user_id_.size());
+
+            // ice_transmission_obj->on_receive_ice_msg_cb_(
+            //     data, size, ice_transmission_obj->remote_user_id_.data(),
+            //     ice_transmission_obj->remote_user_id_.size());
           }
         }
       },
@@ -167,6 +274,21 @@ int IceTransmission::SendAnswer() {
 }
 
 int IceTransmission::SendData(const char *data, size_t size) {
-  ice_agent_->Send(data, size);
+  if (JUICE_STATE_COMPLETED == state_) {
+    LOG_ERROR("[{}] Wanna send size: {}", (void *)this, size);
+    mtx_.lock();
+
+    if (ikcp_waitsnd(kcp_) > kcp_->snd_wnd) {
+      // LOG_ERROR("Skip frame");
+      // mtx_.unlock();
+      // return 0;
+      ikcp_flush(kcp_);
+    }
+    int ret = ikcp_send(kcp_, data, size / 100);
+    LOG_ERROR("ikcp_send {}, wnd [{} | {}]", ret, ikcp_waitsnd(kcp_),
+              kcp_->snd_wnd);
+    mtx_.unlock();
+    // ice_agent_->Send(data, size);
+  }
   return 0;
 }
