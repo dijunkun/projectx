@@ -16,6 +16,7 @@ class VideoDecoder {
   NvDecoder* decoder = nullptr;
   bool get_first_keyframe_ = false;
   bool skip_frame_ = false;
+  FILE* file_ = nullptr;
 };
 
 #endif

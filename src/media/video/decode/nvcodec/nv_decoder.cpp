@@ -2,8 +2,23 @@
 
 #include "log.h"
 
-VideoDecoder::VideoDecoder() {}
-VideoDecoder::~VideoDecoder() {}
+#define SAVE_ENCODER_STREAM 0
+
+VideoDecoder::VideoDecoder() {
+  if (SAVE_ENCODER_STREAM) {
+    file_ = fopen("decode_stream.h264", "w+b");
+    if (!file_) {
+      LOG_WARN("Fail to open stream.h264");
+    }
+  }
+}
+VideoDecoder::~VideoDecoder() {
+  if (SAVE_ENCODER_STREAM && file_) {
+    fflush(file_);
+    fclose(file_);
+    file_ = nullptr;
+  }
+}
 
 int VideoDecoder::Init() {
   ck(cuInit(0));
@@ -34,7 +49,11 @@ int VideoDecoder::Decode(const uint8_t *pData, int nSize) {
   }
 
   if ((*(pData + 4) & 0x1f) == 0x07) {
-    // LOG_WARN("Receive key frame");
+    LOG_WARN("Receive key frame");
+  }
+
+  if (SAVE_ENCODER_STREAM) {
+    fwrite((unsigned char *)pData, 1, nSize, file_);
   }
 
   int ret = decoder->Decode(pData, nSize);
@@ -51,10 +70,12 @@ int VideoDecoder::GetFrame(uint8_t *yuv_data, uint32_t &width, uint32_t &height,
     uint8_t *data = nullptr;
     data = decoder->GetFrame();
     if (data) {
-      yuv_data = data;
+      // yuv_data = data;
+
       width = decoder->GetWidth();
       height = decoder->GetHeight();
       size = width * height * 3 / 2;
+      memcpy(yuv_data, data, size);
       return 0;
 
       return -1;

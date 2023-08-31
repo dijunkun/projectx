@@ -6,6 +6,7 @@
 #include <thread>
 
 #include "common.h"
+#include "ikcp.h"
 #include "log.h"
 
 #if defined(WIN32) || defined(_WIN32) || defined(WIN64) || defined(_WIN64)
@@ -82,42 +83,67 @@ IceTransmission::~IceTransmission() {
     delete ice_agent_;
     ice_agent_ = nullptr;
   }
-  ikcp_release(kcp_);
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
-  kcp_ = ikcp_create(0x11223344, (void *)this);
-  ikcp_setoutput(kcp_,
-                 [](const char *buf, int len, ikcpcb *kcp, void *user) -> int {
-                   IceTransmission *ice_transmission_obj =
-                       static_cast<IceTransmission *>(user);
-                   LOG_ERROR("Real send size: {}", len);
-                   return ice_transmission_obj->ice_agent_->Send(buf, len);
-                 });
-  // ikcp_wndsize(kcp_, 1280, 1280);
-  ikcp_nodelay(kcp_, 0, 40, 0, 0);
-  ikcp_setmtu(kcp_, 4000);
-  // kcp_->rx_minrto = 10;
-  // kcp_->fastresend = 1;
   std::thread kcp_update_thread([this]() {
-    while (1) {
+    int ret = 0;
+    ikcpcb *kcp = ikcp_create(0x11223344, (void *)this);
+    ikcp_setoutput(
+        kcp, [](const char *buf, int len, ikcpcb *kcp, void *user) -> int {
+          IceTransmission *ice_transmission_obj =
+              static_cast<IceTransmission *>(user);
+          return ice_transmission_obj->ice_agent_->Send(buf, len);
+        });
+    ikcp_wndsize(kcp, 1024, 1280);
+    ikcp_nodelay(kcp, 1, 20, 2, 1);
+    // ikcp_setmtu(kcp_, 4000);
+    // kcp_->rx_minrto = 10;
+    // kcp_->fastresend = 1;
+
+    while (!kcp_stop_) {
       auto clock = std::chrono::duration_cast<std::chrono::milliseconds>(
                        std::chrono::system_clock::now().time_since_epoch())
                        .count();
-      mtx_.lock();
-      ikcp_update(kcp_, iclock());
+
+      ikcp_update(kcp, clock);
+
+      if (!send_ringbuffer_.isEmpty()) {
+        RingBuffer::Data buffer;
+        if (ikcp_waitsnd(kcp) <= kcp->snd_wnd * 2) {
+          send_ringbuffer_.pop(buffer);
+          ret = ikcp_send(kcp, buffer.data(), buffer.size());
+        }
+      }
+
+      if (!recv_ringbuffer_.isEmpty()) {
+        RingBuffer::Data buffer;
+        recv_ringbuffer_.pop(buffer);
+        ret = ikcp_input(kcp, buffer.data(), buffer.size());
+      }
 
       int len = 0;
       int total_len = 0;
       while (1) {
-        len = ikcp_recv(kcp_, kcp_complete_buffer_ + len, 1400);
+        len = ikcp_recv(kcp, kcp_complete_buffer_ + len, 400000);
+
         total_len += len;
-        if (len <= 0) break;
+
+        if (len <= 0) {
+          if (on_receive_ice_msg_cb_ && total_len > 0) {
+            // LOG_ERROR("Receive size: {}", total_len);
+            on_receive_ice_msg_cb_(kcp_complete_buffer_, total_len,
+                                   remote_user_id_.data(),
+                                   remote_user_id_.size());
+          }
+          break;
+        }
       }
 
-      mtx_.unlock();
-      std::this_thread::sleep_for(std::chrono::milliseconds(2));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+
+    ikcp_release(kcp);
   });
   kcp_update_thread.detach();
 
@@ -151,6 +177,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
           if (ice_transmission_obj->offer_peer_) {
             ice_transmission_obj->GetLocalSdp();
             ice_transmission_obj->SendOffer();
+
           } else {
             ice_transmission_obj->CreateAnswer();
             ice_transmission_obj->SendAnswer();
@@ -162,19 +189,18 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
           IceTransmission *ice_transmission_obj =
               static_cast<IceTransmission *>(user_ptr);
           if (ice_transmission_obj->on_receive_ice_msg_cb_) {
-            LOG_ERROR("[{}] Receive size: {}", (void *)user_ptr, size);
-            ice_transmission_obj->mtx_.lock();
-            int ret = ikcp_input(ice_transmission_obj->kcp_, data, size);
+            ice_transmission_obj->recv_ringbuffer_.push(
+                std::move(RingBuffer::Data(data, size)));
+
+            // int ret = ikcp_input(ice_transmission_obj->kcp_, data, size);
             // ikcp_update(ice_transmission_obj->kcp_, iclock());
-            LOG_ERROR("ikcp_input {}", ret);
+            // LOG_ERROR("ikcp_input {}", ret);
             // auto clock =
             //     std::chrono::duration_cast<std::chrono::milliseconds>(
             //         std::chrono::system_clock::now().time_since_epoch())
             //         .count();
 
             // ikcp_update(ice_transmission_obj->kcp_, clock);
-
-            ice_transmission_obj->mtx_.unlock();
 
             // ice_transmission_obj->on_receive_ice_msg_cb_(
             //     ice_transmission_obj->kcp_complete_buffer_, total_len,
@@ -193,6 +219,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
 
 int IceTransmission::DestroyIceTransmission() {
   LOG_INFO("[{}->{}] Destroy ice transmission", user_id_, remote_user_id_);
+  kcp_stop_ = true;
   return ice_agent_->DestoryIceAgent();
 }
 
@@ -275,20 +302,8 @@ int IceTransmission::SendAnswer() {
 
 int IceTransmission::SendData(const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
-    LOG_ERROR("[{}] Wanna send size: {}", (void *)this, size);
-    mtx_.lock();
-
-    if (ikcp_waitsnd(kcp_) > kcp_->snd_wnd) {
-      // LOG_ERROR("Skip frame");
-      // mtx_.unlock();
-      // return 0;
-      ikcp_flush(kcp_);
-    }
-    int ret = ikcp_send(kcp_, data, size / 100);
-    LOG_ERROR("ikcp_send {}, wnd [{} | {}]", ret, ikcp_waitsnd(kcp_),
-              kcp_->snd_wnd);
-    mtx_.unlock();
-    // ice_agent_->Send(data, size);
+    LOG_ERROR("Send size: {}", size);
+    send_ringbuffer_.push(std::move(RingBuffer::Data(data, size)));
   }
   return 0;
 }

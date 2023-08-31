@@ -75,6 +75,7 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   SignalStatus signal_status_ = SignalStatus::Closed;
 
   OnReceiveBuffer on_receive_buffer_;
+  char *nv12_data_ = nullptr;
 
  private:
 };

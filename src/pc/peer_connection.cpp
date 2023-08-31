@@ -12,7 +12,12 @@ using nlohmann::json;
 PeerConnection::PeerConnection(OnReceiveBuffer on_receive_buffer)
     : on_receive_buffer_(on_receive_buffer) {}
 
-PeerConnection::~PeerConnection() {}
+PeerConnection::~PeerConnection() {
+  if (nv12_data_) {
+    delete nv12_data_;
+    nv12_data_ = nullptr;
+  }
+}
 
 int PeerConnection::Init(PeerConnectionParams params,
                          const std::string &transmission_id,
@@ -39,7 +44,17 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   on_receive_ice_msg_ = [this](const char *data, size_t size,
                                const char *user_id, size_t user_id_size) {
-    on_receive_buffer_(data, size, user_id, user_id_size);
+    int num_frame_returned = Decode((uint8_t *)data, size);
+
+    uint32_t width = 0;
+    uint32_t height = 0;
+    uint32_t frame_size = 0;
+    for (size_t i = 0; i < num_frame_returned; ++i) {
+      int ret = GetFrame((uint8_t *)nv12_data_, width, height, frame_size);
+
+      on_receive_buffer_(nv12_data_, width * height * 3 / 2, user_id,
+                         user_id_size);
+    }
   };
 
   ws_transport_ = new WsTransmission(on_receive_ws_msg_);
@@ -51,6 +66,8 @@ int PeerConnection::Init(PeerConnectionParams params,
   do {
   } while (SignalStatus::Connected != GetSignalStatus());
   VideoEncoder::Init();
+  VideoDecoder::Init();
+  nv12_data_ = new char[1280 * 720 * 3 / 2];
 
   return 0;
 }

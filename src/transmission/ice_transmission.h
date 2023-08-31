@@ -5,7 +5,7 @@
 
 #include "congestion_control.h"
 #include "ice_agent.h"
-#include "ikcp.h"
+#include "ringbuffer.h"
 #include "ws_transmission.h"
 class IceTransmission {
  public:
@@ -64,9 +64,12 @@ class IceTransmission {
   juice_state_t state_ = JUICE_STATE_DISCONNECTED;
 
  private:
-  ikcpcb *kcp_ = nullptr;
+  // ikcpcb *kcp_ = nullptr;
   char kcp_complete_buffer_[2560 * 1440 * 4];
   std::mutex mtx_;
+  RingBuffer send_ringbuffer_;
+  RingBuffer recv_ringbuffer_;
+  bool kcp_stop_ = false;
 };
 
 #endif

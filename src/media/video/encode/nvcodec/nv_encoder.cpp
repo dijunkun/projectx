@@ -8,9 +8,9 @@
 
 VideoEncoder::VideoEncoder() {
   if (SAVE_ENCODER_STREAM) {
-    file_ = fopen("saved/stream.h264", "w+b");
+    file_ = fopen("encode_stream.h264", "w+b");
     if (!file_) {
-      LOG_WARN("Fail to open saved/stream.h264");
+      LOG_WARN("Fail to open stream.h264");
     }
   }
 }
@@ -79,7 +79,7 @@ int VideoEncoder::Encode(const uint8_t *pData, int nSize) {
     return -1;
   }
 
-  if (0 == seq_++ % (30 * 5)) {
+  if (0 == seq_++ % (30)) {
     ForceIdr();
   }
 
