@@ -4,7 +4,7 @@ package("ffmpeg")
     set_license("GPL-3.0")
 
     if is_plat("windows", "mingw") then
-        -- use pre-built static lib
+        -- use vcpkg static lib
         -- add_urls("https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-$(version)-full_build-shared.7z")
         -- add_versions("5.1.2", "d9eb97b72d7cfdae4d0f7eaea59ccffb8c364d67d88018ea715d5e2e193f00e9")
 
