@@ -83,10 +83,17 @@ IceTransmission::~IceTransmission() {
     delete ice_agent_;
     ice_agent_ = nullptr;
   }
+
+  if (kcp_update_thread_ && kcp_update_thread_->joinable()) {
+    kcp_update_thread_->join();
+  }
+
+  delete kcp_update_thread_;
+  kcp_update_thread_ = nullptr;
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
-  std::thread kcp_update_thread([this]() {
+  kcp_update_thread_ = new std::thread([this]() {
     int ret = 0;
     ikcpcb *kcp = ikcp_create(0x11223344, (void *)this);
     ikcp_setoutput(
@@ -145,7 +152,6 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
 
     ikcp_release(kcp);
   });
-  kcp_update_thread.detach();
 
   ice_agent_ = new IceAgent(ip, port);
 
@@ -302,7 +308,6 @@ int IceTransmission::SendAnswer() {
 
 int IceTransmission::SendData(const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
-    LOG_ERROR("Send size: {}", size);
     send_ringbuffer_.push(std::move(RingBuffer::Data(data, size)));
   }
   return 0;

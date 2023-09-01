@@ -1,6 +1,7 @@
 # Xmake cache
 .xmake/
 build/
+thirdparty/ffmpeg/lib/*
 
 # MacOS Cache
 .DS_Store

@@ -70,6 +70,7 @@ class IceTransmission {
   RingBuffer send_ringbuffer_;
   RingBuffer recv_ringbuffer_;
   bool kcp_stop_ = false;
+  std::thread *kcp_update_thread_ = nullptr;
 };
 
 #endif

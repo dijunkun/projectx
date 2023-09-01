@@ -49,7 +49,7 @@ int VideoDecoder::Decode(const uint8_t *pData, int nSize) {
   }
 
   if ((*(pData + 4) & 0x1f) == 0x07) {
-    LOG_WARN("Receive key frame");
+    // LOG_WARN("Receive key frame");
   }
 
   if (SAVE_ENCODER_STREAM) {

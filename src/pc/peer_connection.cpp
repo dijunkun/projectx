@@ -129,6 +129,12 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       user_id_list_ = j["user_id_list"];
       std::string transmission_id = j["transmission_id"];
 
+      if (user_id_list_.empty()) {
+        LOG_WARN("Wait for host create transmission [{}]", transmission_id);
+        RequestTransmissionMemberList(transmission_id);
+        break;
+      }
+
       LOG_INFO("Transmission [{}] members: [", transmission_id);
       for (auto user_id : user_id_list_) {
         LOG_INFO("{}", user_id);
