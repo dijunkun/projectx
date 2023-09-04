@@ -79,7 +79,7 @@ int VideoEncoder::Encode(const uint8_t *pData, int nSize) {
     return -1;
   }
 
-  if (0 == seq_++ % (30)) {
+  if (0 == seq_++ % (30 * 5)) {
     ForceIdr();
   }
 

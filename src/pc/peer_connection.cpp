@@ -254,6 +254,7 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
 
 int PeerConnection::OnEncodedImage(char *encoded_packets, size_t size) {
   for (auto ice_trans : ice_transmission_list_) {
+    LOG_ERROR("H264 frame size: [{}]", size);
     ice_trans.second->SendData(encoded_packets, size);
   }
 
