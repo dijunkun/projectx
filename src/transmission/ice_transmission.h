@@ -6,6 +6,7 @@
 #include "congestion_control.h"
 #include "ice_agent.h"
 #include "ringbuffer.h"
+#include "rtp_packet.h"
 #include "ws_transmission.h"
 class IceTransmission {
  public:
@@ -67,8 +68,8 @@ class IceTransmission {
   // ikcpcb *kcp_ = nullptr;
   char kcp_complete_buffer_[2560 * 1440 * 4];
   std::mutex mtx_;
-  RingBuffer send_ringbuffer_;
-  RingBuffer recv_ringbuffer_;
+  RingBuffer<RtpPacket> send_ringbuffer_;
+  RingBuffer<RtpPacket> recv_ringbuffer_;
   bool kcp_stop_ = false;
   std::thread *kcp_update_thread_ = nullptr;
 };

@@ -66,17 +66,21 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
       ikcp_update(kcp, clock);
 
       if (!send_ringbuffer_.isEmpty()) {
-        RingBuffer::Data buffer;
+        // Data buffer;
+        RtpPacket buffer;
         if (ikcp_waitsnd(kcp) <= kcp->snd_wnd * 2) {
           send_ringbuffer_.pop(buffer);
-          ret = ikcp_send(kcp, buffer.data(), buffer.size());
+          // ret = ikcp_send(kcp, buffer.data(), buffer.size());
+          ret = ikcp_send(kcp, (const char *)buffer.Buffer(), buffer.Size());
         }
       }
 
       if (!recv_ringbuffer_.isEmpty()) {
-        RingBuffer::Data buffer;
+        // Data buffer;
+        RtpPacket buffer;
         recv_ringbuffer_.pop(buffer);
-        ret = ikcp_input(kcp, buffer.data(), buffer.size());
+        // ret = ikcp_input(kcp, buffer.data(), buffer.size());
+        ret = ikcp_input(kcp, (const char *)buffer.Buffer(), buffer.Size());
       }
 
       int len = 0;
@@ -145,8 +149,11 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
           IceTransmission *ice_transmission_obj =
               static_cast<IceTransmission *>(user_ptr);
           if (ice_transmission_obj->on_receive_ice_msg_cb_) {
-            ice_transmission_obj->recv_ringbuffer_.push(
-                std::move(RingBuffer::Data(data, size)));
+            // ice_transmission_obj->recv_ringbuffer_.push(
+            //     std::move(Data(data, size)));
+
+            RtpPacket packet((uint8_t *)data, size);
+            ice_transmission_obj->recv_ringbuffer_.push(packet);
 
             // int ret = ikcp_input(ice_transmission_obj->kcp_, data, size);
             // ikcp_update(ice_transmission_obj->kcp_, iclock());
@@ -258,7 +265,18 @@ int IceTransmission::SendAnswer() {
 
 int IceTransmission::SendData(const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
-    send_ringbuffer_.push(std::move(RingBuffer::Data(data, size)));
+    // send_ringbuffer_.push(std::move(Data(data, size)));
+
+    int num = 0;
+    for (num = 0; num * 1400 < size; num++) {
+      RtpPacket packet((uint8_t *)(data + num * 1400), 1400);
+      send_ringbuffer_.push(packet);
+    }
+
+    if (size - num * 1400 > 0) {
+      RtpPacket packet((uint8_t *)(data + num * 1400), size - num * 1400);
+      send_ringbuffer_.push(packet);
+    }
   }
   return 0;
 }
