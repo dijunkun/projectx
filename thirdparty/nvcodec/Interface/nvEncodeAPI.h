@@ -1520,52 +1520,10 @@ typedef struct _NV_ENC_RC_PARAMS {
   uint16_t lookaheadDepth;  /**< [in]: Maximum depth of lookahead with range
                                0-(31 - number of B frames).  lookaheadDepth is
                                only used if enableLookahead=1.*/
-  uint8_t lowDelayKeyFrameScale; /**< [in]: Specifies the ratio of I frame bits
-                                    to P frame bits in case of single frame VBV
-                                    and CBR rate control mode, is set 2 by
-                                    default for low latency tuning info and 1 by
-                                    default for ultra low latency tuning info */
+  uint8_t lowDelayKeyFrameScale;
   uint8_t reserved1[3];
-  NV_ENC_QP_MAP_MODE
-  qpMapMode; /**< [in]: This flag is used to interpret values in array
-                specified by NV_ENC_PIC_PARAMS::qpDeltaMap. Set this to
-                NV_ENC_QP_MAP_EMPHASIS to treat values specified by
-                NV_ENC_PIC_PARAMS::qpDeltaMap as Emphasis Level Map.
-                        Emphasis Level can be assigned any value specified
-                in enum NV_ENC_EMPHASIS_MAP_LEVEL. Emphasis Level Map is
-                used to specify regions to be encoded at varying levels of
-                quality. The hardware encoder adjusts the quantization
-                within the image as per the provided emphasis map, by
-                adjusting the quantization parameter (QP) assigned to each
-                macroblock. This adjustment is commonly called “Delta QP”.
-                        The adjustment depends on the absolute QP decided by
-                the rate control algorithm, and is applied after the rate
-                control has decided each macroblock’s QP. Since the Delta QP
-                overrides rate control, enabling Emphasis Level Map may
-                violate bitrate and VBV buffer size constraints. Emphasis
-                Level Map is useful in situations where client has a priori
-                knowledge of the image complexity (e.g. via use of NVFBC's
-                Classification feature) and encoding those high-complexity
-                areas at higher quality (lower QP) is important, even at the
-                possible cost of violating bitrate/VBV buffer size
-                constraints This feature is not supported when AQ(
-                Spatial/Temporal) is enabled. This feature is only supported
-                for H264 codec currently.
-
-                        Set this to NV_ENC_QP_MAP_DELTA to treat values
-                specified by NV_ENC_PIC_PARAMS::qpDeltaMap as QP Delta. This
-                specifies QP modifier to be applied on top of the QP chosen
-                by rate control
-
-                        Set this to NV_ENC_QP_MAP_DISABLED to ignore
-                NV_ENC_PIC_PARAMS::qpDeltaMap values. In this case,
-                qpDeltaMap should be set to NULL.
-
-                        Other values are reserved for future use.*/
-  NV_ENC_MULTI_PASS
-  multiPass; /**< [in]: This flag is used to enable multi-pass encoding for
-                a given ::NV_ENC_PARAMS_RC_MODE. This flag is not valid for
-                H264 and HEVC MEOnly mode */
+  NV_ENC_QP_MAP_MODE qpMapMode;
+  NV_ENC_MULTI_PASS multiPass;
   uint32_t
       alphaLayerBitrateRatio; /**< [in]: Specifies the ratio in which bitrate
                                  should be split between base and alpha layer. A

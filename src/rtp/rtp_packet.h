@@ -5,6 +5,7 @@
 
 #include <vector>
 
+// Common
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -28,6 +29,41 @@
 // |               padding         | Padding size  |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+// H264
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                           timestamp                           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |           synchronization source (SSRC) identifier            |
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |            Contributing source (CSRC) identifiers             |
+// |                             ....                              |
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |       defined by profile      |            length             |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                          Extensions                           |
+// |                             ....                              |
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |  FU indicator |   FU header   |                               |
+// |                                                               |
+// |                           FU Payload                          |
+// |                                                               |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |               padding         | Padding size  |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+// |  FU indicator |   FU header   |
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |F|NRI|   Type  |S|E|R|   Type  |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+#define MAX_NALU_LEN 1400
+typedef enum { H264 = 96, OPUS = 97, USER_DEFINED = 127 } PAYLOAD_TYPE;
+
 class RtpPacket {
  public:
   RtpPacket();
@@ -44,7 +80,9 @@ class RtpPacket {
   void SetHasPadding(bool has_padding) { has_padding_ = has_padding; }
   void SetHasExtension(bool has_extension) { has_extension_ = has_extension; }
   void SetMarker(bool marker) { marker_ = marker; }
-  void SetPayloadType(uint32_t payload_type) { payload_type_ = payload_type; }
+  void SetPayloadType(PAYLOAD_TYPE payload_type) {
+    payload_type_ = payload_type;
+  }
   void SetSequenceNumber(uint16_t sequence_number) {
     sequence_number_ = sequence_number;
   }
@@ -62,8 +100,47 @@ class RtpPacket {
   }
 
  public:
+  typedef struct {
+    unsigned char forbidden_bit : 1;
+    unsigned char nal_reference_idc : 2;
+    unsigned char nal_unit_type : 5;
+  } NALU_HEADER;
+
+  typedef struct {
+    unsigned char f : 1;
+    unsigned char nri : 2;
+    unsigned char type : 5;
+  } FU_INDICATOR;
+
+  typedef struct {
+    unsigned char s : 1;
+    unsigned char e : 1;
+    unsigned char r : 1;
+    unsigned char type : 5;
+  } FU_HEADER;
+
+  void SetNaluHeader(NALU_HEADER nalu_header) {
+    nalu_header_.forbidden_bit = nalu_header.forbidden_bit;
+    nalu_header_.nal_reference_idc = nalu_header.nal_reference_idc;
+    nalu_header_.nal_unit_type = nalu_header.nal_unit_type;
+  }
+
+  void FuAHeader(FU_INDICATOR fu_indicator, FU_HEADER fu_header) {
+    fu_indicator_.f = fu_indicator.f;
+    fu_indicator_.nri = fu_indicator.nri;
+    fu_indicator_.type = fu_indicator.nri;
+
+    fu_header_.s = fu_header.s;
+    fu_header_.e = fu_header.e;
+    fu_header_.r = fu_header.r;
+    fu_header_.type = fu_header.type;
+  }
+
+ public:
   const uint8_t *Encode(uint8_t *payload, size_t payload_size);
+  const uint8_t *EncodeH264Nalu(uint8_t *payload, size_t payload_size);
   const uint8_t *Decode();
+  size_t DecodeH264Nalu(uint8_t *payload);
 
  public:
   // Get Header
@@ -103,6 +180,9 @@ class RtpPacket {
   uint16_t extension_profile_ = 0;
   uint16_t extension_len_ = 0;
   uint8_t *extension_data_ = nullptr;
+  NALU_HEADER nalu_header_;
+  FU_INDICATOR fu_indicator_;
+  FU_HEADER fu_header_;
 
   // Payload
   uint8_t *payload_ = nullptr;

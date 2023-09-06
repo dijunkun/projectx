@@ -11,11 +11,12 @@ class RtpSession
 
 {
  public:
-  RtpSession(uint32_t payload_type);
+  RtpSession(PAYLOAD_TYPE payload_type);
   ~RtpSession();
 
  public:
-  RtpPacket Encode(uint8_t* buffer, size_t size);
+  std::vector<RtpPacket> Encode(uint8_t* buffer, size_t size);
+  size_t Decode(uint8_t* buffer, size_t size, uint8_t* payload);
 
  private:
   uint32_t version_ = 0;
@@ -23,7 +24,7 @@ class RtpSession
   bool has_extension_ = false;
   uint32_t total_csrc_number_ = 0;
   bool marker_ = false;
-  uint8_t payload_type_ = 0;
+  uint32_t payload_type_ = 0;
   uint16_t sequence_number_ = 0;
   uint32_t timestamp_ = 0;
   uint32_t ssrc_ = 0;

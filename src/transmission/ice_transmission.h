@@ -75,7 +75,8 @@ class IceTransmission {
   std::thread *kcp_update_thread_ = nullptr;
 
  private:
-  RtpSession *rtp_session_ = nullptr;
+  RtpSession *video_rtp_session_ = nullptr;
+  uint8_t *rtp_payload_ = nullptr;
 };
 
 #endif

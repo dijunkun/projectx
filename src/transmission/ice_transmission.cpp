@@ -29,9 +29,14 @@ IceTransmission::IceTransmission(
       on_receive_ice_msg_cb_(on_receive_ice_msg) {}
 
 IceTransmission::~IceTransmission() {
-  if (rtp_session_) {
-    delete rtp_session_;
-    rtp_session_ = nullptr;
+  if (video_rtp_session_) {
+    delete video_rtp_session_;
+    video_rtp_session_ = nullptr;
+  }
+
+  if (rtp_payload_) {
+    delete rtp_payload_;
+    rtp_payload_ = nullptr;
   }
 
   if (ice_agent_) {
@@ -84,8 +89,14 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
         // Data buffer;
         RtpPacket buffer;
         recv_ringbuffer_.pop(buffer);
+        if (!rtp_payload_) {
+          rtp_payload_ = new uint8_t[1400];
+        }
+        size_t rtp_payload_size = video_rtp_session_->Decode(
+            (uint8_t *)buffer.Buffer(), buffer.Size(), rtp_payload_);
         // ret = ikcp_input(kcp, buffer.data(), buffer.size());
-        ret = ikcp_input(kcp, (const char *)buffer.Buffer(), buffer.Size());
+        // ret = ikcp_input(kcp, (const char *)buffer.Buffer(), buffer.Size());
+        ret = ikcp_input(kcp, (const char *)rtp_payload_, rtp_payload_size);
       }
 
       int len = 0;
@@ -97,7 +108,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
 
         if (len <= 0) {
           if (on_receive_ice_msg_cb_ && total_len > 0) {
-            // LOG_ERROR("Receive size: {}", total_len);
+            LOG_ERROR("Receive size: {}", total_len);
             on_receive_ice_msg_cb_(kcp_complete_buffer_, total_len,
                                    remote_user_id_.data(),
                                    remote_user_id_.size());
@@ -112,7 +123,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
     ikcp_release(kcp);
   });
 
-  rtp_session_ = new RtpSession(1);
+  video_rtp_session_ = new RtpSession(PAYLOAD_TYPE::H264);
   ice_agent_ = new IceAgent(ip, port);
 
   ice_agent_->CreateIceAgent(
@@ -154,7 +165,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
         if (user_ptr) {
           IceTransmission *ice_transmission_obj =
               static_cast<IceTransmission *>(user_ptr);
-          if (ice_transmission_obj->on_receive_ice_msg_cb_) {
+          if (ice_transmission_obj) {
             // ice_transmission_obj->recv_ringbuffer_.push(
             //     std::move(Data(data, size)));
 
@@ -273,17 +284,19 @@ int IceTransmission::SendData(const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
     // send_ringbuffer_.push(std::move(Data(data, size)));
 
-    int num = 0;
-    for (num = 0; num * 1400 < size; num++) {
-      RtpPacket packet =
-          rtp_session_->Encode((uint8_t *)(data + num * 1400), 1400);
-      send_ringbuffer_.push(packet);
-    }
+    for (int num = 0; num * 1400 < size + 1400; num++) {
+      std::vector<RtpPacket> packets =
+          video_rtp_session_->Encode((uint8_t *)(data + num * 1400), 1400);
 
-    if (size > num * 1400 && size - num * 1400 > 0) {
-      RtpPacket packet = rtp_session_->Encode((uint8_t *)(data + num * 1400),
-                                              size - num * 1400);
-      send_ringbuffer_.push(packet);
+      for (auto &packet : packets) {
+        send_ringbuffer_.push(packet);
+      }
+
+      // std::vector<RtpPacket> packets =
+      //     video_rtp_session_->Encode((uint8_t *)(data), size);
+
+      // send_ringbuffer_.insert(send_ringbuffer_.end(), packets.begin(),
+      //                         packets.end());
     }
   }
   return 0;
