@@ -27,6 +27,7 @@ add_packages("spdlog")
 
 includes("thirdparty")
 includes("application/remote_desk")
+includes("application/signal_server")
 
 target("log")
     set_kind("headeronly")
@@ -112,13 +113,6 @@ target("projectx")
     add_rules("utils.symbols.export_all", {export_classes = true})
     -- set_policy("build.merge_archive", true)
     -- set_targetdir("$(projectdir)/libdrtc/lib")
-
-target("signal_server")
-    set_kind("binary")
-    add_deps("log", "common")
-    add_files("tests/signal_server/*.cpp")
-    add_packages("asio", "nlohmann_json", "spdlog")
-    add_includedirs("thirdparty/websocketpp/include")
 
 target("host")
     set_kind("binary")

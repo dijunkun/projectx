@@ -7,6 +7,7 @@
 #include "ice_agent.h"
 #include "ringbuffer.h"
 #include "rtp_packet.h"
+#include "rtp_session.h"
 #include "ws_transmission.h"
 class IceTransmission {
  public:
@@ -72,6 +73,9 @@ class IceTransmission {
   RingBuffer<RtpPacket> recv_ringbuffer_;
   bool kcp_stop_ = false;
   std::thread *kcp_update_thread_ = nullptr;
+
+ private:
+  RtpSession *rtp_session_ = nullptr;
 };
 
 #endif

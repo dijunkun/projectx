@@ -1,7 +1,8 @@
 #ifndef _RTP_PACKET_H_
 #define _RTP_PACKET_H_
 
-#include <cstring>
+#include <stdint.h>
+
 #include <vector>
 
 //  0                   1                   2                   3
@@ -39,16 +40,18 @@ class RtpPacket {
 
  public:
   // Set Header
-  void SetMarker(bool has_marker) { marker_ = has_marker; }
-  void SetPayloadType(uint8_t payload_type) { payload_type_ = payload_type; }
+  void SetVerion(uint32_t version) { version_ = version; }
+  void SetHasPadding(bool has_padding) { has_padding_ = has_padding; }
+  void SetHasExtension(bool has_extension) { has_extension_ = has_extension; }
+  void SetMarker(bool marker) { marker_ = marker; }
+  void SetPayloadType(uint32_t payload_type) { payload_type_ = payload_type; }
   void SetSequenceNumber(uint16_t sequence_number) {
     sequence_number_ = sequence_number;
   }
   void SetTimestamp(uint32_t timestamp) { timestamp_ = timestamp; }
   void SetSsrc(uint32_t ssrc) { ssrc_ = ssrc; }
-  void SetCsrcs(){};
+  void SetCsrcs(std::vector<uint32_t> &csrcs) { csrcs_ = csrcs; }
 
-  void SetHasExtension(bool has_extension) { has_extension_ = has_extension; };
   void SetExtensionProfile(uint16_t extension_profile) {
     extension_profile_ = extension_profile;
   }
@@ -64,19 +67,21 @@ class RtpPacket {
 
  public:
   // Get Header
-  bool Marker() const { return marker_; }
-  uint8_t PayloadType() const { return payload_type_; }
-  uint16_t SequenceNumber() const { return sequence_number_; }
-  uint32_t Timestamp() const { return timestamp_; }
-  uint32_t Ssrc() const { return ssrc_; }
-  std::vector<uint32_t> Csrcs() const;
-  bool HasExtension() const { return has_extension_; };
-  uint16_t ExtensionProfile() const { return extension_profile_; }
-  uint8_t *ExtensionData() const { return extension_data_; }
+  const uint32_t Verion() { return version_; }
+  const bool HasPadding() { return has_padding_; }
+  const bool HasExtension() { return has_extension_; }
+  const bool Marker() { return marker_; }
+  const uint32_t PayloadType() { return payload_type_; }
+  const uint16_t SequenceNumber() { return sequence_number_; }
+  const uint32_t Timestamp() { return timestamp_; }
+  const uint32_t Ssrc() { return ssrc_; }
+  const std::vector<uint32_t> Csrcs() { return csrcs_; };
+  const uint16_t ExtensionProfile() { return extension_profile_; }
+  const uint8_t *ExtensionData() { return extension_data_; }
 
   // Payload
-  uint8_t *Payload() const { return payload_; };
-  size_t PayloadSize() const { return payload_size_; }
+  const uint8_t *Payload() { return payload_; };
+  const size_t PayloadSize() { return payload_size_; }
 
  public:
   const uint8_t *Buffer() { return buffer_; }
@@ -89,7 +94,7 @@ class RtpPacket {
   bool has_extension_ = false;
   uint32_t total_csrc_number_ = 0;
   bool marker_ = false;
-  uint8_t payload_type_ = 0;
+  uint32_t payload_type_ = 0;
   uint16_t sequence_number_ = 0;
   uint32_t timestamp_ = 0;
   uint32_t ssrc_ = 0;

@@ -1522,7 +1522,7 @@ typedef struct _NV_ENC_RC_PARAMS {
                                only used if enableLookahead=1.*/
   uint8_t lowDelayKeyFrameScale; /**< [in]: Specifies the ratio of I frame bits
                                     to P frame bits in case of single frame VBV
-                                    and CBR rate control mode, is set to 2 by
+                                    and CBR rate control mode, is set 2 by
                                     default for low latency tuning info and 1 by
                                     default for ultra low latency tuning info */
   uint8_t reserved1[3];

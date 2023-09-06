@@ -29,6 +29,11 @@ IceTransmission::IceTransmission(
       on_receive_ice_msg_cb_(on_receive_ice_msg) {}
 
 IceTransmission::~IceTransmission() {
+  if (rtp_session_) {
+    delete rtp_session_;
+    rtp_session_ = nullptr;
+  }
+
   if (ice_agent_) {
     delete ice_agent_;
     ice_agent_ = nullptr;
@@ -107,6 +112,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
     ikcp_release(kcp);
   });
 
+  rtp_session_ = new RtpSession(1);
   ice_agent_ = new IceAgent(ip, port);
 
   ice_agent_->CreateIceAgent(
@@ -269,12 +275,14 @@ int IceTransmission::SendData(const char *data, size_t size) {
 
     int num = 0;
     for (num = 0; num * 1400 < size; num++) {
-      RtpPacket packet((uint8_t *)(data + num * 1400), 1400);
+      RtpPacket packet =
+          rtp_session_->Encode((uint8_t *)(data + num * 1400), 1400);
       send_ringbuffer_.push(packet);
     }
 
-    if (size - num * 1400 > 0) {
-      RtpPacket packet((uint8_t *)(data + num * 1400), size - num * 1400);
+    if (size > num * 1400 && size - num * 1400 > 0) {
+      RtpPacket packet = rtp_session_->Encode((uint8_t *)(data + num * 1400),
+                                              size - num * 1400);
       send_ringbuffer_.push(packet);
     }
   }
