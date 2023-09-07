@@ -132,7 +132,7 @@ class RtpPacket {
   const uint8_t *Encode(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Nalu(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Fua(uint8_t *payload, size_t payload_size);
-  const uint8_t *Decode();
+  size_t Decode(uint8_t *payload);
   size_t DecodeH264Nalu(uint8_t *payload);
   size_t DecodeH264Fua(uint8_t *payload);
 

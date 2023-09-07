@@ -211,7 +211,7 @@ const uint8_t *RtpPacket::EncodeH264Fua(uint8_t *payload, size_t payload_size) {
   return buffer_;
 }
 
-const uint8_t *RtpPacket::Decode() {
+size_t RtpPacket::Decode(uint8_t *payload) {
   version_ = (buffer_[0] >> 6) & 0x03;
   has_padding_ = (buffer_[0] >> 5) & 0x01;
   has_extension_ = (buffer_[0] >> 4) & 0x01;
@@ -246,11 +246,10 @@ const uint8_t *RtpPacket::Decode() {
       (has_extension_ ? extension_len_ : 0) + extension_offset;
 
   payload_size_ = size_ - (12 + payload_offset);
-  // payload_ = new uint8_t[payload_size_];
-  // memcpy(payload_, buffer_ + 12 + payload_offset, payload_size_);
   payload_ = buffer_ + 12 + payload_offset;
+  memcpy(payload, payload_, payload_size_);
 
-  return payload_;
+  return payload_size_;
 }
 
 size_t RtpPacket::DecodeH264Nalu(uint8_t *payload) {

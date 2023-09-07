@@ -135,7 +135,7 @@ size_t RtpSession::Decode(RtpPacket& packet, uint8_t* payload) {
     LOG_ERROR("Fua");
     return packet.DecodeH264Fua(payload);
   } else {
-    LOG_ERROR("Default Nalu");
-    return packet.DecodeH264Nalu(payload);
+    LOG_ERROR("Default");
+    return packet.Decode(payload);
   }
 }
