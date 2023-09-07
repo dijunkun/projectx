@@ -106,43 +106,35 @@ class RtpPacket {
     unsigned char forbidden_bit : 1;
     unsigned char nal_reference_idc : 2;
     unsigned char nal_unit_type : 5;
-  } NALU_HEADER;
-
-  typedef struct {
-    unsigned char f : 1;
-    unsigned char nri : 2;
-    unsigned char type : 5;
   } FU_INDICATOR;
 
   typedef struct {
-    unsigned char s : 1;
-    unsigned char e : 1;
-    unsigned char r : 1;
-    unsigned char type : 5;
+    unsigned char start : 1;
+    unsigned char end : 1;
+    unsigned char remain_bit : 1;
+    unsigned char nal_unit_type : 5;
   } FU_HEADER;
 
-  void SetNaluHeader(NALU_HEADER nalu_header) {
-    nalu_header_.forbidden_bit = nalu_header.forbidden_bit;
-    nalu_header_.nal_reference_idc = nalu_header.nal_reference_idc;
-    nalu_header_.nal_unit_type = nalu_header.nal_unit_type;
+  void SetFuIndicator(FU_INDICATOR fu_indicator) {
+    fu_indicator_.forbidden_bit = fu_indicator.forbidden_bit;
+    fu_indicator_.nal_reference_idc = fu_indicator.nal_reference_idc;
+    fu_indicator_.nal_unit_type = fu_indicator.nal_unit_type;
   }
 
-  void FuAHeader(FU_INDICATOR fu_indicator, FU_HEADER fu_header) {
-    fu_indicator_.f = fu_indicator.f;
-    fu_indicator_.nri = fu_indicator.nri;
-    fu_indicator_.type = fu_indicator.nri;
-
-    fu_header_.s = fu_header.s;
-    fu_header_.e = fu_header.e;
-    fu_header_.r = fu_header.r;
-    fu_header_.type = fu_header.type;
+  void SetFuHeader(FU_HEADER fu_header) {
+    fu_header_.start = fu_header.start;
+    fu_header_.end = fu_header.end;
+    fu_header_.remain_bit = fu_header.remain_bit;
+    fu_header_.nal_unit_type = fu_header.nal_unit_type;
   }
 
  public:
   const uint8_t *Encode(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Nalu(uint8_t *payload, size_t payload_size);
+  const uint8_t *EncodeH264Fua(uint8_t *payload, size_t payload_size);
   const uint8_t *Decode();
   size_t DecodeH264Nalu(uint8_t *payload);
+  size_t DecodeH264Fua(uint8_t *payload);
 
  public:
   // Get Header
@@ -182,7 +174,6 @@ class RtpPacket {
   uint16_t extension_profile_ = 0;
   uint16_t extension_len_ = 0;
   uint8_t *extension_data_ = nullptr;
-  NALU_HEADER nalu_header_;
   FU_INDICATOR fu_indicator_;
   FU_HEADER fu_header_;
 

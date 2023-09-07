@@ -287,17 +287,19 @@ int IceTransmission::SendData(const char *data, size_t size) {
 
     std::vector<RtpPacket> packets;
 
-    for (size_t num = 0, next_packet_size = 0; num * MAX_NALU_LEN < size;
-         num++) {
-      next_packet_size = size - num * MAX_NALU_LEN;
-      if (next_packet_size < MAX_NALU_LEN) {
-        video_rtp_session_->Encode((uint8_t *)(data + num * MAX_NALU_LEN),
-                                   next_packet_size, packets);
-      } else {
-        video_rtp_session_->Encode((uint8_t *)(data + num * MAX_NALU_LEN),
-                                   MAX_NALU_LEN, packets);
-      }
-    }
+    // for (size_t num = 0, next_packet_size = 0; num * MAX_NALU_LEN < size;
+    //      num++) {
+    //   next_packet_size = size - num * MAX_NALU_LEN;
+    //   if (next_packet_size < MAX_NALU_LEN) {
+    //     video_rtp_session_->Encode((uint8_t *)(data + num * MAX_NALU_LEN),
+    //                                next_packet_size, packets);
+    //   } else {
+    //     video_rtp_session_->Encode((uint8_t *)(data + num * MAX_NALU_LEN),
+    //                                MAX_NALU_LEN, packets);
+    //   }
+    // }
+
+    video_rtp_session_->Encode((uint8_t *)data, size, packets);
 
     for (auto &packet : packets) {
       send_ringbuffer_.push(packet);

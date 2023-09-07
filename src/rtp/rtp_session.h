@@ -36,6 +36,7 @@ class RtpSession
 
  private:
   // RtpPacket* rtp_packet_ = nullptr;
+  RtpPacket::FU_INDICATOR fu_indicator_;
 };
 
 #endif

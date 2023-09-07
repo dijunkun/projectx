@@ -150,12 +150,63 @@ const uint8_t *RtpPacket::EncodeH264Nalu(uint8_t *payload,
       (has_extension_ && extension_data_ ? extension_len_ : 0) +
       extension_offset;
 
-  buffer_[12 + payload_offset] = nalu_header_.forbidden_bit << 7 |
-                                 nalu_header_.nal_reference_idc << 6 |
-                                 nalu_header_.nal_unit_type;
+  buffer_[12 + payload_offset] = fu_indicator_.forbidden_bit << 7 |
+                                 fu_indicator_.nal_reference_idc << 6 |
+                                 fu_indicator_.nal_unit_type;
 
   memcpy(buffer_ + 13 + payload_offset, payload, payload_size);
   size_ = payload_size + (13 + payload_offset);
+
+  return buffer_;
+}
+
+const uint8_t *RtpPacket::EncodeH264Fua(uint8_t *payload, size_t payload_size) {
+  buffer_[0] = (version_ << 6) | (has_padding_ << 5) | (has_extension_ << 4) |
+               total_csrc_number_;
+  buffer_[1] = (marker_ << 7) | payload_type_;
+  buffer_[2] = (sequence_number_ >> 8) & 0xFF;
+  buffer_[3] = sequence_number_ & 0xFF;
+  buffer_[4] = (timestamp_ >> 24) & 0xFF;
+  buffer_[5] = (timestamp_ >> 16) & 0xFF;
+  buffer_[6] = (timestamp_ >> 8) & 0xFF;
+  buffer_[7] = timestamp_ & 0xFF;
+  buffer_[8] = (ssrc_ >> 24) & 0xFF;
+  buffer_[9] = (ssrc_ >> 16) & 0xFF;
+  buffer_[10] = (ssrc_ >> 8) & 0xFF;
+  buffer_[11] = ssrc_ & 0xFF;
+
+  for (uint32_t index = 0; index < total_csrc_number_ && !csrcs_.empty();
+       index++) {
+    buffer_[12 + index] = (csrcs_[index] >> 24) & 0xFF;
+    buffer_[13 + index] = (csrcs_[index] >> 16) & 0xFF;
+    buffer_[14 + index] = (csrcs_[index] >> 8) & 0xFF;
+    buffer_[15 + index] = csrcs_[index] & 0xFF;
+  }
+
+  uint32_t extension_offset =
+      total_csrc_number_ && !csrcs_.empty() ? total_csrc_number_ * 4 : 0;
+  if (has_extension_ && extension_data_) {
+    buffer_[12 + extension_offset] = extension_profile_ >> 8;
+    buffer_[13 + extension_offset] = extension_profile_ & 0xff;
+    buffer_[14 + extension_offset] = (extension_len_ >> 8) & 0xFF;
+    buffer_[15 + extension_offset] = extension_len_ & 0xFF;
+    memcpy(buffer_ + 16 + extension_offset, extension_data_, extension_len_);
+  }
+
+  uint32_t payload_offset =
+      (has_extension_ && extension_data_ ? extension_len_ : 0) +
+      extension_offset;
+
+  buffer_[12 + payload_offset] = fu_indicator_.forbidden_bit << 7 |
+                                 fu_indicator_.nal_reference_idc << 6 |
+                                 fu_indicator_.nal_unit_type;
+
+  buffer_[13 + payload_offset] = fu_header_.start << 7 | fu_header_.end << 6 |
+                                 fu_header_.remain_bit << 1 |
+                                 fu_header_.nal_unit_type;
+
+  memcpy(buffer_ + 14 + payload_offset, payload, payload_size);
+  size_ = payload_size + (14 + payload_offset);
 
   return buffer_;
 }
@@ -236,12 +287,61 @@ size_t RtpPacket::DecodeH264Nalu(uint8_t *payload) {
   uint32_t payload_offset =
       (has_extension_ ? extension_len_ : 0) + extension_offset;
 
-  nalu_header_.forbidden_bit = (buffer_[12 + payload_offset] >> 7) & 0x01;
-  nalu_header_.nal_reference_idc = (buffer_[12 + payload_offset] >> 6) & 0x01;
-  nalu_header_.nal_unit_type = (buffer_[12 + payload_offset]) & 0x31;
+  fu_indicator_.forbidden_bit = (buffer_[12 + payload_offset] >> 7) & 0x01;
+  fu_indicator_.nal_reference_idc = (buffer_[12 + payload_offset] >> 5) & 0x03;
+  fu_indicator_.nal_unit_type = buffer_[12 + payload_offset] & 0x1F;
 
   payload_size_ = size_ - (13 + payload_offset);
   payload_ = buffer_ + 13 + payload_offset;
+  memcpy(payload, payload_, payload_size_);
+  return payload_size_;
+}
+
+size_t RtpPacket::DecodeH264Fua(uint8_t *payload) {
+  version_ = (buffer_[0] >> 6) & 0x03;
+  has_padding_ = (buffer_[0] >> 5) & 0x01;
+  has_extension_ = (buffer_[0] >> 4) & 0x01;
+  total_csrc_number_ = buffer_[0] & 0x0f;
+  marker_ = (buffer_[1] >> 7) & 0x01;
+  payload_type_ = buffer_[1] & 0x7f;
+  sequence_number_ = (buffer_[2] << 8) | buffer_[3];
+  timestamp_ =
+      (buffer_[4] << 24) | (buffer_[5] << 16) | (buffer_[6] << 8) | buffer_[7];
+  ssrc_ = (buffer_[8] << 24) | (buffer_[9] << 16) | (buffer_[10] << 8) |
+          buffer_[11];
+
+  for (uint32_t index = 0; index < total_csrc_number_; index++) {
+    uint32_t csrc = (buffer_[12 + index] << 24) | (buffer_[13 + index] << 16) |
+                    (buffer_[14 + index] << 8) | buffer_[15 + index];
+    csrcs_.push_back(csrc);
+  }
+
+  uint32_t extension_offset = total_csrc_number_ * 4;
+  if (has_extension_) {
+    extension_profile_ =
+        (buffer_[12 + extension_offset] << 8) | buffer_[13 + extension_offset];
+    extension_len_ =
+        (buffer_[14 + extension_offset] << 8) | buffer_[15 + extension_offset];
+
+    // extension_data_ = new uint8_t[extension_len_];
+    // memcpy(extension_data_, buffer_ + 16 + extension_offset, extension_len_);
+    extension_data_ = buffer_ + 16 + extension_offset;
+  }
+
+  uint32_t payload_offset =
+      (has_extension_ ? extension_len_ : 0) + extension_offset;
+
+  fu_indicator_.forbidden_bit = (buffer_[12 + payload_offset] >> 7) & 0x01;
+  fu_indicator_.nal_reference_idc = (buffer_[12 + payload_offset] >> 5) & 0x03;
+  fu_indicator_.nal_unit_type = buffer_[12 + payload_offset] & 0x1F;
+
+  fu_header_.start = (buffer_[13 + payload_offset] >> 7) & 0x01;
+  fu_header_.end = (buffer_[13 + payload_offset] >> 6) & 0x01;
+  fu_header_.remain_bit = (buffer_[13 + payload_offset] >> 5) & 0x01;
+  fu_header_.nal_unit_type = buffer_[13 + payload_offset] & 0x1F;
+
+  payload_size_ = size_ - (14 + payload_offset);
+  payload_ = buffer_ + 14 + payload_offset;
   memcpy(payload, payload_, payload_size_);
   return payload_size_;
 }
