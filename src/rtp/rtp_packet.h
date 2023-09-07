@@ -61,6 +61,7 @@
 // |F|NRI|   Type  |S|E|R|   Type  |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+#define DEFAULT_MTU 1500
 #define MAX_NALU_LEN 1400
 typedef enum { H264 = 96, OPUS = 97, USER_DEFINED = 127 } PAYLOAD_TYPE;
 
@@ -69,8 +70,9 @@ class RtpPacket {
   RtpPacket();
   RtpPacket(const uint8_t *buffer, size_t size);
   RtpPacket(const RtpPacket &rtp_packet);
-  RtpPacket &operator=(const RtpPacket &rtp_packet);
   RtpPacket(RtpPacket &&rtp_packet);
+  RtpPacket &operator=(const RtpPacket &rtp_packet);
+  RtpPacket &operator=(RtpPacket &&rtp_packet);
 
   ~RtpPacket();
 

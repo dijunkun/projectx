@@ -57,6 +57,14 @@ int PeerConnection::Init(PeerConnectionParams params,
     }
   };
 
+  on_ice_status_change_ = [this](std::string ice_status) {
+    if ("JUICE_STATE_COMPLETED" == ice_status) {
+      ice_ready_ = true;
+    } else {
+      ice_ready_ = false;
+    }
+  };
+
   ws_transport_ = new WsTransmission(on_receive_ws_msg_);
   uri_ = "ws://" + cfg_signal_server_ip_ + ":" + cfg_signal_server_port_;
   if (ws_transport_) {
@@ -142,9 +150,9 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       LOG_INFO("]");
 
       for (auto &remote_user_id : user_id_list_) {
-        ice_transmission_list_[remote_user_id] =
-            new IceTransmission(true, transmission_id, user_id_, remote_user_id,
-                                ws_transport_, on_receive_ice_msg_);
+        ice_transmission_list_[remote_user_id] = new IceTransmission(
+            true, transmission_id, user_id_, remote_user_id, ws_transport_,
+            on_receive_ice_msg_, on_ice_status_change_);
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
             cfg_stun_server_ip_, stun_server_port_);
         ice_transmission_list_[remote_user_id]->JoinTransmission();
@@ -179,7 +187,7 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
 
         ice_transmission_list_[remote_user_id] = new IceTransmission(
             false, transmission_id, user_id_, remote_user_id, ws_transport_,
-            on_receive_ice_msg_);
+            on_receive_ice_msg_, on_ice_status_change_);
 
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
             cfg_stun_server_ip_, stun_server_port_);
@@ -240,6 +248,7 @@ int PeerConnection::Destroy() {
 SignalStatus PeerConnection::GetSignalStatus() { return signal_status_; }
 
 int PeerConnection::SendVideoData(const char *data, size_t size) {
+  if (!ice_ready_) return -1;
   int ret = Encode((uint8_t *)data, size);
   if (0 != ret) {
     LOG_ERROR("Encode failed");

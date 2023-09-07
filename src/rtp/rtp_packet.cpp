@@ -2,9 +2,10 @@
 
 #include <string>
 
-RtpPacket::RtpPacket()
-    : buffer_(new uint8_t[MAX_NALU_LEN]), size_(MAX_NALU_LEN) {
-  memset(buffer_, 0, MAX_NALU_LEN);
+#include "log.h"
+
+RtpPacket::RtpPacket() : buffer_(new uint8_t[DEFAULT_MTU]), size_(DEFAULT_MTU) {
+  memset(buffer_, 0, DEFAULT_MTU);
 }
 
 RtpPacket::RtpPacket(const uint8_t *buffer, size_t size) {
@@ -23,8 +24,19 @@ RtpPacket::RtpPacket(const RtpPacket &rtp_packet) {
   }
 }
 
+RtpPacket::RtpPacket(RtpPacket &&rtp_packet)
+    : buffer_((uint8_t *)std::move(rtp_packet.buffer_)),
+      size_(rtp_packet.size_) {
+  rtp_packet.buffer_ = nullptr;
+  rtp_packet.size_ = 0;
+}
+
 RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
-  if (&rtp_packet != this && rtp_packet.size_ > 0) {
+  if (&rtp_packet != this) {
+    if (buffer_) {
+      delete buffer_;
+      buffer_ = nullptr;
+    }
     buffer_ = new uint8_t[rtp_packet.size_];
     memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
     size_ = rtp_packet.size_;
@@ -32,8 +44,15 @@ RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
   return *this;
 }
 
-RtpPacket::RtpPacket(RtpPacket &&rtp_packet)
-    : buffer_((uint8_t *)rtp_packet.Buffer()), size_(rtp_packet.Size()) {}
+RtpPacket &RtpPacket::operator=(RtpPacket &&rtp_packet) {
+  if (&rtp_packet != this) {
+    buffer_ = std::move(rtp_packet.buffer_);
+    rtp_packet.buffer_ = nullptr;
+    size_ = rtp_packet.size_;
+    rtp_packet.size_ = 0;
+  }
+  return *this;
+}
 
 RtpPacket::~RtpPacket() {
   if (buffer_) {
@@ -47,11 +66,6 @@ RtpPacket::~RtpPacket() {
     extension_data_ = nullptr;
   }
   extension_len_ = 0;
-
-  if (payload_) {
-    delete payload_;
-    payload_ = nullptr;
-  }
   payload_size_ = 0;
 }
 
@@ -227,10 +241,7 @@ size_t RtpPacket::DecodeH264Nalu(uint8_t *payload) {
   nalu_header_.nal_unit_type = (buffer_[12 + payload_offset]) & 0x31;
 
   payload_size_ = size_ - (13 + payload_offset);
-  // payload_ = new uint8_t[payload_size_];
-  // memcpy(payload_, buffer_ + 12 + payload_offset, payload_size_);
   payload_ = buffer_ + 13 + payload_offset;
-
   memcpy(payload, payload_, payload_size_);
   return payload_size_;
 }

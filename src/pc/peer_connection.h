@@ -68,6 +68,9 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;
   std::function<void(const char *, size_t, const char *, size_t)>
       on_receive_ice_msg_ = nullptr;
+  std::function<void(std::string)> on_ice_status_change_ = nullptr;
+  bool ice_ready_ = false;
+
   unsigned int ws_connection_id_ = 0;
   std::string user_id_ = "";
   std::string transmission_id_ = "";

@@ -19,49 +19,50 @@ RtpSession ::~RtpSession() {
     extension_data_ = nullptr;
   }
 
-  if (rtp_packet_) {
-    delete rtp_packet_;
-    rtp_packet_ = nullptr;
-  }
+  // if (rtp_packet_) {
+  //   delete rtp_packet_;
+  //   rtp_packet_ = nullptr;
+  // }
 }
 
-std::vector<RtpPacket> RtpSession::Encode(uint8_t* buffer, size_t size) {
-  if (!rtp_packet_) {
-    rtp_packet_ = new RtpPacket();
-  }
+void RtpSession::Encode(uint8_t* buffer, size_t size,
+                        std::vector<RtpPacket>& packets) {
+  // if (!rtp_packet_) {
+  //   rtp_packet_ = new RtpPacket();
+  // }
 
-  std::vector<RtpPacket> packets;
+  RtpPacket rtp_packet;
 
   if (size <= MAX_NALU_LEN) {
-    rtp_packet_->SetVerion(version_);
-    rtp_packet_->SetHasPadding(has_padding_);
-    rtp_packet_->SetHasExtension(has_extension_);
-    rtp_packet_->SetMarker(1);
-    rtp_packet_->SetPayloadType(PAYLOAD_TYPE(payload_type_));
-    rtp_packet_->SetSequenceNumber(sequence_number_++);
+    rtp_packet.SetVerion(version_);
+    rtp_packet.SetHasPadding(has_padding_);
+    rtp_packet.SetHasExtension(has_extension_);
+    rtp_packet.SetMarker(1);
+    rtp_packet.SetPayloadType(PAYLOAD_TYPE(payload_type_));
+    rtp_packet.SetSequenceNumber(sequence_number_++);
 
     timestamp_ =
         std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    rtp_packet_->SetTimestamp(timestamp_);
-    rtp_packet_->SetSsrc(ssrc_);
+    rtp_packet.SetTimestamp(timestamp_);
+    rtp_packet.SetSsrc(ssrc_);
 
     if (!csrcs_.empty()) {
-      rtp_packet_->SetCsrcs(csrcs_);
+      rtp_packet.SetCsrcs(csrcs_);
     }
 
     if (has_extension_) {
-      rtp_packet_->SetExtensionProfile(extension_profile_);
-      rtp_packet_->SetExtensionData(extension_data_, extension_len_);
+      rtp_packet.SetExtensionProfile(extension_profile_);
+      rtp_packet.SetExtensionData(extension_data_, extension_len_);
     }
 
     RtpPacket::NALU_HEADER nalu_header;
     nalu_header.forbidden_bit = 0;
     nalu_header.nal_reference_idc = 1;
     nalu_header.nal_unit_type = 1;
-    rtp_packet_->SetNaluHeader(nalu_header);
+    rtp_packet.SetNaluHeader(nalu_header);
 
-    rtp_packet_->EncodeH264Nalu(buffer, size);
-    packets.push_back(*rtp_packet_);
+    rtp_packet.EncodeH264Nalu(buffer, size);
+    packets.emplace_back(rtp_packet);
 
   } else {
     size_t last_packet_size = size % MAX_NALU_LEN;
@@ -69,36 +70,33 @@ std::vector<RtpPacket> RtpSession::Encode(uint8_t* buffer, size_t size) {
 
     for (size_t index = 0; index * MAX_NALU_LEN < size + MAX_NALU_LEN;
          index++) {
-      rtp_packet_->SetVerion(version_);
-      rtp_packet_->SetHasPadding(has_padding_);
-      rtp_packet_->SetHasExtension(has_extension_);
-      rtp_packet_->SetMarker(1);
-      rtp_packet_->SetPayloadType(PAYLOAD_TYPE(payload_type_));
-      rtp_packet_->SetSequenceNumber(sequence_number_++);
+      rtp_packet.SetVerion(version_);
+      rtp_packet.SetHasPadding(has_padding_);
+      rtp_packet.SetHasExtension(has_extension_);
+      rtp_packet.SetMarker(1);
+      rtp_packet.SetPayloadType(PAYLOAD_TYPE(payload_type_));
+      rtp_packet.SetSequenceNumber(sequence_number_++);
 
       timestamp_ =
           std::chrono::high_resolution_clock::now().time_since_epoch().count();
-      rtp_packet_->SetTimestamp(timestamp_);
-      rtp_packet_->SetSsrc(ssrc_);
+      rtp_packet.SetTimestamp(timestamp_);
+      rtp_packet.SetSsrc(ssrc_);
 
       if (!csrcs_.empty()) {
-        rtp_packet_->SetCsrcs(csrcs_);
+        rtp_packet.SetCsrcs(csrcs_);
       }
 
       if (has_extension_) {
-        rtp_packet_->SetExtensionProfile(extension_profile_);
-        rtp_packet_->SetExtensionData(extension_data_, extension_len_);
+        rtp_packet.SetExtensionProfile(extension_profile_);
+        rtp_packet.SetExtensionData(extension_data_, extension_len_);
       }
 
-      rtp_packet_->Encode(buffer, size);
-      packets.push_back(*rtp_packet_);
+      rtp_packet.Encode(buffer, size);
+      packets.emplace_back(rtp_packet);
     }
   }
-
-  return std::move(packets);
 }
 
-size_t RtpSession::Decode(uint8_t* buffer, size_t size, uint8_t* payload) {
-  *rtp_packet_ = std::move(RtpPacket(buffer, size));
-  return rtp_packet_->DecodeH264Nalu(payload);
+size_t RtpSession::Decode(RtpPacket& packet, uint8_t* payload) {
+  return packet.DecodeH264Nalu(payload);
 }

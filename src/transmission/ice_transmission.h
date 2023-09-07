@@ -15,7 +15,8 @@ class IceTransmission {
       bool offer_peer, std::string &transmission_id, std::string &user_id,
       std::string &remote_user_id, WsTransmission *ice_ws_transmission,
       std::function<void(const char *, size_t, const char *, size_t)>
-          on_receive_ice_msg);
+          on_receive_ice_msg,
+      std::function<void(std::string)> on_ice_status_change);
 
   ~IceTransmission();
 
@@ -53,6 +54,7 @@ class IceTransmission {
   CongestionControl *congestion_control_ = nullptr;
   std::function<void(const char *, size_t, const char *, size_t)>
       on_receive_ice_msg_cb_ = nullptr;
+  std::function<void(std::string)> on_ice_status_change_ = nullptr;
   std::string local_sdp_;
   std::string remote_sdp_;
   std::string local_candidates_;
@@ -77,6 +79,7 @@ class IceTransmission {
  private:
   RtpSession *video_rtp_session_ = nullptr;
   uint8_t *rtp_payload_ = nullptr;
+  RtpPacket pop_packet_;
 };
 
 #endif

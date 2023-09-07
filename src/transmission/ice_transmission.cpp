@@ -20,15 +20,23 @@ IceTransmission::IceTransmission(
     bool offer_peer, std::string &transmission_id, std::string &user_id,
     std::string &remote_user_id, WsTransmission *ice_ws_transmission,
     std::function<void(const char *, size_t, const char *, size_t)>
-        on_receive_ice_msg)
+        on_receive_ice_msg,
+    std::function<void(std::string)> on_ice_status_change)
     : offer_peer_(offer_peer),
       transmission_id_(transmission_id),
       user_id_(user_id),
       remote_user_id_(remote_user_id),
       ice_ws_transport_(ice_ws_transmission),
-      on_receive_ice_msg_cb_(on_receive_ice_msg) {}
+      on_receive_ice_msg_cb_(on_receive_ice_msg),
+      on_ice_status_change_(on_ice_status_change) {}
 
 IceTransmission::~IceTransmission() {
+  if (kcp_update_thread_ && kcp_update_thread_->joinable()) {
+    kcp_update_thread_->join();
+    delete kcp_update_thread_;
+    kcp_update_thread_ = nullptr;
+  }
+
   if (video_rtp_session_) {
     delete video_rtp_session_;
     video_rtp_session_ = nullptr;
@@ -43,13 +51,6 @@ IceTransmission::~IceTransmission() {
     delete ice_agent_;
     ice_agent_ = nullptr;
   }
-
-  if (kcp_update_thread_ && kcp_update_thread_->joinable()) {
-    kcp_update_thread_->join();
-  }
-
-  delete kcp_update_thread_;
-  kcp_update_thread_ = nullptr;
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
@@ -80,44 +81,43 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
         RtpPacket buffer;
         if (ikcp_waitsnd(kcp) <= kcp->snd_wnd * 2) {
           send_ringbuffer_.pop(buffer);
-          // ret = ikcp_send(kcp, buffer.data(), buffer.size());
-          ret = ikcp_send(kcp, (const char *)buffer.Buffer(), buffer.Size());
+
+          ice_agent_->Send((const char *)buffer.Buffer(), buffer.Size());
         }
       }
 
       if (!recv_ringbuffer_.isEmpty()) {
-        // Data buffer;
-        RtpPacket buffer;
-        recv_ringbuffer_.pop(buffer);
+        // RtpPacket packet;
+        recv_ringbuffer_.pop(pop_packet_);
         if (!rtp_payload_) {
           rtp_payload_ = new uint8_t[1400];
         }
-        size_t rtp_payload_size = video_rtp_session_->Decode(
-            (uint8_t *)buffer.Buffer(), buffer.Size(), rtp_payload_);
-        // ret = ikcp_input(kcp, buffer.data(), buffer.size());
-        // ret = ikcp_input(kcp, (const char *)buffer.Buffer(), buffer.Size());
-        ret = ikcp_input(kcp, (const char *)rtp_payload_, rtp_payload_size);
+        size_t rtp_payload_size =
+            video_rtp_session_->Decode(pop_packet_, rtp_payload_);
+
+        on_receive_ice_msg_cb_((const char *)rtp_payload_, rtp_payload_size,
+                               remote_user_id_.data(), remote_user_id_.size());
       }
 
-      int len = 0;
-      int total_len = 0;
-      while (1) {
-        len = ikcp_recv(kcp, kcp_complete_buffer_ + len, 400000);
+      // int len = 0;
+      // int total_len = 0;
+      // while (1) {
+      //   len = ikcp_recv(kcp, kcp_complete_buffer_ + len, 400000);
 
-        total_len += len;
+      //   total_len += len;
 
-        if (len <= 0) {
-          if (on_receive_ice_msg_cb_ && total_len > 0) {
-            LOG_ERROR("Receive size: {}", total_len);
-            on_receive_ice_msg_cb_(kcp_complete_buffer_, total_len,
-                                   remote_user_id_.data(),
-                                   remote_user_id_.size());
-          }
-          break;
-        }
-      }
+      //   if (len <= 0) {
+      //     if (on_receive_ice_msg_cb_ && total_len > 0) {
+      //       LOG_ERROR("Receive size: {}", total_len);
+      //       on_receive_ice_msg_cb_(kcp_complete_buffer_, total_len,
+      //                              remote_user_id_.data(),
+      //                              remote_user_id_.size());
+      //     }
+      //     break;
+      //   }
+      // }
 
-      // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     ikcp_release(kcp);
@@ -134,6 +134,7 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
           LOG_INFO("[{}->{}] state_change: {}", ice_transmission_obj->user_id_,
                    ice_transmission_obj->remote_user_id_, ice_status[state]);
           ice_transmission_obj->state_ = state;
+          ice_transmission_obj->on_ice_status_change_(ice_status[state]);
         } else {
           LOG_INFO("state_change: {}", ice_status[state]);
         }
@@ -284,20 +285,29 @@ int IceTransmission::SendData(const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
     // send_ringbuffer_.push(std::move(Data(data, size)));
 
-    for (int num = 0; num * 1400 < size + 1400; num++) {
-      std::vector<RtpPacket> packets =
-          video_rtp_session_->Encode((uint8_t *)(data + num * 1400), 1400);
+    std::vector<RtpPacket> packets;
 
-      for (auto &packet : packets) {
-        send_ringbuffer_.push(packet);
+    for (size_t num = 0, next_packet_size = 0; num * MAX_NALU_LEN < size;
+         num++) {
+      next_packet_size = size - num * MAX_NALU_LEN;
+      if (next_packet_size < MAX_NALU_LEN) {
+        video_rtp_session_->Encode((uint8_t *)(data + num * MAX_NALU_LEN),
+                                   next_packet_size, packets);
+      } else {
+        video_rtp_session_->Encode((uint8_t *)(data + num * MAX_NALU_LEN),
+                                   MAX_NALU_LEN, packets);
       }
-
-      // std::vector<RtpPacket> packets =
-      //     video_rtp_session_->Encode((uint8_t *)(data), size);
-
-      // send_ringbuffer_.insert(send_ringbuffer_.end(), packets.begin(),
-      //                         packets.end());
     }
+
+    for (auto &packet : packets) {
+      send_ringbuffer_.push(packet);
+    }
+
+    // std::vector<RtpPacket> packets =
+    //     video_rtp_session_->Encode((uint8_t *)(data), size);
+
+    // send_ringbuffer_.insert(send_ringbuffer_.end(), packets.begin(),
+    //                         packets.end());
   }
   return 0;
 }

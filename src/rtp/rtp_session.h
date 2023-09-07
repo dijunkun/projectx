@@ -15,8 +15,8 @@ class RtpSession
   ~RtpSession();
 
  public:
-  std::vector<RtpPacket> Encode(uint8_t* buffer, size_t size);
-  size_t Decode(uint8_t* buffer, size_t size, uint8_t* payload);
+  void Encode(uint8_t* buffer, size_t size, std::vector<RtpPacket>& packets);
+  size_t Decode(RtpPacket& packet, uint8_t* payload);
 
  private:
   uint32_t version_ = 0;
@@ -35,7 +35,7 @@ class RtpSession
   uint8_t* extension_data_ = nullptr;
 
  private:
-  RtpPacket* rtp_packet_ = nullptr;
+  // RtpPacket* rtp_packet_ = nullptr;
 };
 
 #endif
