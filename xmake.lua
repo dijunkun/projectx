@@ -47,10 +47,15 @@ target("inih")
 target("ringbuffer")
     set_kind("headeronly")
     add_includedirs("src/ringbuffer", {public = true})
+
+target("frame")
+    set_kind("static")
+    add_files("src/frame/*.cpp")
+    add_includedirs("src/frame", {public = true})
     
 target("rtp")
     set_kind("static")
-    add_deps("log")
+    add_deps("log", "frame")
     add_files("src/rtp/*.cpp")
     add_includedirs("src/rtp", {public = true})
 

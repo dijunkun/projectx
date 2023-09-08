@@ -1,4 +1,4 @@
-#include "rtp_session.h"
+#include "rtp_video_session.h"
 
 #include <chrono>
 
@@ -9,14 +9,14 @@
 #define FU_A 28
 #define FU_B 29
 
-RtpSession ::RtpSession(PAYLOAD_TYPE payload_type)
+RtpVideoSession ::RtpVideoSession(PAYLOAD_TYPE payload_type)
     : version_(RTP_VERSION),
       has_padding_(false),
       has_extension_(false),
       payload_type_(payload_type),
       sequence_number_(0) {}
 
-RtpSession ::~RtpSession() {
+RtpVideoSession ::~RtpVideoSession() {
   if (extension_data_) {
     delete extension_data_;
     extension_data_ = nullptr;
@@ -28,8 +28,8 @@ RtpSession ::~RtpSession() {
   // }
 }
 
-void RtpSession::Encode(uint8_t* buffer, size_t size,
-                        std::vector<RtpPacket>& packets) {
+void RtpVideoSession::Encode(uint8_t* buffer, size_t size,
+                             std::vector<RtpPacket>& packets) {
   // if (!rtp_packet_) {
   //   rtp_packet_ = new RtpPacket();
   // }
@@ -118,7 +118,7 @@ void RtpSession::Encode(uint8_t* buffer, size_t size,
   }
 }
 
-size_t RtpSession::Decode(RtpPacket& packet, uint8_t* payload) {
+size_t RtpVideoSession::Decode(RtpPacket& packet, uint8_t* payload) {
   // if ((packet.Buffer()[13] >> 6) & 0x01) {
   //   LOG_ERROR("End bit!!!!!!!!!!!!!!!");
   // }

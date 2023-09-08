@@ -64,6 +64,7 @@
 #define DEFAULT_MTU 1500
 #define MAX_NALU_LEN 1400
 typedef enum { H264 = 96, OPUS = 97, USER_DEFINED = 127 } PAYLOAD_TYPE;
+typedef enum { UNKNOWN = 0, NALU = 1, FU_A = 28, FU_B = 29 } NAL_UNIT_TYPE;
 
 class RtpPacket {
  public:
@@ -133,8 +134,8 @@ class RtpPacket {
   const uint8_t *EncodeH264Nalu(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Fua(uint8_t *payload, size_t payload_size);
   size_t Decode(uint8_t *payload);
-  size_t DecodeH264Nalu(uint8_t *payload);
-  size_t DecodeH264Fua(uint8_t *payload);
+  size_t DecodeH264Nalu(uint8_t *payload = nullptr);
+  size_t DecodeH264Fua(uint8_t *payload = nullptr);
 
  public:
   // Get Header
@@ -154,9 +155,17 @@ class RtpPacket {
   const uint8_t *Payload() { return payload_; };
   const size_t PayloadSize() { return payload_size_; }
 
- public:
+  // Entire RTP buffer
   const uint8_t *Buffer() { return buffer_; }
   const size_t Size() { return size_; }
+
+  // NAL
+  const NAL_UNIT_TYPE NalUnitType() { return nal_unit_type_; }
+  const bool FuAStart() { return fu_header_.start; }
+  const bool FuAEnd() { return fu_header_.end; }
+
+ private:
+  inline void TryToDecodeH264RtpPacket(uint8_t *buffer);
 
  private:
   // Header
@@ -184,6 +193,9 @@ class RtpPacket {
   // Entire RTP buffer
   uint8_t *buffer_ = nullptr;
   size_t size_ = 0;
+
+  // NAL
+  NAL_UNIT_TYPE nal_unit_type_ = NAL_UNIT_TYPE::UNKNOWN;
 };
 
 #endif

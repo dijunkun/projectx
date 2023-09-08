@@ -1,5 +1,5 @@
-#ifndef _RTP_SESSION_H_
-#define _RTP_SESSION_H_
+#ifndef _RTP_VIDEO_SESSION_H_
+#define _RTP_VIDEO_SESSION_H_
 
 #include <stdint.h>
 
@@ -7,16 +7,17 @@
 
 #include "rtp_packet.h"
 
-class RtpSession
-
-{
+class RtpVideoSession {
  public:
-  RtpSession(PAYLOAD_TYPE payload_type);
-  ~RtpSession();
+  RtpVideoSession(PAYLOAD_TYPE payload_type);
+  ~RtpVideoSession();
 
  public:
   void Encode(uint8_t* buffer, size_t size, std::vector<RtpPacket>& packets);
   size_t Decode(RtpPacket& packet, uint8_t* payload);
+
+  //  protected:
+  //   void OnReceiveFrame(uint8_t* payload) = 0;
 
  private:
   uint32_t version_ = 0;

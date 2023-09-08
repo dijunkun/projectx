@@ -7,8 +7,10 @@
 #include "ice_agent.h"
 #include "ringbuffer.h"
 #include "rtp_packet.h"
-#include "rtp_session.h"
+#include "rtp_video_receiver.h"
+#include "rtp_video_session.h"
 #include "ws_transmission.h"
+
 class IceTransmission {
  public:
   IceTransmission(
@@ -77,7 +79,8 @@ class IceTransmission {
   std::thread *kcp_update_thread_ = nullptr;
 
  private:
-  RtpSession *video_rtp_session_ = nullptr;
+  RtpVideoSession *rtp_video_session_ = nullptr;
+  RtpVideoReceiver *rtp_video_receiver_ = nullptr;
   uint8_t *rtp_payload_ = nullptr;
   RtpPacket pop_packet_;
 };

@@ -4,6 +4,17 @@
 
 #include "log.h"
 
+inline void RtpPacket::TryToDecodeH264RtpPacket(uint8_t *buffer) {
+  if (PAYLOAD_TYPE::H264 == NAL_UNIT_TYPE(buffer[1] & 0x7f)) {
+    nal_unit_type_ = NAL_UNIT_TYPE(buffer[12] & 0x1F);
+    if (NAL_UNIT_TYPE::NALU == nal_unit_type_) {
+      DecodeH264Nalu();
+    } else if (NAL_UNIT_TYPE::FU_A == nal_unit_type_) {
+      DecodeH264Fua();
+    }
+  }
+}
+
 RtpPacket::RtpPacket() : buffer_(new uint8_t[DEFAULT_MTU]), size_(DEFAULT_MTU) {
   memset(buffer_, 0, DEFAULT_MTU);
 }
@@ -13,6 +24,8 @@ RtpPacket::RtpPacket(const uint8_t *buffer, size_t size) {
     buffer_ = new uint8_t[size];
     memcpy(buffer_, buffer, size);
     size_ = size;
+
+    TryToDecodeH264RtpPacket(buffer_);
   }
 }
 
@@ -21,6 +34,8 @@ RtpPacket::RtpPacket(const RtpPacket &rtp_packet) {
     buffer_ = new uint8_t[rtp_packet.size_];
     memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
     size_ = rtp_packet.size_;
+
+    TryToDecodeH264RtpPacket(buffer_);
   }
 }
 
@@ -29,6 +44,8 @@ RtpPacket::RtpPacket(RtpPacket &&rtp_packet)
       size_(rtp_packet.size_) {
   rtp_packet.buffer_ = nullptr;
   rtp_packet.size_ = 0;
+
+  TryToDecodeH264RtpPacket(buffer_);
 }
 
 RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
@@ -40,6 +57,8 @@ RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
     buffer_ = new uint8_t[rtp_packet.size_];
     memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
     size_ = rtp_packet.size_;
+
+    TryToDecodeH264RtpPacket(buffer_);
   }
   return *this;
 }
@@ -50,6 +69,8 @@ RtpPacket &RtpPacket::operator=(RtpPacket &&rtp_packet) {
     rtp_packet.buffer_ = nullptr;
     size_ = rtp_packet.size_;
     rtp_packet.size_ = 0;
+
+    TryToDecodeH264RtpPacket(buffer_);
   }
   return *this;
 }
@@ -292,7 +313,9 @@ size_t RtpPacket::DecodeH264Nalu(uint8_t *payload) {
 
   payload_size_ = size_ - (13 + payload_offset);
   payload_ = buffer_ + 13 + payload_offset;
-  memcpy(payload, payload_, payload_size_);
+  if (payload) {
+    memcpy(payload, payload_, payload_size_);
+  }
   return payload_size_;
 }
 
@@ -341,6 +364,8 @@ size_t RtpPacket::DecodeH264Fua(uint8_t *payload) {
 
   payload_size_ = size_ - (14 + payload_offset);
   payload_ = buffer_ + 14 + payload_offset;
-  memcpy(payload, payload_, payload_size_);
+  if (payload) {
+    memcpy(payload, payload_, payload_size_);
+  }
   return payload_size_;
 }
