@@ -2,6 +2,7 @@
 .xmake/
 build/
 thirdparty/ffmpeg/lib/*
+.VSCodeCounter/
 
 # MacOS Cache
 .DS_Store

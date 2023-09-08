@@ -55,7 +55,7 @@ target("frame")
     
 target("rtp")
     set_kind("static")
-    add_deps("log", "frame")
+    add_deps("log", "frame", "ringbuffer")
     add_files("src/rtp/*.cpp")
     add_includedirs("src/rtp", {public = true})
 
@@ -95,7 +95,7 @@ target("qos")
 
 target("transmission")
     set_kind("static")
-    add_deps("log", "ws", "ice", "qos", "ringbuffer", "rtp")
+    add_deps("log", "ws", "ice", "qos", "rtp")
     add_files("src/transmission/*.cpp")
     add_packages("asio", "nlohmann_json")
     add_includedirs("src/ws", "src/ice", "src/qos", {public = true})

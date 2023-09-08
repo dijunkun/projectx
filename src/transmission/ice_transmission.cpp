@@ -69,6 +69,15 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
                                remote_user_id_.size());
       });
 
+  rtp_video_sender_ = new RtpVideoSender();
+  rtp_video_sender_->SetRtpPacketSendFunc([this](
+                                              RtpPacket &rtp_packet) -> void {
+    if (ice_agent_) {
+      LOG_ERROR("Send rtp packet {}", rtp_packet.Size());
+      ice_agent_->Send((const char *)rtp_packet.Buffer(), rtp_packet.Size());
+    }
+  });
+
   ice_agent_ = new IceAgent(ip, port);
 
   ice_agent_->CreateIceAgent(
@@ -213,9 +222,10 @@ int IceTransmission::SendData(const char *data, size_t size) {
     std::vector<RtpPacket> packets;
 
     rtp_video_session_->Encode((uint8_t *)data, size, packets);
-    for (auto &packet : packets) {
-      ice_agent_->Send((const char *)packet.Buffer(), packet.Size());
-    }
+    rtp_video_sender_->Enqueue(packets);
+    // for (auto &packet : packets) {
+    //   ice_agent_->Send((const char *)packet.Buffer(), packet.Size());
+    // }
 
     // std::vector<RtpPacket> packets =
     //     rtp_video_session_->Encode((uint8_t *)(data), size);

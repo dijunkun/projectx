@@ -8,6 +8,7 @@
 #include "ringbuffer.h"
 #include "rtp_packet.h"
 #include "rtp_video_receiver.h"
+#include "rtp_video_sender.h"
 #include "rtp_video_session.h"
 #include "ws_transmission.h"
 
@@ -72,15 +73,13 @@ class IceTransmission {
  private:
   // ikcpcb *kcp_ = nullptr;
   char kcp_complete_buffer_[2560 * 1440 * 4];
-  std::mutex mtx_;
-  RingBuffer<RtpPacket> send_ringbuffer_;
-  RingBuffer<RtpPacket> recv_ringbuffer_;
   bool kcp_stop_ = false;
   std::thread *kcp_update_thread_ = nullptr;
 
  private:
   RtpVideoSession *rtp_video_session_ = nullptr;
   RtpVideoReceiver *rtp_video_receiver_ = nullptr;
+  RtpVideoSender *rtp_video_sender_ = nullptr;
   uint8_t *rtp_payload_ = nullptr;
   RtpPacket pop_packet_;
 };
