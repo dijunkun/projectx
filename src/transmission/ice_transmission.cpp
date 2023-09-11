@@ -47,7 +47,7 @@ IceTransmission::~IceTransmission() {
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
-  rtp_codec_ = std::make_unique<RtpCodec>(PAYLOAD_TYPE::H264);
+  rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::H264);
   rtp_video_receiver_ = std::make_unique<RtpVideoReceiver>();
   rtp_video_receiver_->SetOnReceiveCompleteFrame(
       [this](VideoFrame &video_frame) -> void {

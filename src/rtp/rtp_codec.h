@@ -9,7 +9,7 @@
 
 class RtpCodec {
  public:
-  RtpCodec(PAYLOAD_TYPE payload_type);
+  RtpCodec(RtpPacket::PAYLOAD_TYPE payload_type);
   ~RtpCodec();
 
  public:

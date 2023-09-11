@@ -63,10 +63,12 @@
 
 #define DEFAULT_MTU 1500
 #define MAX_NALU_LEN 1400
-typedef enum { H264 = 96, OPUS = 97, USER_DEFINED = 127 } PAYLOAD_TYPE;
-typedef enum { UNKNOWN = 0, NALU = 1, FU_A = 28, FU_B = 29 } NAL_UNIT_TYPE;
 
 class RtpPacket {
+ public:
+  typedef enum { H264 = 96, OPUS = 97, USER_DEFINED = 127 } PAYLOAD_TYPE;
+  typedef enum { UNKNOWN = 0, NALU = 1, FU_A = 28, FU_B = 29 } NAL_UNIT_TYPE;
+
  public:
   RtpPacket();
   RtpPacket(const uint8_t *buffer, size_t size);
@@ -104,16 +106,16 @@ class RtpPacket {
 
  public:
   typedef struct {
-    unsigned char forbidden_bit : 1;
-    unsigned char nal_reference_idc : 2;
-    unsigned char nal_unit_type : 5;
+    uint8_t forbidden_bit : 1;
+    uint8_t nal_reference_idc : 2;
+    uint8_t nal_unit_type : 5;
   } FU_INDICATOR;
 
   typedef struct {
-    unsigned char start : 1;
-    unsigned char end : 1;
-    unsigned char remain_bit : 1;
-    unsigned char nal_unit_type : 5;
+    uint8_t start : 1;
+    uint8_t end : 1;
+    uint8_t remain_bit : 1;
+    uint8_t nal_unit_type : 5;
   } FU_HEADER;
 
   void SetFuIndicator(FU_INDICATOR fu_indicator) {
@@ -143,7 +145,7 @@ class RtpPacket {
   const bool HasPadding() { return has_padding_; }
   const bool HasExtension() { return has_extension_; }
   const bool Marker() { return marker_; }
-  const uint32_t PayloadType() { return payload_type_; }
+  const PAYLOAD_TYPE PayloadType() { return PAYLOAD_TYPE(payload_type_); }
   const uint16_t SequenceNumber() { return sequence_number_; }
   const uint32_t Timestamp() { return timestamp_; }
   const uint32_t Ssrc() { return ssrc_; }

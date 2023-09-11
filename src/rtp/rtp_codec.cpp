@@ -4,12 +4,12 @@
 
 #include "log.h"
 
-#define RTP_VERSION 1
+#define RTP_VERSION 2
 #define NALU 1
 #define FU_A 28
 #define FU_B 29
 
-RtpCodec ::RtpCodec(PAYLOAD_TYPE payload_type)
+RtpCodec ::RtpCodec(RtpPacket::PAYLOAD_TYPE payload_type)
     : version_(RTP_VERSION),
       has_padding_(false),
       has_extension_(false),
@@ -41,7 +41,7 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
     rtp_packet.SetHasPadding(has_padding_);
     rtp_packet.SetHasExtension(has_extension_);
     rtp_packet.SetMarker(1);
-    rtp_packet.SetPayloadType(PAYLOAD_TYPE(payload_type_));
+    rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE(payload_type_));
     rtp_packet.SetSequenceNumber(sequence_number_++);
 
     timestamp_ =
@@ -76,7 +76,7 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
       rtp_packet.SetHasPadding(has_padding_);
       rtp_packet.SetHasExtension(has_extension_);
       rtp_packet.SetMarker(index == packet_num ? 1 : 0);
-      rtp_packet.SetPayloadType(PAYLOAD_TYPE(payload_type_));
+      rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE(payload_type_));
       rtp_packet.SetSequenceNumber(sequence_number_++);
 
       timestamp_ =

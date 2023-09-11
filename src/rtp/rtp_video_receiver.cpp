@@ -19,7 +19,7 @@ void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
     rtp_video_receive_statistics_->UpdateReceiveBytes(rtp_packet.Size());
   }
 
-  if (NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {
+  if (RtpPacket::NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {
     compelete_video_frame_queue_.push(
         VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
     // if (on_receive_complete_frame_) {
@@ -33,7 +33,7 @@ void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
     //   on_receive_complete_frame_(
     //       VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
     // }
-  } else if (NAL_UNIT_TYPE::FU_A == rtp_packet.NalUnitType()) {
+  } else if (RtpPacket::NAL_UNIT_TYPE::FU_A == rtp_packet.NalUnitType()) {
     incomplete_frame_list_[rtp_packet.SequenceNumber()] = rtp_packet;
     bool complete = CheckIsFrameCompleted(rtp_packet);
   }
