@@ -5,6 +5,7 @@
 
 #include "ringbuffer.h"
 #include "rtp_packet.h"
+#include "rtp_video_send_statistics.h"
 #include "thread_base.h"
 
 class RtpVideoSender : public ThreadBase {
@@ -27,6 +28,10 @@ class RtpVideoSender : public ThreadBase {
  private:
   std::function<void(RtpPacket &)> rtp_packet_send_func_ = nullptr;
   RingBuffer<RtpPacket> rtp_packe_queue_;
+
+ private:
+  std::unique_ptr<RtpVideoSendStatistics> rtp_video_send_statistics_ = nullptr;
+  uint32_t last_send_bytes_ = 0;
 };
 
 #endif

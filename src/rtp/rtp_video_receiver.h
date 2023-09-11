@@ -8,6 +8,7 @@
 #include "frame.h"
 #include "ringbuffer.h"
 #include "rtp_codec.h"
+#include "rtp_video_receive_statistics.h"
 #include "thread_base.h"
 
 class RtpVideoReceiver : public ThreadBase {
@@ -35,8 +36,11 @@ class RtpVideoReceiver : public ThreadBase {
   uint8_t* nv12_data_ = nullptr;
   std::function<void(VideoFrame&)> on_receive_complete_frame_ = nullptr;
   uint32_t last_complete_frame_ts_ = 0;
-
   RingBuffer<VideoFrame> compelete_video_frame_queue_;
+
+ private:
+  std::unique_ptr<RtpVideoReceiveStatistics> rtp_video_receive_statistics_ =
+      nullptr;
 };
 
 #endif

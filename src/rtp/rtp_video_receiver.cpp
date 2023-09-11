@@ -9,6 +9,16 @@ RtpVideoReceiver::RtpVideoReceiver() {}
 RtpVideoReceiver::~RtpVideoReceiver() {}
 
 void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
+  if (!rtp_video_receive_statistics_) {
+    rtp_video_receive_statistics_ =
+        std::make_unique<RtpVideoReceiveStatistics>();
+    rtp_video_receive_statistics_->Start();
+  }
+
+  if (rtp_video_receive_statistics_) {
+    rtp_video_receive_statistics_->UpdateReceiveBytes(rtp_packet.Size());
+  }
+
   if (NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {
     compelete_video_frame_queue_.push(
         VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
@@ -93,12 +103,13 @@ bool RtpVideoReceiver::Process() {
     VideoFrame video_frame;
     compelete_video_frame_queue_.pop(video_frame);
     if (on_receive_complete_frame_) {
-      auto now_complete_frame_ts =
-          std::chrono::high_resolution_clock::now().time_since_epoch().count() /
-          1000000;
-      uint32_t duration = now_complete_frame_ts - last_complete_frame_ts_;
-      LOG_ERROR("Duration {}", 1000 / duration);
-      last_complete_frame_ts_ = now_complete_frame_ts;
+      // auto now_complete_frame_ts =
+      //     std::chrono::high_resolution_clock::now().time_since_epoch().count()
+      //     / 1000000;
+      // uint32_t duration = now_complete_frame_ts - last_complete_frame_ts_;
+      // LOG_ERROR("Duration {}", 1000 / duration);
+      // last_complete_frame_ts_ = now_complete_frame_ts;
+
       on_receive_complete_frame_(video_frame);
     }
   }
