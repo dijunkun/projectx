@@ -7,7 +7,7 @@
 
 #include "frame.h"
 #include "ringbuffer.h"
-#include "rtp_video_session.h"
+#include "rtp_codec.h"
 #include "thread_base.h"
 
 class RtpVideoReceiver : public ThreadBase {

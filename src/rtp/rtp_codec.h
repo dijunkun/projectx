@@ -1,5 +1,5 @@
-#ifndef _RTP_VIDEO_SESSION_H_
-#define _RTP_VIDEO_SESSION_H_
+#ifndef _RTP_CODEC_H_
+#define _RTP_CODEC_H_
 
 #include <stdint.h>
 
@@ -7,10 +7,10 @@
 
 #include "rtp_packet.h"
 
-class RtpVideoSession {
+class RtpCodec {
  public:
-  RtpVideoSession(PAYLOAD_TYPE payload_type);
-  ~RtpVideoSession();
+  RtpCodec(PAYLOAD_TYPE payload_type);
+  ~RtpCodec();
 
  public:
   void Encode(uint8_t* buffer, size_t size, std::vector<RtpPacket>& packets);

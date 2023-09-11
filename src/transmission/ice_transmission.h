@@ -6,10 +6,10 @@
 #include "congestion_control.h"
 #include "ice_agent.h"
 #include "ringbuffer.h"
+#include "rtp_codec.h"
 #include "rtp_packet.h"
 #include "rtp_video_receiver.h"
 #include "rtp_video_sender.h"
-#include "rtp_video_session.h"
 #include "ws_transmission.h"
 
 class IceTransmission {
@@ -72,7 +72,7 @@ class IceTransmission {
   juice_state_t state_ = JUICE_STATE_DISCONNECTED;
 
  private:
-  std::unique_ptr<RtpVideoSession> rtp_video_session_ = nullptr;
+  std::unique_ptr<RtpCodec> rtp_codec_ = nullptr;
   std::unique_ptr<RtpVideoReceiver> rtp_video_receiver_ = nullptr;
   std::unique_ptr<RtpVideoSender> rtp_video_sender_ = nullptr;
   uint8_t *rtp_payload_ = nullptr;

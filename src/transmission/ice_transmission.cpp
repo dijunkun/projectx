@@ -47,7 +47,7 @@ IceTransmission::~IceTransmission() {
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
-  rtp_video_session_ = std::make_unique<RtpVideoSession>(PAYLOAD_TYPE::H264);
+  rtp_codec_ = std::make_unique<RtpCodec>(PAYLOAD_TYPE::H264);
   rtp_video_receiver_ = std::make_unique<RtpVideoReceiver>();
   rtp_video_receiver_->SetOnReceiveCompleteFrame(
       [this](VideoFrame &video_frame) -> void {
@@ -211,8 +211,8 @@ int IceTransmission::SendData(const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
     std::vector<RtpPacket> packets;
 
-    if (rtp_video_session_) {
-      rtp_video_session_->Encode((uint8_t *)data, size, packets);
+    if (rtp_codec_) {
+      rtp_codec_->Encode((uint8_t *)data, size, packets);
     }
     if (rtp_video_sender_) {
       rtp_video_sender_->Enqueue(packets);
@@ -223,7 +223,7 @@ int IceTransmission::SendData(const char *data, size_t size) {
     // }
 
     // std::vector<RtpPacket> packets =
-    //     rtp_video_session_->Encode((uint8_t *)(data), size);
+    //     rtp_codec_->Encode((uint8_t *)(data), size);
 
     // send_ringbuffer_.insert(send_ringbuffer_.end(), packets.begin(),
     //                         packets.end());
