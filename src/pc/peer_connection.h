@@ -62,25 +62,26 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   std::string cfg_stun_server_port_;
   int signal_server_port_ = 0;
   int stun_server_port_ = 0;
-  WsTransmission *ws_transport_ = nullptr;
-  IceTransmission *ice_transmission_ = nullptr;
-  std::map<std::string, IceTransmission *> ice_transmission_list_;
-  std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;
-  std::function<void(const char *, size_t, const char *, size_t)>
-      on_receive_ice_msg_ = nullptr;
-  std::function<void(std::string)> on_ice_status_change_ = nullptr;
-  bool ice_ready_ = false;
 
+ private:
+  std::shared_ptr<WsTransmission> ws_transport_ = nullptr;
+  std::function<void(const std::string &)> on_receive_ws_msg_ = nullptr;
   unsigned int ws_connection_id_ = 0;
   std::string user_id_ = "";
   std::string transmission_id_ = "";
   std::vector<std::string> user_id_list_;
   SignalStatus signal_status_ = SignalStatus::Closed;
 
+ private:
+  std::map<std::string, std::unique_ptr<IceTransmission>>
+      ice_transmission_list_;
+  std::function<void(const char *, size_t, const char *, size_t)>
+      on_receive_ice_msg_ = nullptr;
+  std::function<void(std::string)> on_ice_status_change_ = nullptr;
+  bool ice_ready_ = false;
+
   OnReceiveBuffer on_receive_buffer_;
   char *nv12_data_ = nullptr;
-
- private:
 };
 
 #endif

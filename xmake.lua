@@ -48,6 +48,12 @@ target("ringbuffer")
     set_kind("headeronly")
     add_includedirs("src/ringbuffer", {public = true})
 
+target("thread")
+    set_kind("static")
+    add_deps("log")
+    add_files("src/thread/*.cpp")
+    add_includedirs("src/thread", {public = true})
+
 target("frame")
     set_kind("static")
     add_files("src/frame/*.cpp")
@@ -55,7 +61,7 @@ target("frame")
     
 target("rtp")
     set_kind("static")
-    add_deps("log", "frame", "ringbuffer")
+    add_deps("log", "frame", "ringbuffer", "thread")
     add_files("src/rtp/*.cpp")
     add_includedirs("src/rtp", {public = true})
 

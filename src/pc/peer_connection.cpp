@@ -59,12 +59,14 @@ int PeerConnection::Init(PeerConnectionParams params,
   on_ice_status_change_ = [this](std::string ice_status) {
     if ("JUICE_STATE_COMPLETED" == ice_status) {
       ice_ready_ = true;
+      LOG_INFO("Ice connected");
     } else {
       ice_ready_ = false;
+      LOG_INFO("Ice not useable");
     }
   };
 
-  ws_transport_ = new WsTransmission(on_receive_ws_msg_);
+  ws_transport_ = std::make_shared<WsTransmission>(on_receive_ws_msg_);
   uri_ = "ws://" + cfg_signal_server_ip_ + ":" + cfg_signal_server_port_;
   if (ws_transport_) {
     ws_transport_->Connect(uri_);
@@ -149,9 +151,10 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       LOG_INFO("]");
 
       for (auto &remote_user_id : user_id_list_) {
-        ice_transmission_list_[remote_user_id] = new IceTransmission(
-            true, transmission_id, user_id_, remote_user_id, ws_transport_,
-            on_receive_ice_msg_, on_ice_status_change_);
+        ice_transmission_list_[remote_user_id] =
+            std::make_unique<IceTransmission>(
+                true, transmission_id, user_id_, remote_user_id, ws_transport_,
+                on_receive_ice_msg_, on_ice_status_change_);
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
             cfg_stun_server_ip_, stun_server_port_);
         ice_transmission_list_[remote_user_id]->JoinTransmission();
@@ -166,8 +169,6 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       auto user_id_it = ice_transmission_list_.find(user_id);
       if (user_id_it != ice_transmission_list_.end()) {
         user_id_it->second->DestroyIceTransmission();
-        delete user_id_it->second;
-        user_id_it->second = nullptr;
         ice_transmission_list_.erase(user_id_it);
         LOG_INFO("Terminate transmission to user [{}]", user_id);
       }
@@ -184,9 +185,10 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
         std::string remote_user_id = j["remote_user_id"].get<std::string>();
         LOG_INFO("[{}] receive offer from [{}]", user_id_, remote_user_id);
 
-        ice_transmission_list_[remote_user_id] = new IceTransmission(
-            false, transmission_id, user_id_, remote_user_id, ws_transport_,
-            on_receive_ice_msg_, on_ice_status_change_);
+        ice_transmission_list_[remote_user_id] =
+            std::make_unique<IceTransmission>(
+                false, transmission_id, user_id_, remote_user_id, ws_transport_,
+                on_receive_ice_msg_, on_ice_status_change_);
 
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
             cfg_stun_server_ip_, stun_server_port_);
@@ -237,17 +239,19 @@ int PeerConnection::RequestTransmissionMemberList(
   return 0;
 }
 
-int PeerConnection::Destroy() {
-  if (ws_transport_) {
-    delete ws_transport_;
-  }
-  return 0;
-}
+int PeerConnection::Destroy() { return 0; }
 
 SignalStatus PeerConnection::GetSignalStatus() { return signal_status_; }
 
 int PeerConnection::SendVideoData(const char *data, size_t size) {
-  if (!ice_ready_) return -1;
+  if (!ice_ready_) {
+    return -1;
+  }
+
+  if (ice_transmission_list_.empty()) {
+    return -1;
+  }
+
   int ret = Encode((uint8_t *)data, size);
   if (0 != ret) {
     LOG_ERROR("Encode failed");
@@ -261,7 +265,7 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
 }
 
 int PeerConnection::OnEncodedImage(char *encoded_packets, size_t size) {
-  for (auto ice_trans : ice_transmission_list_) {
+  for (auto &ice_trans : ice_transmission_list_) {
     LOG_ERROR("H264 frame size: [{}]", size);
     ice_trans.second->SendData(encoded_packets, size);
   }
@@ -270,14 +274,14 @@ int PeerConnection::OnEncodedImage(char *encoded_packets, size_t size) {
 }
 
 int PeerConnection::SendAudioData(const char *data, size_t size) {
-  for (auto ice_trans : ice_transmission_list_) {
+  for (auto &ice_trans : ice_transmission_list_) {
     ice_trans.second->SendData(data, size);
   }
   return 0;
 }
 
 int PeerConnection::SendUserData(const char *data, size_t size) {
-  for (auto ice_trans : ice_transmission_list_) {
+  for (auto &ice_trans : ice_transmission_list_) {
     ice_trans.second->SendData(data, size);
   }
   return 0;

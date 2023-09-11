@@ -16,7 +16,8 @@ class IceTransmission {
  public:
   IceTransmission(
       bool offer_peer, std::string &transmission_id, std::string &user_id,
-      std::string &remote_user_id, WsTransmission *ice_ws_transmission,
+      std::string &remote_user_id,
+      std::shared_ptr<WsTransmission> ice_ws_transmission,
       std::function<void(const char *, size_t, const char *, size_t)>
           on_receive_ice_msg,
       std::function<void(std::string)> on_ice_status_change);
@@ -52,8 +53,8 @@ class IceTransmission {
   int SendAnswer();
 
  private:
-  IceAgent *ice_agent_ = nullptr;
-  WsTransmission *ice_ws_transport_ = nullptr;
+  std::unique_ptr<IceAgent> ice_agent_ = nullptr;
+  std::shared_ptr<WsTransmission> ice_ws_transport_ = nullptr;
   CongestionControl *congestion_control_ = nullptr;
   std::function<void(const char *, size_t, const char *, size_t)>
       on_receive_ice_msg_cb_ = nullptr;
@@ -71,17 +72,14 @@ class IceTransmission {
   juice_state_t state_ = JUICE_STATE_DISCONNECTED;
 
  private:
-  // ikcpcb *kcp_ = nullptr;
-  char kcp_complete_buffer_[2560 * 1440 * 4];
-  bool kcp_stop_ = false;
-  std::thread *kcp_update_thread_ = nullptr;
-
- private:
-  RtpVideoSession *rtp_video_session_ = nullptr;
-  RtpVideoReceiver *rtp_video_receiver_ = nullptr;
-  RtpVideoSender *rtp_video_sender_ = nullptr;
+  std::unique_ptr<RtpVideoSession> rtp_video_session_ = nullptr;
+  std::unique_ptr<RtpVideoReceiver> rtp_video_receiver_ = nullptr;
+  std::unique_ptr<RtpVideoSender> rtp_video_sender_ = nullptr;
   uint8_t *rtp_payload_ = nullptr;
   RtpPacket pop_packet_;
+  bool start_send_packet_ = false;
+
+  uint32_t last_complete_frame_ts_ = 0;
 };
 
 #endif

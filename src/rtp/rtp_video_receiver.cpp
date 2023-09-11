@@ -6,19 +6,9 @@
 
 RtpVideoReceiver::RtpVideoReceiver() {}
 
-RtpVideoReceiver::~RtpVideoReceiver() {
-  if (jitter_thread_ && jitter_thread_->joinable()) {
-    jitter_thread_->join();
-    delete jitter_thread_;
-    jitter_thread_ = nullptr;
-  }
-}
+RtpVideoReceiver::~RtpVideoReceiver() {}
 
 void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
-  if (!jitter_thread_) {
-    jitter_thread_ = new std::thread(&RtpVideoReceiver::Process, this);
-  }
-
   if (NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {
     compelete_video_frame_queue_.push(
         VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
@@ -98,23 +88,36 @@ bool RtpVideoReceiver::CheckIsFrameCompleted(RtpPacket& rtp_packet) {
   return false;
 }
 
-void RtpVideoReceiver::Process() {
-  while (1) {
-    if (!compelete_video_frame_queue_.isEmpty()) {
-      VideoFrame video_frame;
-      compelete_video_frame_queue_.pop(video_frame);
-      if (on_receive_complete_frame_) {
-        auto now_complete_frame_ts = std::chrono::high_resolution_clock::now()
-                                         .time_since_epoch()
-                                         .count() /
-                                     1000000;
-        uint32_t duration = now_complete_frame_ts - last_complete_frame_ts_;
-        LOG_ERROR("Duration {}", 1000 / duration);
-        last_complete_frame_ts_ = now_complete_frame_ts;
-        on_receive_complete_frame_(video_frame);
-      }
-    }
+void RtpVideoReceiver::Start() {
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  stop_ = false;
+}
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(13));
+void RtpVideoReceiver::Stop() {
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  stop_ = true;
+}
+
+bool RtpVideoReceiver::Process() {
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  if (stop_) {
+    return false;
   }
+
+  if (!compelete_video_frame_queue_.isEmpty()) {
+    VideoFrame video_frame;
+    compelete_video_frame_queue_.pop(video_frame);
+    if (on_receive_complete_frame_) {
+      auto now_complete_frame_ts =
+          std::chrono::high_resolution_clock::now().time_since_epoch().count() /
+          1000000;
+      uint32_t duration = now_complete_frame_ts - last_complete_frame_ts_;
+      LOG_ERROR("Duration {}", 1000 / duration);
+      last_complete_frame_ts_ = now_complete_frame_ts;
+      on_receive_complete_frame_(video_frame);
+    }
+  }
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(13));
+  return true;
 }

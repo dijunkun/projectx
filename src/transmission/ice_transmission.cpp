@@ -18,7 +18,8 @@ const std::vector<std::string> ice_status = {
 
 IceTransmission::IceTransmission(
     bool offer_peer, std::string &transmission_id, std::string &user_id,
-    std::string &remote_user_id, WsTransmission *ice_ws_transmission,
+    std::string &remote_user_id,
+    std::shared_ptr<WsTransmission> ice_ws_transmission,
     std::function<void(const char *, size_t, const char *, size_t)>
         on_receive_ice_msg,
     std::function<void(std::string)> on_ice_status_change)
@@ -31,36 +32,25 @@ IceTransmission::IceTransmission(
       on_ice_status_change_(on_ice_status_change) {}
 
 IceTransmission::~IceTransmission() {
-  if (kcp_update_thread_ && kcp_update_thread_->joinable()) {
-    kcp_update_thread_->join();
-    delete kcp_update_thread_;
-    kcp_update_thread_ = nullptr;
-  }
-
-  if (rtp_video_session_) {
-    delete rtp_video_session_;
-    rtp_video_session_ = nullptr;
+  if (rtp_video_sender_) {
+    rtp_video_sender_->Stop();
+    rtp_video_sender_->StopThread();
   }
 
   if (rtp_video_receiver_) {
-    delete rtp_video_receiver_;
-    rtp_video_receiver_ = nullptr;
+    rtp_video_receiver_->Stop();
+    rtp_video_receiver_->StopThread();
   }
 
   if (rtp_payload_) {
     delete rtp_payload_;
     rtp_payload_ = nullptr;
   }
-
-  if (ice_agent_) {
-    delete ice_agent_;
-    ice_agent_ = nullptr;
-  }
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
-  rtp_video_session_ = new RtpVideoSession(PAYLOAD_TYPE::H264);
-  rtp_video_receiver_ = new RtpVideoReceiver();
+  rtp_video_session_ = std::make_unique<RtpVideoSession>(PAYLOAD_TYPE::H264);
+  rtp_video_receiver_ = std::make_unique<RtpVideoReceiver>();
   rtp_video_receiver_->SetOnReceiveCompleteFrame(
       [this](VideoFrame &video_frame) -> void {
         LOG_ERROR("OnReceiveCompleteFrame {}", video_frame.Size());
@@ -69,16 +59,21 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
                                remote_user_id_.size());
       });
 
-  rtp_video_sender_ = new RtpVideoSender();
+  rtp_video_receiver_->StartThread();
+  rtp_video_receiver_->Start();
+
+  rtp_video_sender_ = std::make_unique<RtpVideoSender>();
   rtp_video_sender_->SetRtpPacketSendFunc([this](
                                               RtpPacket &rtp_packet) -> void {
     if (ice_agent_) {
-      LOG_ERROR("Send rtp packet {}", rtp_packet.Size());
       ice_agent_->Send((const char *)rtp_packet.Buffer(), rtp_packet.Size());
     }
   });
 
-  ice_agent_ = new IceAgent(ip, port);
+  rtp_video_sender_->StartThread();
+  rtp_video_sender_->Start();
+
+  ice_agent_ = std::make_unique<IceAgent>(ip, port);
 
   ice_agent_->CreateIceAgent(
       [](juice_agent_t *agent, juice_state_t state, void *user_ptr) {
@@ -136,7 +131,6 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
 
 int IceTransmission::DestroyIceTransmission() {
   LOG_INFO("[{}->{}] Destroy ice transmission", user_id_, remote_user_id_);
-  kcp_stop_ = true;
   return ice_agent_->DestoryIceAgent();
 }
 
@@ -221,8 +215,13 @@ int IceTransmission::SendData(const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
     std::vector<RtpPacket> packets;
 
-    rtp_video_session_->Encode((uint8_t *)data, size, packets);
-    rtp_video_sender_->Enqueue(packets);
+    if (rtp_video_session_) {
+      rtp_video_session_->Encode((uint8_t *)data, size, packets);
+    }
+    if (rtp_video_sender_) {
+      rtp_video_sender_->Enqueue(packets);
+    }
+
     // for (auto &packet : packets) {
     //   ice_agent_->Send((const char *)packet.Buffer(), packet.Size());
     // }

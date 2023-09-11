@@ -2,29 +2,35 @@
 
 #include <chrono>
 
+#include "log.h"
+
 RtpVideoSender::RtpVideoSender() {}
 
-RtpVideoSender::~RtpVideoSender() {
-  if (send_thread_ && send_thread_->joinable()) {
-    send_thread_->join();
-    delete send_thread_;
-    send_thread_ = nullptr;
-  }
-}
+RtpVideoSender::~RtpVideoSender() {}
 
 void RtpVideoSender::Enqueue(std::vector<RtpPacket>& rtp_packets) {
-  if (!send_thread_) {
-    send_thread_ = new std::thread(&RtpVideoSender::Process, this);
-  }
-
   for (auto& rtp_packet : rtp_packets) {
-    start_ = true;
     rtp_packe_queue_.push(rtp_packet);
   }
 }
 
-void RtpVideoSender::Process() {
-  while (1) {
+void RtpVideoSender::Start() {
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  stop_ = false;
+}
+
+void RtpVideoSender::Stop() {
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  stop_ = true;
+}
+
+bool RtpVideoSender::Process() {
+  std::lock_guard<std::mutex> lock_guard(mutex_);
+  if (stop_) {
+    return false;
+  }
+
+  for (size_t i = 0; i < 50; i++)
     if (!rtp_packe_queue_.isEmpty()) {
       RtpPacket rtp_packet;
       rtp_packe_queue_.pop(rtp_packet);
@@ -33,6 +39,5 @@ void RtpVideoSender::Process() {
       }
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
+  return true;
 }
