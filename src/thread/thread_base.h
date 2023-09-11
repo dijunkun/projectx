@@ -1,7 +1,7 @@
 #ifndef _THREAD_BASE_H_
 #define _THREAD_BASE_H_
 
-#include <mutex>
+#include <atomic>
 #include <thread>
 
 class ThreadBase {
@@ -10,8 +10,12 @@ class ThreadBase {
   ~ThreadBase();
 
  public:
-  void StartThread();
-  void StopThread();
+  void Start();
+  void Stop();
+
+  void Pause();
+  void Resume();
+
   virtual bool Process() = 0;
 
  private:
@@ -19,8 +23,9 @@ class ThreadBase {
 
  private:
   std::unique_ptr<std::thread> thread_ = nullptr;
-  bool start_ = false;
-  std::mutex mutex_;
+
+  std::atomic<bool> stop_ = false;
+  std::atomic<bool> pause_ = false;
 };
 
 #endif

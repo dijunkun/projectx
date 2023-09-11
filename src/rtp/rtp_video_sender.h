@@ -2,8 +2,6 @@
 #define _RTP_VIDEO_SENDER_H_
 
 #include <functional>
-#include <mutex>
-#include <thread>
 
 #include "ringbuffer.h"
 #include "rtp_packet.h"
@@ -23,18 +21,12 @@ class RtpVideoSender : public ThreadBase {
     rtp_packet_send_func_ = rtp_packet_send_func;
   }
 
-  void Start();
-  void Stop();
-
  private:
   bool Process() override;
 
  private:
   std::function<void(RtpPacket &)> rtp_packet_send_func_ = nullptr;
   RingBuffer<RtpPacket> rtp_packe_queue_;
-
-  bool stop_ = true;
-  std::mutex mutex_;
 };
 
 #endif

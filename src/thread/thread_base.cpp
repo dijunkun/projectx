@@ -6,19 +6,27 @@ ThreadBase::ThreadBase() {}
 
 ThreadBase::~ThreadBase() {}
 
-void ThreadBase::StartThread() {
+void ThreadBase::Start() {
   if (!thread_) {
     thread_ = std::make_unique<std::thread>(&ThreadBase::Run, this);
   }
+
+  stop_ = false;
 }
 
-void ThreadBase::StopThread() {
+void ThreadBase::Stop() {
+  stop_ = true;
+
   if (thread_ && thread_->joinable()) {
     thread_->join();
   }
 }
 
+void ThreadBase::Pause() { pause_ = true; }
+
+void ThreadBase::Resume() { pause_ = false; }
+
 void ThreadBase::Run() {
-  while (Process()) {
+  while (!stop_ && Process()) {
   }
 }

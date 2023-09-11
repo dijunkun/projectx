@@ -34,12 +34,10 @@ IceTransmission::IceTransmission(
 IceTransmission::~IceTransmission() {
   if (rtp_video_sender_) {
     rtp_video_sender_->Stop();
-    rtp_video_sender_->StopThread();
   }
 
   if (rtp_video_receiver_) {
     rtp_video_receiver_->Stop();
-    rtp_video_receiver_->StopThread();
   }
 
   if (rtp_payload_) {
@@ -59,7 +57,6 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
                                remote_user_id_.size());
       });
 
-  rtp_video_receiver_->StartThread();
   rtp_video_receiver_->Start();
 
   rtp_video_sender_ = std::make_unique<RtpVideoSender>();
@@ -70,7 +67,6 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
     }
   });
 
-  rtp_video_sender_->StartThread();
   rtp_video_sender_->Start();
 
   ice_agent_ = std::make_unique<IceAgent>(ip, port);

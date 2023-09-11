@@ -14,22 +14,7 @@ void RtpVideoSender::Enqueue(std::vector<RtpPacket>& rtp_packets) {
   }
 }
 
-void RtpVideoSender::Start() {
-  std::lock_guard<std::mutex> lock_guard(mutex_);
-  stop_ = false;
-}
-
-void RtpVideoSender::Stop() {
-  std::lock_guard<std::mutex> lock_guard(mutex_);
-  stop_ = true;
-}
-
 bool RtpVideoSender::Process() {
-  std::lock_guard<std::mutex> lock_guard(mutex_);
-  if (stop_) {
-    return false;
-  }
-
   for (size_t i = 0; i < 50; i++)
     if (!rtp_packe_queue_.isEmpty()) {
       RtpPacket rtp_packet;

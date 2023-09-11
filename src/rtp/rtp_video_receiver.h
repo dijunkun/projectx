@@ -3,7 +3,6 @@
 
 #include <functional>
 #include <map>
-#include <mutex>
 #include <queue>
 
 #include "frame.h"
@@ -24,9 +23,6 @@ class RtpVideoReceiver : public ThreadBase {
     on_receive_complete_frame_ = on_receive_complete_frame;
   }
 
-  void Start();
-  void Stop();
-
  private:
   bool CheckIsFrameCompleted(RtpPacket& rtp_packet);
   //   void OnReceiveFrame(uint8_t* payload) {}
@@ -41,9 +37,6 @@ class RtpVideoReceiver : public ThreadBase {
   uint32_t last_complete_frame_ts_ = 0;
 
   RingBuffer<VideoFrame> compelete_video_frame_queue_;
-
-  bool stop_ = true;
-  std::mutex mutex_;
 };
 
 #endif

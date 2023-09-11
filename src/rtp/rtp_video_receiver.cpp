@@ -88,22 +88,7 @@ bool RtpVideoReceiver::CheckIsFrameCompleted(RtpPacket& rtp_packet) {
   return false;
 }
 
-void RtpVideoReceiver::Start() {
-  std::lock_guard<std::mutex> lock_guard(mutex_);
-  stop_ = false;
-}
-
-void RtpVideoReceiver::Stop() {
-  std::lock_guard<std::mutex> lock_guard(mutex_);
-  stop_ = true;
-}
-
 bool RtpVideoReceiver::Process() {
-  std::lock_guard<std::mutex> lock_guard(mutex_);
-  if (stop_) {
-    return false;
-  }
-
   if (!compelete_video_frame_queue_.isEmpty()) {
     VideoFrame video_frame;
     compelete_video_frame_queue_.pop(video_frame);
