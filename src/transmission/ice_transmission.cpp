@@ -60,11 +60,13 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
   rtp_video_receiver_->Start();
 
   rtp_video_sender_ = std::make_unique<RtpVideoSender>();
-  rtp_video_sender_->SetRtpPacketSendFunc([this](
-                                              RtpPacket &rtp_packet) -> void {
-    if (ice_agent_) {
-      ice_agent_->Send((const char *)rtp_packet.Buffer(), rtp_packet.Size());
+  rtp_video_sender_->SetUdpSender([this](const char *data, size_t size) -> int {
+    if (!ice_agent_) {
+      LOG_ERROR("ice_agent_ is nullptr");
+      return -1;
     }
+
+    return ice_agent_->Send(data, size);
   });
 
   rtp_video_sender_->Start();

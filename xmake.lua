@@ -58,10 +58,16 @@ target("frame")
     set_kind("static")
     add_files("src/frame/*.cpp")
     add_includedirs("src/frame", {public = true})
-    
+
+target("rtcp")
+    set_kind("static")
+    add_deps("log")
+    add_files("src/rtcp/*.cpp")
+    add_includedirs("src/rtcp", {public = true})
+
 target("rtp")
     set_kind("static")
-    add_deps("log", "frame", "ringbuffer", "thread")
+    add_deps("log", "frame", "ringbuffer", "thread", "rtcp")
     add_files("src/rtp/*.cpp")
     add_includedirs("src/rtp", {public = true})
 
@@ -101,7 +107,7 @@ target("qos")
 
 target("transmission")
     set_kind("static")
-    add_deps("log", "ws", "ice", "qos", "rtp")
+    add_deps("log", "ws", "ice", "qos", "rtp", "rtcp")
     add_files("src/transmission/*.cpp")
     add_packages("asio", "nlohmann_json")
     add_includedirs("src/ws", "src/ice", "src/qos", {public = true})

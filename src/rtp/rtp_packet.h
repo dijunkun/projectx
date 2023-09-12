@@ -141,30 +141,30 @@ class RtpPacket {
 
  public:
   // Get Header
-  const uint32_t Verion() { return version_; }
-  const bool HasPadding() { return has_padding_; }
-  const bool HasExtension() { return has_extension_; }
-  const bool Marker() { return marker_; }
-  const PAYLOAD_TYPE PayloadType() { return PAYLOAD_TYPE(payload_type_); }
-  const uint16_t SequenceNumber() { return sequence_number_; }
-  const uint32_t Timestamp() { return timestamp_; }
-  const uint32_t Ssrc() { return ssrc_; }
-  const std::vector<uint32_t> Csrcs() { return csrcs_; };
-  const uint16_t ExtensionProfile() { return extension_profile_; }
-  const uint8_t *ExtensionData() { return extension_data_; }
+  uint32_t Verion() const { return version_; }
+  bool HasPadding() const { return has_padding_; }
+  bool HasExtension() const { return has_extension_; }
+  bool Marker() const { return marker_; }
+  PAYLOAD_TYPE PayloadType() const { return PAYLOAD_TYPE(payload_type_); }
+  uint16_t SequenceNumber() const { return sequence_number_; }
+  uint32_t Timestamp() const { return timestamp_; }
+  uint32_t Ssrc() const { return ssrc_; }
+  std::vector<uint32_t> Csrcs() const { return csrcs_; };
+  uint16_t ExtensionProfile() const { return extension_profile_; }
+  const uint8_t *ExtensionData() const { return extension_data_; }
 
   // Payload
-  const uint8_t *Payload() { return payload_; };
-  const size_t PayloadSize() { return payload_size_; }
+  const uint8_t *Payload() const { return payload_; };
+  size_t PayloadSize() const { return payload_size_; }
 
   // Entire RTP buffer
-  const uint8_t *Buffer() { return buffer_; }
-  const size_t Size() { return size_; }
+  const uint8_t *Buffer() const { return buffer_; }
+  size_t Size() const { return size_; }
 
   // NAL
-  const NAL_UNIT_TYPE NalUnitType() { return nal_unit_type_; }
-  const bool FuAStart() { return fu_header_.start; }
-  const bool FuAEnd() { return fu_header_.end; }
+  NAL_UNIT_TYPE NalUnitType() const { return nal_unit_type_; }
+  bool FuAStart() const { return fu_header_.start; }
+  bool FuAEnd() const { return fu_header_.end; }
 
  private:
   inline void TryToDecodeH264RtpPacket(uint8_t *buffer);
