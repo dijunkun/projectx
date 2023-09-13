@@ -1,7 +1,27 @@
 #include "rtcp_header.h"
 
 RtcpHeader::RtcpHeader()
-    : version_(0), padding_(0), count_or_format_(0), length_(0) {}
+    : version_(0),
+      padding_(0),
+      count_or_format_(0),
+      payload_type_(PAYLOAD_TYPE::UNKNOWN),
+      length_(0) {}
+
+RtcpHeader::RtcpHeader(const uint8_t* buffer, uint32_t size) {
+  if (size < 4) {
+    version_ = 2;
+    padding_ = 0;
+    count_or_format_ = 0;
+    payload_type_ = PAYLOAD_TYPE::UNKNOWN;
+    length_ = 0;
+  } else {
+    version_ = buffer[0] >> 6;
+    padding_ = buffer[0] >> 5 & 0x01;
+    count_or_format_ = buffer[0] & 0x1F;
+    payload_type_ = PAYLOAD_TYPE(buffer[1]);
+    length_ = buffer[2] << 8 + buffer[3];
+  }
+}
 
 RtcpHeader::~RtcpHeader() {}
 

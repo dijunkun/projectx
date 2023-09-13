@@ -26,7 +26,7 @@ class RtpVideoSender : public ThreadBase {
   int SendRtpPacket(RtpPacket &rtp_packet);
   int SendRtcpSR(RtcpSenderReport &rtcp_sr);
 
-  bool CheckIsTimeSendRtcpPacket();
+  bool CheckIsTimeSendSR();
 
  private:
   bool Process() override;

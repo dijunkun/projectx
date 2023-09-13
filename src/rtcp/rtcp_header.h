@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "log.h"
+
 // RTCP header
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -26,6 +28,7 @@ class RtcpHeader {
 
  public:
   RtcpHeader();
+  RtcpHeader(const uint8_t* buffer, uint32_t size);
   ~RtcpHeader();
 
  public:
@@ -34,14 +37,18 @@ class RtcpHeader {
   void SetCountOrFormat(uint8_t count_or_format) {
     count_or_format_ = count_or_format;
   }
-  void SetPayloadType(uint8_t payload_type) { payload_type_ = payload_type; }
+  void SetPayloadType(PAYLOAD_TYPE payload_type) {
+    payload_type_ = payload_type;
+  }
   void SetLength(uint16_t length) { length_ = length; }
 
  public:
   uint8_t Verion() const { return version_; }
   uint8_t Padding() const { return padding_; }
   uint8_t CountOrFormat() const { return count_or_format_; }
-  PAYLOAD_TYPE PayloadType() const { return PAYLOAD_TYPE(payload_type_); }
+  PAYLOAD_TYPE PayloadType() const {
+    return PAYLOAD_TYPE((uint8_t)payload_type_);
+  }
   uint16_t Length() const { return length_; }
 
   int Encode(uint8_t version, uint8_t padding, uint8_t count_or_format,
@@ -51,7 +58,7 @@ class RtcpHeader {
   uint8_t version_ : 2;
   uint8_t padding_ : 1;
   uint8_t count_or_format_ : 5;
-  uint8_t payload_type_ : 8;
+  PAYLOAD_TYPE payload_type_ : 8;
   uint16_t length_ : 16;
 };
 

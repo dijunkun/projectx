@@ -109,17 +109,19 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
           }
         }
       },
-      [](juice_agent_t *agent, const char *data, size_t size, void *user_ptr) {
+      [](juice_agent_t *agent, const char *buffer, size_t size,
+         void *user_ptr) {
         if (user_ptr) {
           IceTransmission *ice_transmission_obj =
               static_cast<IceTransmission *>(user_ptr);
           if (ice_transmission_obj) {
-            RtpPacket packet((uint8_t *)data, size);
-            ice_transmission_obj->rtp_video_receiver_->InsertRtpPacket(packet);
-            // ice_transmission_obj->on_receive_ice_msg_cb_(
-            //     (const char *)packet.Payload(), packet.PayloadSize(),
-            //     ice_transmission_obj->remote_user_id_.data(),
-            //     ice_transmission_obj->remote_user_id_.size());
+            if (ice_transmission_obj->CheckIsVideoPacket(buffer, size)) {
+              RtpPacket packet((uint8_t *)buffer, size);
+              ice_transmission_obj->rtp_video_receiver_->InsertRtpPacket(
+                  packet);
+            } else if (ice_transmission_obj->CheckIsRtcpPacket(buffer, size)) {
+              LOG_ERROR("Rtcp packet [{}]", (uint8_t)(buffer[1]));
+            }
           }
         }
       },
@@ -219,16 +221,61 @@ int IceTransmission::SendData(const char *data, size_t size) {
     if (rtp_video_sender_) {
       rtp_video_sender_->Enqueue(packets);
     }
-
-    // for (auto &packet : packets) {
-    //   ice_agent_->Send((const char *)packet.Buffer(), packet.Size());
-    // }
-
-    // std::vector<RtpPacket> packets =
-    //     rtp_codec_->Encode((uint8_t *)(data), size);
-
-    // send_ringbuffer_.insert(send_ringbuffer_.end(), packets.begin(),
-    //                         packets.end());
   }
   return 0;
+}
+
+uint8_t IceTransmission::CheckIsRtcpPacket(const char *buffer, size_t size) {
+  if (size < 4) {
+    return 0;
+  }
+
+  uint8_t pt = buffer[1];
+
+  switch (pt) {
+    case RtcpHeader::PAYLOAD_TYPE::SR: {
+      return pt;
+    }
+    case RtcpHeader::PAYLOAD_TYPE::RR: {
+      return pt;
+    }
+    case RtcpHeader::PAYLOAD_TYPE::SDES: {
+      return pt;
+    }
+    case RtcpHeader::PAYLOAD_TYPE::BYE: {
+      return pt;
+    }
+    case RtcpHeader::PAYLOAD_TYPE::APP: {
+      return pt;
+    }
+    default: {
+      return 0;
+    }
+  }
+}
+
+uint8_t IceTransmission::CheckIsVideoPacket(const char *buffer, size_t size) {
+  if (size < 4) {
+    return 0;
+  }
+
+  uint8_t pt = buffer[1] & 0x7F;
+  if (RtpPacket::PAYLOAD_TYPE::H264 == pt) {
+    return pt;
+  } else {
+    return 0;
+  }
+}
+
+uint8_t IceTransmission::CheckIsAudioPacket(const char *buffer, size_t size) {
+  if (size < 4) {
+    return 0;
+  }
+
+  uint8_t pt = buffer[1] & 0x7F;
+  if (RtpPacket::PAYLOAD_TYPE::OPUS == pt) {
+    return pt;
+  } else {
+    return 0;
+  }
 }

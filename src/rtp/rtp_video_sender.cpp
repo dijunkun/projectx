@@ -43,7 +43,7 @@ int RtpVideoSender::SendRtpPacket(RtpPacket& rtp_packet) {
   total_rtp_packets_sent_++;
   total_rtp_payload_sent_ += rtp_packet.PayloadSize();
 
-  if (CheckIsTimeSendRtcpPacket()) {
+  if (CheckIsTimeSendSR()) {
     RtcpSenderReport rtcp_sr;
     RtcpSenderReport::SENDER_INFO sender_info;
 
@@ -90,10 +90,11 @@ int RtpVideoSender::SendRtcpSR(RtcpSenderReport& rtcp_sr) {
   return 0;
 }
 
-bool RtpVideoSender::CheckIsTimeSendRtcpPacket() {
-  auto now_ts =
-      std::chrono::high_resolution_clock::now().time_since_epoch().count() *
-      1000000;
+bool RtpVideoSender::CheckIsTimeSendSR() {
+  uint32_t now_ts = static_cast<uint32_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count());
 
   if (now_ts - last_send_rtcp_packet_ts_ >= RTCP_INTERVAL) {
     last_send_rtcp_packet_ts_ = now_ts;

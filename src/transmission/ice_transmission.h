@@ -53,6 +53,11 @@ class IceTransmission {
   int SendAnswer();
 
  private:
+  uint8_t CheckIsRtcpPacket(const char *buffer, size_t size);
+  uint8_t CheckIsVideoPacket(const char *buffer, size_t size);
+  uint8_t CheckIsAudioPacket(const char *buffer, size_t size);
+
+ private:
   std::unique_ptr<IceAgent> ice_agent_ = nullptr;
   std::shared_ptr<WsTransmission> ice_ws_transport_ = nullptr;
   CongestionControl *congestion_control_ = nullptr;
