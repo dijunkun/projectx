@@ -40,6 +40,10 @@ IceTransmission::~IceTransmission() {
     rtp_video_receiver_->Stop();
   }
 
+  if (rtp_data_sender_) {
+    rtp_data_sender_->Stop();
+  }
+
   if (rtp_payload_) {
     delete rtp_payload_;
     rtp_payload_ = nullptr;
@@ -47,9 +51,11 @@ IceTransmission::~IceTransmission() {
 }
 
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
-  rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::H264);
+  video_rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::H264);
+  data_rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::DATA);
+
   rtp_video_receiver_ = std::make_unique<RtpVideoReceiver>();
-  rtp_video_receiver_->SetUdpSender(
+  rtp_video_receiver_->SetSendDataFunc(
       [this](const char *data, size_t size) -> int {
         if (!ice_agent_) {
           LOG_ERROR("ice_agent_ is nullptr");
@@ -69,16 +75,30 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
   rtp_video_receiver_->Start();
 
   rtp_video_sender_ = std::make_unique<RtpVideoSender>();
-  rtp_video_sender_->SetUdpSender([this](const char *data, size_t size) -> int {
-    if (!ice_agent_) {
-      LOG_ERROR("ice_agent_ is nullptr");
-      return -1;
-    }
+  rtp_video_sender_->SetSendDataFunc(
+      [this](const char *data, size_t size) -> int {
+        if (!ice_agent_) {
+          LOG_ERROR("ice_agent_ is nullptr");
+          return -1;
+        }
 
-    return ice_agent_->Send(data, size);
-  });
+        return ice_agent_->Send(data, size);
+      });
 
   rtp_video_sender_->Start();
+
+  rtp_data_sender_ = std::make_unique<RtpDataSender>();
+  rtp_data_sender_->SetSendDataFunc(
+      [this](const char *data, size_t size) -> int {
+        if (!ice_agent_) {
+          LOG_ERROR("ice_agent_ is nullptr");
+          return -1;
+        }
+
+        return ice_agent_->Send(data, size);
+      });
+
+  rtp_data_sender_->Start();
 
   ice_agent_ = std::make_unique<IceAgent>(ip, port);
 
@@ -220,15 +240,25 @@ int IceTransmission::SendAnswer() {
   return 0;
 }
 
-int IceTransmission::SendData(const char *data, size_t size) {
+int IceTransmission::SendData(DATA_TYPE type, const char *data, size_t size) {
   if (JUICE_STATE_COMPLETED == state_) {
     std::vector<RtpPacket> packets;
 
-    if (rtp_codec_) {
-      rtp_codec_->Encode((uint8_t *)data, size, packets);
-    }
-    if (rtp_video_sender_) {
-      rtp_video_sender_->Enqueue(packets);
+    if (DATA_TYPE::VIDEO == type) {
+      if (rtp_video_sender_) {
+        if (video_rtp_codec_) {
+          video_rtp_codec_->Encode((uint8_t *)data, size, packets);
+        }
+        rtp_video_sender_->Enqueue(packets);
+      }
+    } else if (DATA_TYPE::AUDIO == type) {
+    } else if (DATA_TYPE::DATA == type) {
+      if (rtp_data_sender_) {
+        if (data_rtp_codec_) {
+          data_rtp_codec_->Encode((uint8_t *)data, size, packets);
+        }
+        rtp_data_sender_->Enqueue(packets);
+      }
     }
   }
   return 0;

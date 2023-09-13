@@ -7,17 +7,20 @@
 
 RtpVideoReceiver::RtpVideoReceiver() {}
 
-RtpVideoReceiver::~RtpVideoReceiver() {}
+RtpVideoReceiver::~RtpVideoReceiver() {
+  if (rtp_statistics_) {
+    rtp_statistics_->Stop();
+  }
+}
 
 void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
-  if (!rtp_video_receive_statistics_) {
-    rtp_video_receive_statistics_ =
-        std::make_unique<RtpVideoReceiveStatistics>();
-    rtp_video_receive_statistics_->Start();
+  if (!rtp_statistics_) {
+    rtp_statistics_ = std::make_unique<RtpStatistics>();
+    rtp_statistics_->Start();
   }
 
-  if (rtp_video_receive_statistics_) {
-    rtp_video_receive_statistics_->UpdateReceiveBytes(rtp_packet.Size());
+  if (rtp_statistics_) {
+    rtp_statistics_->UpdateReceiveBytes(rtp_packet.Size());
   }
 
   if (CheckIsTimeSendRR()) {
@@ -147,18 +150,18 @@ bool RtpVideoReceiver::Process() {
   return true;
 }
 
-void RtpVideoReceiver::SetUdpSender(
-    std::function<int(const char*, size_t)> udp_sender) {
-  udp_sender_ = udp_sender;
+void RtpVideoReceiver::SetSendDataFunc(
+    std::function<int(const char*, size_t)> data_send_func) {
+  data_send_func_ = data_send_func;
 }
 
 int RtpVideoReceiver::SendRtcpRR(RtcpReceiverReport& rtcp_rr) {
-  if (!udp_sender_) {
-    LOG_ERROR("udp_sender_ is nullptr");
+  if (!data_send_func_) {
+    LOG_ERROR("data_send_func_ is nullptr");
     return -1;
   }
 
-  if (udp_sender_((const char*)rtcp_rr.Buffer(), rtcp_rr.Size())) {
+  if (data_send_func_((const char*)rtcp_rr.Buffer(), rtcp_rr.Size())) {
     LOG_ERROR("Send RR failed");
     return -1;
   }

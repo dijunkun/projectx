@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 enum ws_status { WS_CONNECTING = 0, WS_OPEN, WS_FAILED, WS_CLOSED, WS_UNKNOWN };
-enum DATA_TYPE { VIDEO = 0, AUDIO, USER };
+enum DATA_TYPE { VIDEO = 0, AUDIO, DATA };
 
 #ifdef __cplusplus
 extern "C" {

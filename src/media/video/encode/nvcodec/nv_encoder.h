@@ -1,6 +1,8 @@
 #ifndef _NV_ENCODER_H_
 #define _NV_ENCODER_H_
 
+#include <functional>
+
 #include "NvEncoderCuda.h"
 
 class VideoEncoder {
@@ -9,8 +11,12 @@ class VideoEncoder {
   ~VideoEncoder();
 
   int Init();
-  int Encode(const uint8_t* pData, int nSize);
+  int Encode(
+      const uint8_t* pData, int nSize,
+      std::function<int(char* encoded_packets, size_t size)> on_encoded_image);
+
   virtual int OnEncodedImage(char* encoded_packets, size_t size);
+
   void ForceIdr();
 
  private:

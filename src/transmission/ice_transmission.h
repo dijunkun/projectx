@@ -7,12 +7,17 @@
 #include "ice_agent.h"
 #include "ringbuffer.h"
 #include "rtp_codec.h"
+#include "rtp_data_receiver.h"
+#include "rtp_data_sender.h"
 #include "rtp_packet.h"
 #include "rtp_video_receiver.h"
 #include "rtp_video_sender.h"
 #include "ws_transmission.h"
 
 class IceTransmission {
+ public:
+  typedef enum { VIDEO = 96, AUDIO = 97, DATA = 127 } DATA_TYPE;
+
  public:
   IceTransmission(
       bool offer_peer, std::string &transmission_id, std::string &user_id,
@@ -21,7 +26,6 @@ class IceTransmission {
       std::function<void(const char *, size_t, const char *, size_t)>
           on_receive_ice_msg,
       std::function<void(std::string)> on_ice_status_change);
-
   ~IceTransmission();
 
  public:
@@ -33,7 +37,7 @@ class IceTransmission {
 
   int SetTransmissionId(const std::string &transmission_id);
 
-  int SendData(const char *data, size_t size);
+  int SendData(DATA_TYPE type, const char *data, size_t size);
 
  public:
   int GatherCandidates();
@@ -77,9 +81,13 @@ class IceTransmission {
   juice_state_t state_ = JUICE_STATE_DISCONNECTED;
 
  private:
-  std::unique_ptr<RtpCodec> rtp_codec_ = nullptr;
+  std::unique_ptr<RtpCodec> video_rtp_codec_ = nullptr;
+  std::unique_ptr<RtpCodec> audio_rtp_codec_ = nullptr;
+  std::unique_ptr<RtpCodec> data_rtp_codec_ = nullptr;
   std::unique_ptr<RtpVideoReceiver> rtp_video_receiver_ = nullptr;
   std::unique_ptr<RtpVideoSender> rtp_video_sender_ = nullptr;
+  std::unique_ptr<RtpDataReceiver> rtp_data_receiver_ = nullptr;
+  std::unique_ptr<RtpDataSender> rtp_data_sender_ = nullptr;
   uint8_t *rtp_payload_ = nullptr;
   RtpPacket pop_packet_;
   bool start_send_packet_ = false;

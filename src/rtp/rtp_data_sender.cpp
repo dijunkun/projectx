@@ -1,4 +1,4 @@
-#include "rtp_video_sender.h"
+#include "rtp_data_sender.h"
 
 #include <chrono>
 
@@ -6,15 +6,15 @@
 
 #define RTCP_SR_INTERVAL 1000
 
-RtpVideoSender::RtpVideoSender() {}
+RtpDataSender::RtpDataSender() {}
 
-RtpVideoSender::~RtpVideoSender() {
+RtpDataSender::~RtpDataSender() {
   if (rtp_statistics_) {
     rtp_statistics_->Stop();
   }
 }
 
-void RtpVideoSender::Enqueue(std::vector<RtpPacket>& rtp_packets) {
+void RtpDataSender::Enqueue(std::vector<RtpPacket>& rtp_packets) {
   if (!rtp_statistics_) {
     rtp_statistics_ = std::make_unique<RtpStatistics>();
     rtp_statistics_->Start();
@@ -25,12 +25,12 @@ void RtpVideoSender::Enqueue(std::vector<RtpPacket>& rtp_packets) {
   }
 }
 
-void RtpVideoSender::SetSendDataFunc(
+void RtpDataSender::SetSendDataFunc(
     std::function<int(const char*, size_t)> data_send_func) {
   data_send_func_ = data_send_func;
 }
 
-int RtpVideoSender::SendRtpPacket(RtpPacket& rtp_packet) {
+int RtpDataSender::SendRtpPacket(RtpPacket& rtp_packet) {
   if (!data_send_func_) {
     LOG_ERROR("data_send_func_ is nullptr");
     return -1;
@@ -91,7 +91,7 @@ int RtpVideoSender::SendRtpPacket(RtpPacket& rtp_packet) {
   return 0;
 }
 
-int RtpVideoSender::SendRtcpSR(RtcpSenderReport& rtcp_sr) {
+int RtpDataSender::SendRtcpSR(RtcpSenderReport& rtcp_sr) {
   if (!data_send_func_) {
     LOG_ERROR("data_send_func_ is nullptr");
     return -1;
@@ -107,7 +107,7 @@ int RtpVideoSender::SendRtcpSR(RtcpSenderReport& rtcp_sr) {
   return 0;
 }
 
-bool RtpVideoSender::CheckIsTimeSendSR() {
+bool RtpDataSender::CheckIsTimeSendSR() {
   uint32_t now_ts = static_cast<uint32_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::high_resolution_clock::now().time_since_epoch())
@@ -121,7 +121,7 @@ bool RtpVideoSender::CheckIsTimeSendSR() {
   }
 }
 
-bool RtpVideoSender::Process() {
+bool RtpDataSender::Process() {
   last_send_bytes_ = 0;
 
   for (size_t i = 0; i < 10; i++)

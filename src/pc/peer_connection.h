@@ -52,9 +52,6 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   int RequestTransmissionMemberList(const std::string &transmission_id);
 
  private:
-  int OnEncodedImage(char *encoded_packets, size_t size) override;
-
- private:
   std::string uri_ = "";
   std::string cfg_signal_server_ip_;
   std::string cfg_signal_server_port_;

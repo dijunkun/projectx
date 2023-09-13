@@ -66,7 +66,7 @@
 
 class RtpPacket {
  public:
-  typedef enum { H264 = 96, OPUS = 97, USER_DEFINED = 127 } PAYLOAD_TYPE;
+  typedef enum { H264 = 96, OPUS = 97, DATA = 127 } PAYLOAD_TYPE;
   typedef enum { UNKNOWN = 0, NALU = 1, FU_A = 28, FU_B = 29 } NAL_UNIT_TYPE;
 
  public:

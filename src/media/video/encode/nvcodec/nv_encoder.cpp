@@ -73,7 +73,9 @@ int VideoEncoder::Init() {
   return 0;
 }
 
-int VideoEncoder::Encode(const uint8_t *pData, int nSize) {
+int VideoEncoder::Encode(
+    const uint8_t *pData, int nSize,
+    std::function<int(char *encoded_packets, size_t size)> on_encoded_image) {
   if (!encoder_) {
     LOG_ERROR("Invalid encoder");
     return -1;
@@ -104,7 +106,11 @@ int VideoEncoder::Encode(const uint8_t *pData, int nSize) {
   }
 
   for (const auto &packet : encoded_packets_) {
-    OnEncodedImage((char *)packet.data(), packet.size());
+    if (on_encoded_image) {
+      on_encoded_image((char *)packet.data(), packet.size());
+    } else {
+      OnEncodedImage((char *)packet.data(), packet.size());
+    }
 
     if (SAVE_ENCODER_STREAM) {
       fwrite((unsigned char *)packet.data(), 1, packet.size(), file_);

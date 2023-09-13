@@ -47,7 +47,7 @@ int SendData(PeerPtr *peer_ptr, DATA_TYPE data_type, const char *data,
     peer_ptr->peer_connection->SendVideoData(data, size);
   } else if (DATA_TYPE::AUDIO == data_type) {
     peer_ptr->peer_connection->SendAudioData(data, size);
-  } else if (DATA_TYPE::USER == data_type) {
+  } else if (DATA_TYPE::DATA == data_type) {
     peer_ptr->peer_connection->SendUserData(data, size);
   }
   return 0;

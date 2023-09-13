@@ -252,22 +252,18 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
     return -1;
   }
 
-  int ret = Encode((uint8_t *)data, size);
+  int ret = Encode(
+      (uint8_t *)data, size, [this](char *encoded_frame, size_t size) -> int {
+        for (auto &ice_trans : ice_transmission_list_) {
+          // LOG_ERROR("H264 frame size: [{}]", size);
+          ice_trans.second->SendData(IceTransmission::DATA_TYPE::VIDEO,
+                                     encoded_frame, size);
+        }
+        return 0;
+      });
   if (0 != ret) {
     LOG_ERROR("Encode failed");
     return -1;
-  }
-
-  // for (auto ice_trans : ice_transmission_list_) {
-  //   ice_trans.second->SendData(data, size);
-  // }
-  return 0;
-}
-
-int PeerConnection::OnEncodedImage(char *encoded_packets, size_t size) {
-  for (auto &ice_trans : ice_transmission_list_) {
-    // LOG_ERROR("H264 frame size: [{}]", size);
-    ice_trans.second->SendData(encoded_packets, size);
   }
 
   return 0;
@@ -275,14 +271,14 @@ int PeerConnection::OnEncodedImage(char *encoded_packets, size_t size) {
 
 int PeerConnection::SendAudioData(const char *data, size_t size) {
   for (auto &ice_trans : ice_transmission_list_) {
-    ice_trans.second->SendData(data, size);
+    ice_trans.second->SendData(IceTransmission::DATA_TYPE::AUDIO, data, size);
   }
   return 0;
 }
 
 int PeerConnection::SendUserData(const char *data, size_t size) {
   for (auto &ice_trans : ice_transmission_list_) {
-    ice_trans.second->SendData(data, size);
+    ice_trans.second->SendData(IceTransmission::DATA_TYPE::DATA, data, size);
   }
   return 0;
 }
