@@ -100,7 +100,6 @@ int VideoEncoder::Encode(const uint8_t *pData, int nSize) {
   encoder_->EncodeFrame(encoded_packets_);
 
   if (encoded_packets_.size() < 1) {
-    LOG_WARN("empty encoded_packets_");
     return -1;
   }
 

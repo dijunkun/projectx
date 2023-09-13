@@ -4,7 +4,7 @@
 
 #include "log.h"
 
-#define RTCP_INTERVAL 1000
+#define RTCP_SR_INTERVAL 1000
 
 RtpVideoSender::RtpVideoSender() {}
 
@@ -45,7 +45,8 @@ int RtpVideoSender::SendRtpPacket(RtpPacket& rtp_packet) {
 
   if (CheckIsTimeSendSR()) {
     RtcpSenderReport rtcp_sr;
-    RtcpSenderReport::SENDER_INFO sender_info;
+    SenderInfo sender_info;
+    RtcpReportBlock report;
 
     auto duration = std::chrono::system_clock::now().time_since_epoch();
     auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
@@ -57,7 +58,8 @@ int RtpVideoSender::SendRtpPacket(RtpPacket& rtp_packet) {
             .count());
 
     sender_info.sender_ssrc = 0x00;
-    sender_info.ntp_ts = (uint64_t)seconds_u32 << 32 | (uint64_t)fraction_u32;
+    sender_info.ntp_ts_msw = (uint32_t)seconds_u32;
+    sender_info.ntp_ts_lsw = (uint32_t)fraction_u32;
     sender_info.rtp_ts =
         std::chrono::high_resolution_clock::now().time_since_epoch().count() *
         1000000;
@@ -65,6 +67,16 @@ int RtpVideoSender::SendRtpPacket(RtpPacket& rtp_packet) {
     sender_info.sender_octet_count = total_rtp_payload_sent_;
 
     rtcp_sr.SetSenderInfo(sender_info);
+
+    report.source_ssrc = 0x00;
+    report.fraction_lost = 0;
+    report.cumulative_lost = 0;
+    report.extended_high_seq_num = 0;
+    report.jitter = 0;
+    report.lsr = 0;
+    report.dlsr = 0;
+
+    rtcp_sr.SetReportBlock(report);
 
     rtcp_sr.Encode();
 
@@ -96,8 +108,8 @@ bool RtpVideoSender::CheckIsTimeSendSR() {
           std::chrono::high_resolution_clock::now().time_since_epoch())
           .count());
 
-  if (now_ts - last_send_rtcp_packet_ts_ >= RTCP_INTERVAL) {
-    last_send_rtcp_packet_ts_ = now_ts;
+  if (now_ts - last_send_rtcp_sr_packet_ts_ >= RTCP_SR_INTERVAL) {
+    last_send_rtcp_sr_packet_ts_ = now_ts;
     return true;
   } else {
     return false;

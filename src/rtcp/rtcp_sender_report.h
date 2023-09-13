@@ -39,11 +39,7 @@
 #include <vector>
 
 #include "rtcp_header.h"
-#include "rtcp_packet.h"
-#include "rtcp_report_block.h"
-
-#define DEFAULT_SR_BLOCK_NUM 1
-#define DEFAULT_SR_SIZE 52
+#include "rtcp_typedef.h"
 
 class RtcpSenderReport {
  public:
@@ -51,21 +47,9 @@ class RtcpSenderReport {
   ~RtcpSenderReport();
 
  public:
-  typedef struct {
-    uint32_t sender_ssrc : 32;
-    uint64_t ntp_ts : 64;
-    uint32_t rtp_ts : 32;
-    uint32_t sender_packet_count : 32;
-    uint32_t sender_octet_count : 32;
-  } SENDER_INFO;
-
-  void SetSenderInfo(SENDER_INFO &sender_info) {
-    sender_info_.sender_ssrc = sender_info.sender_ssrc;
-    sender_info_.ntp_ts = sender_info.ntp_ts;
-    sender_info_.rtp_ts = sender_info.rtp_ts;
-    sender_info_.sender_packet_count = sender_info.sender_packet_count;
-    sender_info_.sender_octet_count = sender_info.sender_octet_count;
-  }
+  void SetSenderInfo(SenderInfo &sender_info);
+  void SetReportBlock(RtcpReportBlock &rtcp_report_block);
+  void SetReportBlock(std::vector<RtcpReportBlock> &rtcp_report_blocks);
 
  public:
   const uint8_t *Encode();
@@ -77,7 +61,7 @@ class RtcpSenderReport {
 
  private:
   RtcpHeader rtcp_header_;
-  SENDER_INFO sender_info_;
+  SenderInfo sender_info_;
   std::vector<RtcpReportBlock> reports_;
 
   // Entire RTCP buffer

@@ -7,6 +7,7 @@
 
 #include "frame.h"
 #include "ringbuffer.h"
+#include "rtcp_receiver_report.h"
 #include "rtp_codec.h"
 #include "rtp_video_receive_statistics.h"
 #include "thread_base.h"
@@ -19,6 +20,9 @@ class RtpVideoReceiver : public ThreadBase {
  public:
   void InsertRtpPacket(RtpPacket& rtp_packet);
 
+  void SetUdpSender(
+      std::function<int(const char*, size_t)> rtp_packet_send_func);
+
   void SetOnReceiveCompleteFrame(
       std::function<void(VideoFrame&)> on_receive_complete_frame) {
     on_receive_complete_frame_ = on_receive_complete_frame;
@@ -26,7 +30,8 @@ class RtpVideoReceiver : public ThreadBase {
 
  private:
   bool CheckIsFrameCompleted(RtpPacket& rtp_packet);
-  //   void OnReceiveFrame(uint8_t* payload) {}
+  bool CheckIsTimeSendRR();
+  int SendRtcpRR(RtcpReceiverReport& rtcp_rr);
 
  private:
   bool Process() override;
@@ -41,6 +46,8 @@ class RtpVideoReceiver : public ThreadBase {
  private:
   std::unique_ptr<RtpVideoReceiveStatistics> rtp_video_receive_statistics_ =
       nullptr;
+  uint32_t last_send_rtcp_rr_packet_ts_ = 0;
+  std::function<int(const char*, size_t)> udp_sender_ = nullptr;
 };
 
 #endif

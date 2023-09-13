@@ -49,9 +49,18 @@ IceTransmission::~IceTransmission() {
 int IceTransmission::InitIceTransmission(std::string &ip, int port) {
   rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::H264);
   rtp_video_receiver_ = std::make_unique<RtpVideoReceiver>();
+  rtp_video_receiver_->SetUdpSender(
+      [this](const char *data, size_t size) -> int {
+        if (!ice_agent_) {
+          LOG_ERROR("ice_agent_ is nullptr");
+          return -1;
+        }
+
+        return ice_agent_->Send(data, size);
+      });
   rtp_video_receiver_->SetOnReceiveCompleteFrame(
       [this](VideoFrame &video_frame) -> void {
-        LOG_ERROR("OnReceiveCompleteFrame {}", video_frame.Size());
+        // LOG_ERROR("OnReceiveCompleteFrame {}", video_frame.Size());
         on_receive_ice_msg_cb_((const char *)video_frame.Buffer(),
                                video_frame.Size(), remote_user_id_.data(),
                                remote_user_id_.size());

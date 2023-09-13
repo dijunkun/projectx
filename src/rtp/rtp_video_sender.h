@@ -4,7 +4,6 @@
 #include <functional>
 
 #include "ringbuffer.h"
-#include "rtcp_packet.h"
 #include "rtcp_sender_report.h"
 #include "rtp_packet.h"
 #include "rtp_video_send_statistics.h"
@@ -38,7 +37,7 @@ class RtpVideoSender : public ThreadBase {
  private:
   std::unique_ptr<RtpVideoSendStatistics> rtp_video_send_statistics_ = nullptr;
   uint32_t last_send_bytes_ = 0;
-  uint32_t last_send_rtcp_packet_ts_ = 0;
+  uint32_t last_send_rtcp_sr_packet_ts_ = 0;
   uint32_t total_rtp_packets_sent_ = 0;
   uint32_t total_rtp_payload_sent_ = 0;
 };

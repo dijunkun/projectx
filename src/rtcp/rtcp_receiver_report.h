@@ -31,9 +31,7 @@
 #include <vector>
 
 #include "rtcp_header.h"
-#include "rtcp_report_block.h"
-
-#define DEFAULT_SR_SIZE 32
+#include "rtcp_typedef.h"
 
 class RtcpReceiverReport {
  public:
@@ -41,12 +39,24 @@ class RtcpReceiverReport {
   ~RtcpReceiverReport();
 
  public:
-  const uint8_t *Encode(uint8_t *payload, size_t payload_size);
-  size_t Decode(uint8_t *payload);
+  void SetReportBlock(RtcpReportBlock &rtcp_report_block);
+  void SetReportBlock(std::vector<RtcpReportBlock> &rtcp_report_blocks);
+
+ public:
+  const uint8_t *Encode();
+  size_t Decode();
+
+  // Entire RTP buffer
+  const uint8_t *Buffer() const { return buffer_; }
+  size_t Size() const { return size_; }
 
  private:
   RtcpHeader rtcp_header_;
   std::vector<RtcpReportBlock> reports_;
+
+  // Entire RTCP buffer
+  uint8_t *buffer_ = nullptr;
+  size_t size_ = 0;
 };
 
 #endif

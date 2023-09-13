@@ -12,8 +12,7 @@
 // |V=2|P|   RC    |   PT=SR=200   |            length             |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-#define DEFAULT_RTCP_VERSION 2
-#define DEFAULT_RTCP_HEADER_SIZE 4
+#include "rtcp_typedef.h"
 
 class RtcpHeader {
  public:
