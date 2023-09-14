@@ -135,39 +135,88 @@ class RtpPacket {
   const uint8_t *Encode(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Nalu(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Fua(uint8_t *payload, size_t payload_size);
-  size_t Decode(uint8_t *payload);
+  size_t DecodeData(uint8_t *payload = nullptr);
   size_t DecodeH264Nalu(uint8_t *payload = nullptr);
   size_t DecodeH264Fua(uint8_t *payload = nullptr);
 
  public:
   // Get Header
-  uint32_t Verion() const { return version_; }
-  bool HasPadding() const { return has_padding_; }
-  bool HasExtension() const { return has_extension_; }
-  bool Marker() const { return marker_; }
-  PAYLOAD_TYPE PayloadType() const { return PAYLOAD_TYPE(payload_type_); }
-  uint16_t SequenceNumber() const { return sequence_number_; }
-  uint32_t Timestamp() const { return timestamp_; }
-  uint32_t Ssrc() const { return ssrc_; }
-  std::vector<uint32_t> Csrcs() const { return csrcs_; };
-  uint16_t ExtensionProfile() const { return extension_profile_; }
-  const uint8_t *ExtensionData() const { return extension_data_; }
+  uint32_t Verion() {
+    ParseRtpData();
+    return version_;
+  }
+  bool HasPadding() {
+    ParseRtpData();
+    return has_padding_;
+  }
+  bool HasExtension() {
+    ParseRtpData();
+    return has_extension_;
+  }
+  bool Marker() {
+    ParseRtpData();
+    return marker_;
+  }
+  PAYLOAD_TYPE PayloadType() {
+    ParseRtpData();
+    return PAYLOAD_TYPE(payload_type_);
+  }
+  uint16_t SequenceNumber() {
+    ParseRtpData();
+    return sequence_number_;
+  }
+  uint32_t Timestamp() {
+    ParseRtpData();
+    return timestamp_;
+  }
+  uint32_t Ssrc() {
+    ParseRtpData();
+    return ssrc_;
+  }
+  std::vector<uint32_t> Csrcs() {
+    ParseRtpData();
+    return csrcs_;
+  };
+  uint16_t ExtensionProfile() {
+    ParseRtpData();
+    return extension_profile_;
+  }
+  const uint8_t *ExtensionData() {
+    ParseRtpData();
+    return extension_data_;
+  }
 
   // Payload
-  const uint8_t *Payload() const { return payload_; };
-  size_t PayloadSize() const { return payload_size_; }
+  const uint8_t *Payload() {
+    ParseRtpData();
+    return payload_;
+  };
+  size_t PayloadSize() {
+    ParseRtpData();
+    return payload_size_;
+  }
 
   // Entire RTP buffer
   const uint8_t *Buffer() const { return buffer_; }
   size_t Size() const { return size_; }
 
   // NAL
-  NAL_UNIT_TYPE NalUnitType() const { return nal_unit_type_; }
-  bool FuAStart() const { return fu_header_.start; }
-  bool FuAEnd() const { return fu_header_.end; }
+  NAL_UNIT_TYPE NalUnitType() {
+    ParseRtpData();
+    return nal_unit_type_;
+  }
+  bool FuAStart() {
+    ParseRtpData();
+    return fu_header_.start;
+  }
+  bool FuAEnd() {
+    ParseRtpData();
+    return fu_header_.end;
+  }
 
  private:
-  inline void TryToDecodeH264RtpPacket(uint8_t *buffer);
+  void TryToDecodeRtpPacket();
+  void ParseRtpData();
 
  private:
   // Header
@@ -198,6 +247,8 @@ class RtpPacket {
 
   // NAL
   NAL_UNIT_TYPE nal_unit_type_ = NAL_UNIT_TYPE::UNKNOWN;
+
+  bool parsed_ = false;
 };
 
 #endif

@@ -9,8 +9,7 @@
 
 using nlohmann::json;
 
-PeerConnection::PeerConnection(OnReceiveBuffer on_receive_buffer)
-    : on_receive_buffer_(on_receive_buffer) {}
+PeerConnection::PeerConnection() {}
 
 PeerConnection::~PeerConnection() {
   if (nv12_data_) {
@@ -40,10 +39,14 @@ int PeerConnection::Init(PeerConnectionParams params,
   LOG_INFO("stun server ip [{}] port [{}]", cfg_stun_server_ip_,
            stun_server_port_);
 
+  on_receive_video_buffer_ = params.on_receive_video_buffer;
+  on_receive_audio_buffer_ = params.on_receive_audio_buffer;
+  on_receive_data_buffer_ = params.on_receive_data_buffer;
+
   on_receive_ws_msg_ = [this](const std::string &msg) { ProcessSignal(msg); };
 
-  on_receive_ice_msg_ = [this](const char *data, size_t size,
-                               const char *user_id, size_t user_id_size) {
+  on_receive_video_ = [this](const char *data, size_t size, const char *user_id,
+                             size_t user_id_size) {
     int num_frame_returned = Decode((uint8_t *)data, size);
     uint32_t width = 0;
     uint32_t height = 0;
@@ -51,8 +54,24 @@ int PeerConnection::Init(PeerConnectionParams params,
     for (size_t i = 0; i < num_frame_returned; ++i) {
       int ret = GetFrame((uint8_t *)nv12_data_, width, height, frame_size);
 
-      on_receive_buffer_(nv12_data_, width * height * 3 / 2, user_id,
-                         user_id_size);
+      if (on_receive_video_buffer_) {
+        on_receive_video_buffer_(nv12_data_, width * height * 3 / 2, user_id,
+                                 user_id_size);
+      }
+    }
+  };
+
+  on_receive_audio_ = [this](const char *data, size_t size, const char *user_id,
+                             size_t user_id_size) {
+    if (on_receive_audio_buffer_) {
+      on_receive_audio_buffer_(data, size, user_id, user_id_size);
+    }
+  };
+
+  on_receive_data_ = [this](const char *data, size_t size, const char *user_id,
+                            size_t user_id_size) {
+    if (on_receive_data_buffer_) {
+      on_receive_data_buffer_(data, size, user_id, user_id_size);
     }
   };
 
@@ -152,9 +171,17 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
 
       for (auto &remote_user_id : user_id_list_) {
         ice_transmission_list_[remote_user_id] =
-            std::make_unique<IceTransmission>(
-                true, transmission_id, user_id_, remote_user_id, ws_transport_,
-                on_receive_ice_msg_, on_ice_status_change_);
+            std::make_unique<IceTransmission>(true, transmission_id, user_id_,
+                                              remote_user_id, ws_transport_,
+                                              on_ice_status_change_);
+
+        ice_transmission_list_[remote_user_id]->SetOnReceiveVideoFunc(
+            on_receive_video_);
+        ice_transmission_list_[remote_user_id]->SetOnReceiveAudioFunc(
+            on_receive_audio_);
+        ice_transmission_list_[remote_user_id]->SetOnReceiveDataFunc(
+            on_receive_data_);
+
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
             cfg_stun_server_ip_, stun_server_port_);
         ice_transmission_list_[remote_user_id]->JoinTransmission();
@@ -186,9 +213,16 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
         LOG_INFO("[{}] receive offer from [{}]", user_id_, remote_user_id);
 
         ice_transmission_list_[remote_user_id] =
-            std::make_unique<IceTransmission>(
-                false, transmission_id, user_id_, remote_user_id, ws_transport_,
-                on_receive_ice_msg_, on_ice_status_change_);
+            std::make_unique<IceTransmission>(false, transmission_id, user_id_,
+                                              remote_user_id, ws_transport_,
+                                              on_ice_status_change_);
+
+        ice_transmission_list_[remote_user_id]->SetOnReceiveVideoFunc(
+            on_receive_video_);
+        ice_transmission_list_[remote_user_id]->SetOnReceiveAudioFunc(
+            on_receive_audio_);
+        ice_transmission_list_[remote_user_id]->SetOnReceiveDataFunc(
+            on_receive_data_);
 
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
             cfg_stun_server_ip_, stun_server_port_);

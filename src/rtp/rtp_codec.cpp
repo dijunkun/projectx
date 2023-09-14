@@ -154,6 +154,6 @@ size_t RtpCodec::Decode(RtpPacket& packet, uint8_t* payload) {
     return packet.DecodeH264Fua(payload);
   } else {
     LOG_ERROR("Default");
-    return packet.Decode(payload);
+    return packet.DecodeData(payload);
   }
 }

@@ -18,13 +18,15 @@ typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
 
 typedef struct {
   const char *cfg_path;
-  OnReceiveBuffer on_receive_buffer;
+  OnReceiveBuffer on_receive_video_buffer;
+  OnReceiveBuffer on_receive_audio_buffer;
+  OnReceiveBuffer on_receive_data_buffer;
   NetStatusReport net_status_report;
 } PeerConnectionParams;
 
 class PeerConnection : public VideoEncoder, VideoDecoder {
  public:
-  PeerConnection(OnReceiveBuffer on_receive_buffer);
+  PeerConnection();
   ~PeerConnection();
 
  public:
@@ -73,11 +75,17 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   std::map<std::string, std::unique_ptr<IceTransmission>>
       ice_transmission_list_;
   std::function<void(const char *, size_t, const char *, size_t)>
-      on_receive_ice_msg_ = nullptr;
+      on_receive_video_ = nullptr;
+  std::function<void(const char *, size_t, const char *, size_t)>
+      on_receive_audio_ = nullptr;
+  std::function<void(const char *, size_t, const char *, size_t)>
+      on_receive_data_ = nullptr;
   std::function<void(std::string)> on_ice_status_change_ = nullptr;
   bool ice_ready_ = false;
 
-  OnReceiveBuffer on_receive_buffer_;
+  OnReceiveBuffer on_receive_video_buffer_;
+  OnReceiveBuffer on_receive_audio_buffer_;
+  OnReceiveBuffer on_receive_data_buffer_;
   char *nv12_data_ = nullptr;
 };
 

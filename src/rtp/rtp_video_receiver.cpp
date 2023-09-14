@@ -166,7 +166,7 @@ int RtpVideoReceiver::SendRtcpRR(RtcpReceiverReport& rtcp_rr) {
     return -1;
   }
 
-  LOG_ERROR("Send RR");
+  // LOG_ERROR("Send RR");
 
   return 0;
 }

@@ -102,7 +102,7 @@ int RtpVideoSender::SendRtcpSR(RtcpSenderReport& rtcp_sr) {
     return -1;
   }
 
-  LOG_ERROR("Send SR");
+  // LOG_ERROR("Send SR");
 
   return 0;
 }

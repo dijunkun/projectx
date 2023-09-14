@@ -4,14 +4,25 @@
 
 #include "log.h"
 
-inline void RtpPacket::TryToDecodeH264RtpPacket(uint8_t *buffer) {
-  if (PAYLOAD_TYPE::H264 == NAL_UNIT_TYPE(buffer[1] & 0x7f)) {
-    nal_unit_type_ = NAL_UNIT_TYPE(buffer[12] & 0x1F);
+void RtpPacket::TryToDecodeRtpPacket() {
+  if (PAYLOAD_TYPE::H264 == NAL_UNIT_TYPE(buffer_[1] & 0x7F)) {
+    nal_unit_type_ = NAL_UNIT_TYPE(buffer_[12] & 0x1F);
     if (NAL_UNIT_TYPE::NALU == nal_unit_type_) {
       DecodeH264Nalu();
     } else if (NAL_UNIT_TYPE::FU_A == nal_unit_type_) {
       DecodeH264Fua();
     }
+  } else if (PAYLOAD_TYPE::DATA == NAL_UNIT_TYPE(buffer_[1] & 0x7F)) {
+    DecodeData();
+  } else {
+    LOG_ERROR("Unknown pt: {}", NAL_UNIT_TYPE(buffer_[1] & 0x7F));
+  }
+}
+
+void RtpPacket::ParseRtpData() {
+  if (!parsed_) {
+    TryToDecodeRtpPacket();
+    parsed_ = true;
   }
 }
 
@@ -25,7 +36,7 @@ RtpPacket::RtpPacket(const uint8_t *buffer, size_t size) {
     memcpy(buffer_, buffer, size);
     size_ = size;
 
-    TryToDecodeH264RtpPacket(buffer_);
+    // TryToDecodeH264RtpPacket(buffer_);
   }
 }
 
@@ -35,7 +46,7 @@ RtpPacket::RtpPacket(const RtpPacket &rtp_packet) {
     memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
     size_ = rtp_packet.size_;
 
-    TryToDecodeH264RtpPacket(buffer_);
+    // TryToDecodeH264RtpPacket(buffer_);
   }
 }
 
@@ -45,7 +56,7 @@ RtpPacket::RtpPacket(RtpPacket &&rtp_packet)
   rtp_packet.buffer_ = nullptr;
   rtp_packet.size_ = 0;
 
-  TryToDecodeH264RtpPacket(buffer_);
+  // TryToDecodeH264RtpPacket(buffer_);
 }
 
 RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
@@ -58,7 +69,7 @@ RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
     memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
     size_ = rtp_packet.size_;
 
-    TryToDecodeH264RtpPacket(buffer_);
+    // TryToDecodeH264RtpPacket(buffer_);
   }
   return *this;
 }
@@ -70,7 +81,7 @@ RtpPacket &RtpPacket::operator=(RtpPacket &&rtp_packet) {
     size_ = rtp_packet.size_;
     rtp_packet.size_ = 0;
 
-    TryToDecodeH264RtpPacket(buffer_);
+    // TryToDecodeH264RtpPacket(buffer_);
   }
   return *this;
 }
@@ -232,7 +243,7 @@ const uint8_t *RtpPacket::EncodeH264Fua(uint8_t *payload, size_t payload_size) {
   return buffer_;
 }
 
-size_t RtpPacket::Decode(uint8_t *payload) {
+size_t RtpPacket::DecodeData(uint8_t *payload) {
   version_ = (buffer_[0] >> 6) & 0x03;
   has_padding_ = (buffer_[0] >> 5) & 0x01;
   has_extension_ = (buffer_[0] >> 4) & 0x01;
@@ -259,7 +270,8 @@ size_t RtpPacket::Decode(uint8_t *payload) {
         (buffer_[14 + extension_offset] << 8) | buffer_[15 + extension_offset];
 
     // extension_data_ = new uint8_t[extension_len_];
-    // memcpy(extension_data_, buffer_ + 16 + extension_offset, extension_len_);
+    // memcpy(extension_data_, buffer_ + 16 + extension_offset,
+    // extension_len_);
     extension_data_ = buffer_ + 16 + extension_offset;
   }
 
@@ -268,7 +280,9 @@ size_t RtpPacket::Decode(uint8_t *payload) {
 
   payload_size_ = size_ - (12 + payload_offset);
   payload_ = buffer_ + 12 + payload_offset;
-  memcpy(payload, payload_, payload_size_);
+  if (payload) {
+    memcpy(payload, payload_, payload_size_);
+  }
 
   return payload_size_;
 }
@@ -300,7 +314,8 @@ size_t RtpPacket::DecodeH264Nalu(uint8_t *payload) {
         (buffer_[14 + extension_offset] << 8) | buffer_[15 + extension_offset];
 
     // extension_data_ = new uint8_t[extension_len_];
-    // memcpy(extension_data_, buffer_ + 16 + extension_offset, extension_len_);
+    // memcpy(extension_data_, buffer_ + 16 + extension_offset,
+    // extension_len_);
     extension_data_ = buffer_ + 16 + extension_offset;
   }
 
@@ -346,7 +361,8 @@ size_t RtpPacket::DecodeH264Fua(uint8_t *payload) {
         (buffer_[14 + extension_offset] << 8) | buffer_[15 + extension_offset];
 
     // extension_data_ = new uint8_t[extension_len_];
-    // memcpy(extension_data_, buffer_ + 16 + extension_offset, extension_len_);
+    // memcpy(extension_data_, buffer_ + 16 + extension_offset,
+    // extension_len_);
     extension_data_ = buffer_ + 16 + extension_offset;
   }
 

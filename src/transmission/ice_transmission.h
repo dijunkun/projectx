@@ -19,19 +19,34 @@ class IceTransmission {
   typedef enum { VIDEO = 96, AUDIO = 97, DATA = 127 } DATA_TYPE;
 
  public:
-  IceTransmission(
-      bool offer_peer, std::string &transmission_id, std::string &user_id,
-      std::string &remote_user_id,
-      std::shared_ptr<WsTransmission> ice_ws_transmission,
-      std::function<void(const char *, size_t, const char *, size_t)>
-          on_receive_ice_msg,
-      std::function<void(std::string)> on_ice_status_change);
+  IceTransmission(bool offer_peer, std::string &transmission_id,
+                  std::string &user_id, std::string &remote_user_id,
+                  std::shared_ptr<WsTransmission> ice_ws_transmission,
+                  std::function<void(std::string)> on_ice_status_change);
   ~IceTransmission();
 
  public:
   int InitIceTransmission(std::string &ip, int port);
 
   int DestroyIceTransmission();
+
+  void SetOnReceiveVideoFunc(
+      std::function<void(const char *, size_t, const char *, size_t)>
+          on_receive_video) {
+    on_receive_video_ = on_receive_video;
+  }
+
+  void SetOnReceiveAudioFunc(
+      std::function<void(const char *, size_t, const char *, size_t)>
+          on_receive_audio) {
+    on_receive_audio_ = on_receive_audio;
+  }
+
+  void SetOnReceiveDataFunc(
+      std::function<void(const char *, size_t, const char *, size_t)>
+          on_receive_data) {
+    on_receive_data_ = on_receive_data;
+  }
 
   int JoinTransmission();
 
@@ -60,13 +75,18 @@ class IceTransmission {
   uint8_t CheckIsRtcpPacket(const char *buffer, size_t size);
   uint8_t CheckIsVideoPacket(const char *buffer, size_t size);
   uint8_t CheckIsAudioPacket(const char *buffer, size_t size);
+  uint8_t CheckIsDataPacket(const char *buffer, size_t size);
 
  private:
   std::unique_ptr<IceAgent> ice_agent_ = nullptr;
   std::shared_ptr<WsTransmission> ice_ws_transport_ = nullptr;
   CongestionControl *congestion_control_ = nullptr;
   std::function<void(const char *, size_t, const char *, size_t)>
-      on_receive_ice_msg_cb_ = nullptr;
+      on_receive_video_ = nullptr;
+  std::function<void(const char *, size_t, const char *, size_t)>
+      on_receive_audio_ = nullptr;
+  std::function<void(const char *, size_t, const char *, size_t)>
+      on_receive_data_ = nullptr;
   std::function<void(std::string)> on_ice_status_change_ = nullptr;
   std::string local_sdp_;
   std::string remote_sdp_;

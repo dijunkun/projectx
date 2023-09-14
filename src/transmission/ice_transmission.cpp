@@ -20,15 +20,12 @@ IceTransmission::IceTransmission(
     bool offer_peer, std::string &transmission_id, std::string &user_id,
     std::string &remote_user_id,
     std::shared_ptr<WsTransmission> ice_ws_transmission,
-    std::function<void(const char *, size_t, const char *, size_t)>
-        on_receive_ice_msg,
     std::function<void(std::string)> on_ice_status_change)
     : offer_peer_(offer_peer),
       transmission_id_(transmission_id),
       user_id_(user_id),
       remote_user_id_(remote_user_id),
       ice_ws_transport_(ice_ws_transmission),
-      on_receive_ice_msg_cb_(on_receive_ice_msg),
       on_ice_status_change_(on_ice_status_change) {}
 
 IceTransmission::~IceTransmission() {
@@ -67,9 +64,9 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
   rtp_video_receiver_->SetOnReceiveCompleteFrame(
       [this](VideoFrame &video_frame) -> void {
         // LOG_ERROR("OnReceiveCompleteFrame {}", video_frame.Size());
-        on_receive_ice_msg_cb_((const char *)video_frame.Buffer(),
-                               video_frame.Size(), remote_user_id_.data(),
-                               remote_user_id_.size());
+        on_receive_video_((const char *)video_frame.Buffer(),
+                          video_frame.Size(), remote_user_id_.data(),
+                          remote_user_id_.size());
       });
 
   rtp_video_receiver_->Start();
@@ -99,6 +96,22 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
       });
 
   rtp_data_sender_->Start();
+
+  rtp_data_receiver_ = std::make_unique<RtpDataReceiver>();
+  rtp_data_receiver_->SetSendDataFunc(
+      [this](const char *data, size_t size) -> int {
+        if (!ice_agent_) {
+          LOG_ERROR("ice_agent_ is nullptr");
+          return -1;
+        }
+
+        return ice_agent_->Send(data, size);
+      });
+  rtp_data_receiver_->SetOnReceiveData(
+      [this](const char *data, size_t size) -> void {
+        on_receive_data_(data, size, remote_user_id_.data(),
+                         remote_user_id_.size());
+      });
 
   ice_agent_ = std::make_unique<IceAgent>(ip, port);
 
@@ -148,8 +161,11 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
               RtpPacket packet((uint8_t *)buffer, size);
               ice_transmission_obj->rtp_video_receiver_->InsertRtpPacket(
                   packet);
+            } else if (ice_transmission_obj->CheckIsDataPacket(buffer, size)) {
+              RtpPacket packet((uint8_t *)buffer, size);
+              ice_transmission_obj->rtp_data_receiver_->InsertRtpPacket(packet);
             } else if (ice_transmission_obj->CheckIsRtcpPacket(buffer, size)) {
-              LOG_ERROR("Rtcp packet [{}]", (uint8_t)(buffer[1]));
+              // LOG_ERROR("Rtcp packet [{}]", (uint8_t)(buffer[1]));
             }
           }
         }
@@ -313,6 +329,19 @@ uint8_t IceTransmission::CheckIsAudioPacket(const char *buffer, size_t size) {
 
   uint8_t pt = buffer[1] & 0x7F;
   if (RtpPacket::PAYLOAD_TYPE::OPUS == pt) {
+    return pt;
+  } else {
+    return 0;
+  }
+}
+
+uint8_t IceTransmission::CheckIsDataPacket(const char *buffer, size_t size) {
+  if (size < 4) {
+    return 0;
+  }
+
+  uint8_t pt = buffer[1] & 0x7F;
+  if (RtpPacket::PAYLOAD_TYPE::DATA == pt) {
     return pt;
   } else {
     return 0;

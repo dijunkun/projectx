@@ -16,11 +16,11 @@ void RtpStatistics::UpdateReceiveBytes(uint32_t received_bytes) {
 
 bool RtpStatistics::Process() {
   if (!sent_bytes_) {
-    LOG_INFO("rtp statistics: Send [{} bps]", sent_bytes_);
+    // LOG_INFO("rtp statistics: Send [{} bps]", sent_bytes_);
   }
 
   if (!received_bytes_) {
-    LOG_INFO("rtp statistics: Receive [{} bps]", received_bytes_);
+    // LOG_INFO("rtp statistics: Receive [{} bps]", received_bytes_);
   }
 
   sent_bytes_ = 0;

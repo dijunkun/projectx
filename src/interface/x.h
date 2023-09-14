@@ -19,7 +19,9 @@ typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
 
 typedef struct {
   const char* cfg_path;
-  OnReceiveBuffer on_receive_buffer;
+  OnReceiveBuffer on_receive_video_buffer;
+  OnReceiveBuffer on_receive_audio_buffer;
+  OnReceiveBuffer on_receive_data_buffer;
   NetStatusReport net_status_report;
 } Params;
 
