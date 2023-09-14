@@ -47,18 +47,14 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   on_receive_video_ = [this](const char *data, size_t size, const char *user_id,
                              size_t user_id_size) {
-    int num_frame_returned = Decode((uint8_t *)data, size);
-    uint32_t width = 0;
-    uint32_t height = 0;
-    uint32_t frame_size = 0;
-    for (size_t i = 0; i < num_frame_returned; ++i) {
-      int ret = GetFrame((uint8_t *)nv12_data_, width, height, frame_size);
-
-      if (on_receive_video_buffer_) {
-        on_receive_video_buffer_(nv12_data_, width * height * 3 / 2, user_id,
-                                 user_id_size);
-      }
-    }
+    int num_frame_returned = Decode(
+        (uint8_t *)data, size,
+        [this, user_id, user_id_size](VideoFrame video_frame) {
+          if (on_receive_video_buffer_) {
+            on_receive_video_buffer_((const char *)video_frame.Buffer(),
+                                     video_frame.Size(), user_id, user_id_size);
+          }
+        });
   };
 
   on_receive_audio_ = [this](const char *data, size_t size, const char *user_id,

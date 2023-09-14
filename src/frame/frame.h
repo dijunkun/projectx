@@ -7,6 +7,7 @@ class VideoFrame {
  public:
   VideoFrame();
   VideoFrame(const uint8_t *buffer, size_t size);
+  VideoFrame(const uint8_t *buffer, size_t size, size_t width, size_t height);
   VideoFrame(const VideoFrame &video_frame);
   VideoFrame(VideoFrame &&video_frame);
   VideoFrame &operator=(const VideoFrame &video_frame);

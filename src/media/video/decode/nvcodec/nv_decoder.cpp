@@ -43,7 +43,9 @@ int VideoDecoder::Init() {
   return 0;
 }
 
-int VideoDecoder::Decode(const uint8_t *pData, int nSize) {
+int VideoDecoder::Decode(
+    const uint8_t *pData, int nSize,
+    std::function<void(VideoFrame)> on_receive_decoded_frame) {
   if (!decoder) {
     return -1;
   }
@@ -56,8 +58,26 @@ int VideoDecoder::Decode(const uint8_t *pData, int nSize) {
     fwrite((unsigned char *)pData, 1, nSize, file_);
   }
 
-  int ret = decoder->Decode(pData, nSize);
-  return ret;
+  int num_frame_returned = decoder->Decode(pData, nSize);
+
+  for (size_t i = 0; i < num_frame_returned; ++i) {
+    cudaVideoSurfaceFormat format = decoder->GetOutputFormat();
+    if (format == cudaVideoSurfaceFormat_NV12) {
+      uint8_t *data = nullptr;
+      data = decoder->GetFrame();
+      if (data) {
+        VideoFrame decoded_frame(
+            data, decoder->GetWidth() * decoder->GetHeight() * 3 / 2,
+            decoder->GetWidth(), decoder->GetHeight());
+
+        if (on_receive_decoded_frame) {
+          on_receive_decoded_frame(decoded_frame);
+        }
+      }
+    }
+  }
+
+  return -1;
 }
 
 int VideoDecoder::GetFrame(uint8_t *yuv_data, uint32_t &width, uint32_t &height,

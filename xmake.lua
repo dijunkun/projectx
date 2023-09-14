@@ -88,7 +88,7 @@ target("ws")
 
 target("media")
     set_kind("static")
-    add_deps("log")
+    add_deps("log", "frame")
     add_packages("cuda")
     add_links("cuda", "nvencodeapi", "nvcuvid")
     add_files("src/media/video/encode/nvcodec/*.cpp",
