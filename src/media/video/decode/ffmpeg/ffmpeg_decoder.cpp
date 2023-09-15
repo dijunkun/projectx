@@ -60,8 +60,8 @@ int VideoDecoder::Init() {
   codec_ctx_->time_base.den = 29;
   codec_ctx_->width = 1280;
   codec_ctx_->height = 720;
-  codec_ctx_->pix_fmt = AV_PIX_FMT_NV12;
-  codec_ctx_->color_range = AVCOL_RANGE_MPEG;
+  // codec_ctx_->pix_fmt = AV_PIX_FMT_NV12; // yuv420 default?
+  codec_ctx_->color_range = AVCOL_RANGE_JPEG;
 
   if (avcodec_open2(codec_ctx_, codec_, NULL) < 0) {
     printf("Could not open codec\n");
@@ -106,12 +106,31 @@ int VideoDecoder::Decode(
     }
 
     if (on_receive_decoded_frame) {
-      av_image_fill_arrays(frame_nv12_->data, frame_nv12_->linesize,
-                           decoded_frame_->GetBuffer(), AV_PIX_FMT_NV12,
-                           frame_->width, frame_->height, 1);
+      uint64_t start_ts = static_cast<uint64_t>(
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::high_resolution_clock::now().time_since_epoch())
+              .count());
 
-      sws_scale(img_convert_ctx, frame_->data, frame_->linesize, 0,
-                frame_->height, frame_nv12_->data, frame_nv12_->linesize);
+      if (1) {
+        av_image_fill_arrays(frame_nv12_->data, frame_nv12_->linesize,
+                             decoded_frame_->GetBuffer(), AV_PIX_FMT_NV12,
+                             frame_->width, frame_->height, 1);
+
+        sws_scale(img_convert_ctx, frame_->data, frame_->linesize, 0,
+                  frame_->height, frame_nv12_->data, frame_nv12_->linesize);
+      } else {
+        memcpy(decoded_frame_->GetBuffer(), frame_->data[0],
+               frame_->width * frame_->height);
+        memcpy(decoded_frame_->GetBuffer() + frame_->width * frame_->height,
+               frame_->data[1], frame_->width * frame_->height / 2);
+      }
+
+      uint64_t now_ts = static_cast<uint64_t>(
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              std::chrono::high_resolution_clock::now().time_since_epoch())
+              .count());
+
+      LOG_ERROR("cost {}", now_ts - start_ts);
 
       on_receive_decoded_frame(*decoded_frame_);
       if (SAVE_ENCODER_STREAM) {
