@@ -13,10 +13,8 @@ class VideoDecoder {
 
  public:
   int Init();
-  int Decode(const uint8_t* pData, int nSize,
+  int Decode(const uint8_t* data, int size,
              std::function<void(VideoFrame)> on_receive_decoded_frame);
-  int GetFrame(uint8_t* yuv_data, uint32_t& width, uint32_t& height,
-               uint32_t& size);
 
  private:
   NvDecoder* decoder = nullptr;

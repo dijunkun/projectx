@@ -1,57 +1,49 @@
 #ifndef _FFMPEG_DECODER_H_
 #define _FFMPEG_DECODER_H_
 
+#ifdef _WIN32
+// Windows
 extern "C" {
-// 编解码
 #include "libavcodec/avcodec.h"
-}
+};
+#else
+// Linux...
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavcodec/avcodec.h>
+#ifdef __cplusplus
+};
+#endif
+#endif
 
-#include "PacketQueue.h"
-#include "cb/FrameDataCallback.h"
+#include <functional>
+
+#include "frame.h"
 
 class VideoDecoder {
  public:
-  VideoDecoder(PacketQueue *packetQueue);
+  VideoDecoder();
   ~VideoDecoder();
 
  public:
   int Init();
-  int Decode(const uint8_t *pData, int nSize);
-  int GetFrame(uint8_t *yuv_data, uint32_t &width, uint32_t &height,
-               uint32_t &size);
-
-  bool open(unsigned int frameRate, unsigned int profile, unsigned int level,
-            char *sps, unsigned int spsLen, char *pps, unsigned int ppsLen);
-
-  void close();
-
-  void decode();
-
-  static void *_decode(void *self) {
-    static_cast<VideoDecoder *>(self)->decode();
-    return nullptr;
-  }
-
-  void setFrameDataCallback(FrameDataCallback *frameDataCallback);
+  int Decode(const uint8_t *data, int size,
+             std::function<void(VideoFrame)> on_receive_decoded_frame);
 
  private:
-  PacketQueue *pPacketQueue;
-  AVCodecContext *pVideoAVCodecCtx;
-  AVFrame *pFrame;
+  AVCodecID codec_id_;
+  const AVCodec *codec_;
+  AVCodecContext *codec_ctx_ = nullptr;
+  AVPacket packet_;
+  AVFrame *frame_ = nullptr;
+  AVFrame *frame_nv12_ = nullptr;
+  struct SwsContext *img_convert_ctx = nullptr;
 
-  bool volatile isDecoding;
-  pthread_t decodeThread;
-  pthread_mutex_t *pFrameDataCallbackMutex;
-  FrameDataCallback *pFrameDataCallback;
+  VideoFrame *decoded_frame_ = nullptr;
 
-  char *pSPS;
-  unsigned int volatile gSPSLen;
-  char *pPPS;
-  unsigned int volatile gPPSLen;
-
-  bool volatile isFirstIDR;
-
-  unsigned int gFrameRate;
+  FILE *file_ = nullptr;
+  bool first_ = false;
 };
 
 #endif

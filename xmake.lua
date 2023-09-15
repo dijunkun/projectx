@@ -9,6 +9,14 @@ add_rules("mode.release", "mode.debug")
 add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0")
 add_requires("libjuice", {system = false})
 
+if is_os("windows") then
+    add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
+    add_packages("vcpkg::ffmpeg")
+elseif is_os("linux") then
+    add_requires("ffmpeg 5.1.2", {system = false})
+    add_packages("ffmpeg")
+end
+
 add_defines("JUICE_STATIC")
 add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_PTR", 
     "ASIO_HAS_STD_ADDRESSOF", "ASIO_HAS_STD_ATOMIC", "ASIO_HAS_STD_CHRONO", "ASIO_HAS_CSTDINT", "ASIO_HAS_STD_ARRAY",
@@ -17,6 +25,7 @@ add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_
 if is_os("windows") then
     add_defines("_WEBSOCKETPP_CPP11_INTERNAL_")
     add_links("ws2_32", "Bcrypt")
+    add_links("windowsapp", "User32", "Strmiids", "Mfuuid")
     add_requires("cuda")
 elseif is_os("linux") then 
     add_links("pthread")
@@ -90,14 +99,14 @@ target("media")
     set_kind("static")
     add_deps("log", "frame")
     add_packages("cuda")
-    add_links("cuda", "nvencodeapi", "nvcuvid")
     add_files("src/media/video/encode/nvcodec/*.cpp",
-    "src/media/video/decode/nvcodec/*.cpp")
+    "src/media/video/decode/nvcodec/*.cpp", "src/media/video/decode/ffmpeg/*.cpp")
     add_includedirs("src/media/video/encode/nvcodec",
-    "src/media/video/decode/nvcodec", 
+    "src/media/video/decode/nvcodec", "src/media/video/decode/ffmpeg",
     "thirdparty/nvcodec/Interface",
     "thirdparty/nvcodec/Samples", {public = true})
     add_linkdirs("thirdparty/nvcodec/Lib/x64")
+    add_links("cuda", "nvencodeapi", "nvcuvid")
 
 target("qos")
     set_kind("static")
@@ -119,6 +128,7 @@ target("pc")
     add_files("src/pc/*.cpp")
     add_packages("asio", "nlohmann_json", "cuda")
     add_includedirs("src/transmission", {public = true})
+
 
 target("projectx")
     set_kind("shared")

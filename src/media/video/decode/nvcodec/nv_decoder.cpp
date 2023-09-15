@@ -44,21 +44,21 @@ int VideoDecoder::Init() {
 }
 
 int VideoDecoder::Decode(
-    const uint8_t *pData, int nSize,
+    const uint8_t *data, int size,
     std::function<void(VideoFrame)> on_receive_decoded_frame) {
   if (!decoder) {
     return -1;
   }
 
-  if ((*(pData + 4) & 0x1f) == 0x07) {
+  if ((*(data + 4) & 0x1f) == 0x07) {
     // LOG_WARN("Receive key frame");
   }
 
   if (SAVE_ENCODER_STREAM) {
-    fwrite((unsigned char *)pData, 1, nSize, file_);
+    fwrite((unsigned char *)data, 1, size, file_);
   }
 
-  int num_frame_returned = decoder->Decode(pData, nSize);
+  int num_frame_returned = decoder->Decode(data, size);
 
   for (size_t i = 0; i < num_frame_returned; ++i) {
     cudaVideoSurfaceFormat format = decoder->GetOutputFormat();
@@ -66,41 +66,15 @@ int VideoDecoder::Decode(
       uint8_t *data = nullptr;
       data = decoder->GetFrame();
       if (data) {
-        VideoFrame decoded_frame(
-            data, decoder->GetWidth() * decoder->GetHeight() * 3 / 2,
-            decoder->GetWidth(), decoder->GetHeight());
-
         if (on_receive_decoded_frame) {
+          VideoFrame decoded_frame(
+              data, decoder->GetWidth() * decoder->GetHeight() * 3 / 2,
+              decoder->GetWidth(), decoder->GetHeight());
           on_receive_decoded_frame(decoded_frame);
         }
       }
     }
   }
 
-  return -1;
-}
-
-int VideoDecoder::GetFrame(uint8_t *yuv_data, uint32_t &width, uint32_t &height,
-                           uint32_t &size) {
-  if (nullptr == decoder) {
-    return -1;
-  }
-  cudaVideoSurfaceFormat format = decoder->GetOutputFormat();
-  if (format == cudaVideoSurfaceFormat_NV12) {
-    uint8_t *data = nullptr;
-    data = decoder->GetFrame();
-    if (data) {
-      // yuv_data = data;
-
-      width = decoder->GetWidth();
-      height = decoder->GetHeight();
-      size = width * height * 3 / 2;
-      memcpy(yuv_data, data, size);
-      return 0;
-
-      return -1;
-    }
-    return -1;
-  }
   return -1;
 }

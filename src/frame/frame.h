@@ -6,6 +6,7 @@
 class VideoFrame {
  public:
   VideoFrame();
+  VideoFrame(size_t size);
   VideoFrame(const uint8_t *buffer, size_t size);
   VideoFrame(const uint8_t *buffer, size_t size, size_t width, size_t height);
   VideoFrame(const VideoFrame &video_frame);
@@ -18,6 +19,8 @@ class VideoFrame {
  public:
   const uint8_t *Buffer() { return buffer_; }
   const size_t Size() { return size_; }
+
+  uint8_t *GetBuffer() { return buffer_; }
 
  private:
   size_t width_ = 0;

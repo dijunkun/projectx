@@ -1,4 +1,4 @@
-package("ffmpeg")
+package("ffmpegxx")
     set_homepage("https://www.ffmpeg.org")
     set_description("A collection of libraries to process multimedia content such as audio, video, subtitles and related metadata.")
     set_license("GPL-3.0")
