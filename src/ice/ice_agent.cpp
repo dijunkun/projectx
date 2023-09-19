@@ -6,7 +6,15 @@
 
 #include "log.h"
 
-IceAgent::IceAgent(std::string &ip, uint16_t port) : ip_(ip), port_(port) {}
+IceAgent::IceAgent(std::string &stun_ip, uint16_t stun_port,
+                   std::string &turn_ip, uint16_t turn_port,
+                   std::string &turn_username, std::string &turn_password)
+    : stun_ip_(stun_ip),
+      stun_port_(stun_port),
+      turn_ip_(turn_ip),
+      turn_port_(turn_port),
+      turn_username_(turn_username),
+      turn_password_(turn_password) {}
 
 IceAgent::~IceAgent() {}
 
@@ -20,8 +28,20 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
   memset(&config, 0, sizeof(config));
 
   // STUN server example
-  config.stun_server_host = ip_.c_str();
-  config.stun_server_port = port_;
+  config.stun_server_host = stun_ip_.c_str();
+  config.stun_server_port = stun_port_;
+
+  if (!turn_ip_.empty() && -1 != turn_port_ && !turn_username_.empty() &&
+      !turn_password_.empty()) {
+    juice_turn_server_t turn_server;
+    memset(&turn_server, 0, sizeof(turn_server));
+    turn_server.host = turn_ip_.c_str();
+    turn_server.port = turn_port_;
+    turn_server.username = turn_username_.c_str();
+    turn_server.password = turn_password_.c_str();
+    config.turn_servers = &turn_server;
+    config.turn_servers_count = 1;
+  }
 
   config.cb_state_changed = on_state_changed;
   config.cb_candidate = on_candidate;

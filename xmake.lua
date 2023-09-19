@@ -1,5 +1,6 @@
 set_project("projectx")
 set_version("0.0.1")
+set_license("GPL-3.0")
 
 add_rules("mode.release", "mode.debug")
 set_languages("c++17")
@@ -13,6 +14,9 @@ if is_os("windows") then
     add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
     add_packages("vcpkg::ffmpeg")
 elseif is_os("linux") then
+    add_requires("ffmpeg 5.1.2", {system = false})
+    add_packages("ffmpeg")
+elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
     add_packages("ffmpeg")
 end
@@ -98,15 +102,20 @@ target("ws")
 target("media")
     set_kind("static")
     add_deps("log", "frame")
-    add_packages("cuda")
-    add_files("src/media/video/encode/nvcodec/*.cpp",
-    "src/media/video/decode/nvcodec/*.cpp", "src/media/video/decode/ffmpeg/*.cpp")
-    add_includedirs("src/media/video/encode/nvcodec",
-    "src/media/video/decode/nvcodec", "src/media/video/decode/ffmpeg",
-    "thirdparty/nvcodec/Interface",
-    "thirdparty/nvcodec/Samples", {public = true})
-    add_linkdirs("thirdparty/nvcodec/Lib/x64")
-    add_links("cuda", "nvencodeapi", "nvcuvid")
+    if is_os("windows") or is_os(("linux")) then
+        add_packages("cuda")
+        add_files("src/media/video/encode/nvcodec/*.cpp",
+        "src/media/video/decode/nvcodec/*.cpp")
+        add_includedirs("src/media/video/encode/nvcodec",
+        "src/media/video/decode/nvcodec", "src/media/video/decode/ffmpeg",
+        "thirdparty/nvcodec/Interface",
+        "thirdparty/nvcodec/Samples", {public = true})
+        add_linkdirs("thirdparty/nvcodec/Lib/x64")
+        add_links("cuda", "nvencodeapi", "nvcuvid")
+    elseif is_os("macosx") then
+        add_files("src/media/video/encode/ffmpeg/*.cpp", "src/media/video/decode/ffmpeg/*.cpp")
+        add_includedirs("src/media/video/encode/ffmpeg", "src/media/video/decode/ffmpeg", {public = true})
+    end
 
 target("qos")
     set_kind("static")

@@ -26,7 +26,10 @@ class IceTransmission {
   ~IceTransmission();
 
  public:
-  int InitIceTransmission(std::string &ip, int port);
+  int InitIceTransmission(std::string &stun_ip, int stun_port,
+                          std::string &turn_ip, int turn_port,
+                          std::string &turn_username,
+                          std::string &turn_password);
 
   int DestroyIceTransmission();
 

@@ -2,12 +2,10 @@
 #define _FFMPEG_DECODER_H_
 
 #ifdef _WIN32
-// Windows
 extern "C" {
 #include "libavcodec/avcodec.h"
 };
 #else
-// Linux...
 #ifdef __cplusplus
 extern "C" {
 #endif

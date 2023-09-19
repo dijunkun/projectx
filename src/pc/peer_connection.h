@@ -3,10 +3,17 @@
 
 #include <iostream>
 #include <map>
+#include <mutex>
 
-#include "ffmpeg_decoder.h"
 #include "ice_transmission.h"
+#ifdef _WIN32
+#include "nv_decoder.h"
 #include "nv_encoder.h"
+#else
+#include "ffmpeg_decoder.h"
+#include "ffmpeg_encoder.h"
+#endif
+
 #include "ws_transmission.h"
 
 enum SignalStatus { Connecting = 0, Connected, Closed };
@@ -59,8 +66,13 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   std::string cfg_signal_server_port_;
   std::string cfg_stun_server_ip_;
   std::string cfg_stun_server_port_;
+  std::string cfg_turn_server_ip_;
+  std::string cfg_turn_server_port_;
+  std::string cfg_turn_server_username_;
+  std::string cfg_turn_server_password_;
   int signal_server_port_ = 0;
   int stun_server_port_ = 0;
+  int turn_server_port_ = 0;
 
  private:
   std::shared_ptr<WsTransmission> ws_transport_ = nullptr;
@@ -70,6 +82,7 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   std::string transmission_id_ = "";
   std::vector<std::string> user_id_list_;
   SignalStatus signal_status_ = SignalStatus::Closed;
+  std::mutex signal_status_mutex_;
 
  private:
   std::map<std::string, std::unique_ptr<IceTransmission>>

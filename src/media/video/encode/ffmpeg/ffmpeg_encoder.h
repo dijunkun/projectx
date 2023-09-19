@@ -1,9 +1,20 @@
-#ifndef _NV_ENCODER_H_
-#define _NV_ENCODER_H_
+#ifndef _FFMPEG_ENCODER_H_
+#define _FFMPEG_ENCODER_H_
 
+#ifdef _WIN32
+extern "C" {
+#include "libavcodec/avcodec.h"
+};
+#else
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include <libavcodec/avcodec.h>
+#ifdef __cplusplus
+};
+#endif
+#endif
 #include <functional>
-
-#include "NvEncoderCuda.h"
 
 class VideoEncoder {
  public:
@@ -20,18 +31,12 @@ class VideoEncoder {
   void ForceIdr();
 
  private:
-  int index_of_GPU = 0;
-  GUID codec_guid = NV_ENC_CODEC_H264_GUID;
-  GUID preset_guid = NV_ENC_PRESET_P2_GUID;
-  NV_ENC_TUNING_INFO tuning_info =
-      NV_ENC_TUNING_INFO::NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
   int frame_width = 1280;
   int frame_height = 720;
   int keyFrameInterval_ = 3000;
-  int maxBitrate_ = 1000;
+  int maxBitrate_ = 2000;
   int max_payload_size_ = 3000;
-  NvEncoder* encoder_ = nullptr;
-  CUcontext cuda_context_ = nullptr;
+
   std::vector<std::vector<uint8_t>> encoded_packets_;
   unsigned char* encoded_image_ = nullptr;
   FILE* file_ = nullptr;

@@ -1,1 +1,1 @@
-includes("libjuice")
+includes("libjuice", "sdl2")

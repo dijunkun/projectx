@@ -2,6 +2,7 @@
 #define _FRAME_H_
 
 #include <stdint.h>
+#include <stddef.h>
 
 class VideoFrame {
  public:

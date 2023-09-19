@@ -29,15 +29,28 @@ int PeerConnection::Init(PeerConnectionParams params,
   cfg_signal_server_port_ = reader.Get("signal server", "port", "-1");
   cfg_stun_server_ip_ = reader.Get("stun server", "ip", "-1");
   cfg_stun_server_port_ = reader.Get("stun server", "port", "-1");
+  cfg_turn_server_ip_ = reader.Get("turn server", "ip", "");
+  cfg_turn_server_port_ = reader.Get("turn server", "port", "-1");
+  cfg_turn_server_username_ = reader.Get("turn server", "username", "");
+  cfg_turn_server_password_ = reader.Get("turn server", "password", "");
   std::regex regex("\n");
 
   LOG_INFO("Read config success");
 
   signal_server_port_ = stoi(cfg_signal_server_port_);
   stun_server_port_ = stoi(cfg_stun_server_port_);
+  turn_server_port_ = stoi(cfg_turn_server_port_);
 
   LOG_INFO("stun server ip [{}] port [{}]", cfg_stun_server_ip_,
            stun_server_port_);
+
+  if (!cfg_turn_server_ip_.empty() && 0 != turn_server_port_ &&
+      !cfg_turn_server_username_.empty() &&
+      !cfg_turn_server_password_.empty()) {
+    LOG_INFO("turn server ip [{}] port [{}] username [{}] password [{}]",
+             cfg_turn_server_ip_, turn_server_port_, cfg_turn_server_username_,
+             cfg_turn_server_password_);
+  }
 
   on_receive_video_buffer_ = params.on_receive_video_buffer;
   on_receive_audio_buffer_ = params.on_receive_audio_buffer;
@@ -74,10 +87,9 @@ int PeerConnection::Init(PeerConnectionParams params,
   on_ice_status_change_ = [this](std::string ice_status) {
     if ("JUICE_STATE_COMPLETED" == ice_status) {
       ice_ready_ = true;
-      LOG_INFO("Ice connected");
+      LOG_INFO("Ice finish");
     } else {
       ice_ready_ = false;
-      LOG_INFO("Ice not useable");
     }
   };
 
@@ -135,6 +147,7 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       ws_connection_id_ = j["ws_connection_id"].get<unsigned int>();
       LOG_INFO("Receive local peer websocket connection id [{}]",
                ws_connection_id_);
+      std::lock_guard<std::mutex> l(signal_status_mutex_);
       signal_status_ = SignalStatus::Connected;
       break;
     }
@@ -179,7 +192,9 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
             on_receive_data_);
 
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
-            cfg_stun_server_ip_, stun_server_port_);
+            cfg_stun_server_ip_, stun_server_port_, cfg_turn_server_ip_,
+            turn_server_port_, cfg_turn_server_username_,
+            cfg_turn_server_password_);
         ice_transmission_list_[remote_user_id]->JoinTransmission();
       }
 
@@ -221,7 +236,9 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
             on_receive_data_);
 
         ice_transmission_list_[remote_user_id]->InitIceTransmission(
-            cfg_stun_server_ip_, stun_server_port_);
+            cfg_stun_server_ip_, stun_server_port_, cfg_turn_server_ip_,
+            turn_server_port_, cfg_turn_server_username_,
+            cfg_turn_server_password_);
 
         ice_transmission_list_[remote_user_id]->SetTransmissionId(
             transmission_id_);
@@ -271,7 +288,10 @@ int PeerConnection::RequestTransmissionMemberList(
 
 int PeerConnection::Destroy() { return 0; }
 
-SignalStatus PeerConnection::GetSignalStatus() { return signal_status_; }
+SignalStatus PeerConnection::GetSignalStatus() {
+  std::lock_guard<std::mutex> l(signal_status_mutex_);
+  return signal_status_;
+}
 
 int PeerConnection::SendVideoData(const char *data, size_t size) {
   if (!ice_ready_) {

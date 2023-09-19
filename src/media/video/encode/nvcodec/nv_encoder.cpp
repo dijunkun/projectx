@@ -60,11 +60,11 @@ int VideoEncoder::Init() {
   // TO TEST: not tested yet
   // init_params.encodeConfig->gopLength = NVENC_INFINITE_GOPLENGTH;
   init_params.encodeConfig->gopLength = keyFrameInterval_;
-  // Donot use B-frame for realtime application
+  // Do not use B-frame for realtime application
   init_params.encodeConfig->frameIntervalP = 1;
   init_params.encodeConfig->rcParams.rateControlMode =
       NV_ENC_PARAMS_RC_MODE::NV_ENC_PARAMS_RC_CBR;
-  init_params.encodeConfig->rcParams.maxBitRate = maxBitrate_ * 1000;
+  init_params.encodeConfig->rcParams.maxBitRate = maxBitrate_ * 500;
   init_params.encodeConfig->encodeCodecConfig.h264Config.sliceMode = 1;
   init_params.encodeConfig->encodeCodecConfig.h264Config.sliceModeData =
       max_payload_size_;
@@ -81,7 +81,7 @@ int VideoEncoder::Encode(
     return -1;
   }
 
-  if (0 == seq_++ % (30)) {
+  if (0 == seq_++ % (300)) {
     ForceIdr();
   }
 

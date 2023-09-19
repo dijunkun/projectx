@@ -47,7 +47,10 @@ IceTransmission::~IceTransmission() {
   }
 }
 
-int IceTransmission::InitIceTransmission(std::string &ip, int port) {
+int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
+                                         std::string &turn_ip, int turn_port,
+                                         std::string &turn_username,
+                                         std::string &turn_password) {
   video_rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::H264);
   data_rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::DATA);
 
@@ -113,7 +116,8 @@ int IceTransmission::InitIceTransmission(std::string &ip, int port) {
                          remote_user_id_.size());
       });
 
-  ice_agent_ = std::make_unique<IceAgent>(ip, port);
+  ice_agent_ = std::make_unique<IceAgent>(
+      stun_ip, stun_port, turn_ip, turn_port, turn_username, turn_password);
 
   ice_agent_->CreateIceAgent(
       [](juice_agent_t *agent, juice_state_t state, void *user_ptr) {
