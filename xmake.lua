@@ -29,7 +29,7 @@ add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_
 if is_os("windows") then
     add_defines("_WEBSOCKETPP_CPP11_INTERNAL_")
     add_links("ws2_32", "Bcrypt")
-    add_links("windowsapp", "User32", "Strmiids", "Mfuuid")
+    add_links("windowsapp", "User32", "Strmiids", "Mfuuid", "Secur32", "Bcrypt")
     add_requires("cuda")
 elseif is_os("linux") then 
     add_links("pthread")
@@ -105,16 +105,23 @@ target("media")
     if is_os("windows") or is_os(("linux")) then
         add_packages("cuda")
         add_files("src/media/video/encode/nvcodec/*.cpp",
-        "src/media/video/decode/nvcodec/*.cpp")
+        "src/media/video/decode/nvcodec/*.cpp",
+        "src/media/video/encode/ffmpeg/*.cpp",
+        "src/media/video/decode/ffmpeg/*.cpp"
+        )
         add_includedirs("src/media/video/encode/nvcodec",
-        "src/media/video/decode/nvcodec", "src/media/video/decode/ffmpeg",
+        "src/media/video/decode/nvcodec",
+        "src/media/video/encode/ffmpeg",
+        "src/media/video/decode/ffmpeg",
         "thirdparty/nvcodec/Interface",
         "thirdparty/nvcodec/Samples", {public = true})
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
         add_links("cuda", "nvencodeapi", "nvcuvid")
     elseif is_os("macosx") then
-        add_files("src/media/video/encode/ffmpeg/*.cpp", "src/media/video/decode/ffmpeg/*.cpp")
-        add_includedirs("src/media/video/encode/ffmpeg", "src/media/video/decode/ffmpeg", {public = true})
+        add_files("src/media/video/encode/ffmpeg/*.cpp",
+        "src/media/video/decode/ffmpeg/*.cpp")
+        add_includedirs("src/media/video/encode/ffmpeg",
+        "src/media/video/decode/ffmpeg", {public = true})
     end
 
 target("qos")

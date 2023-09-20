@@ -40,7 +40,7 @@ int VideoEncoder::Init() {
   if (!cuda_ctx_succeed) {
   }
 
-  encoder_ = new NvEncoderCuda(cuda_context_, frame_width, frame_height,
+  encoder_ = new NvEncoderCuda(cuda_context_, frame_width_, frame_height_,
                                NV_ENC_BUFFER_FORMAT::NV_ENC_BUFFER_FORMAT_NV12);
 
   // Init encoder_ session
@@ -52,8 +52,8 @@ int VideoEncoder::Init() {
   encoder_->CreateDefaultEncoderParams(&init_params, codec_guid, preset_guid,
                                        tuning_info);
 
-  init_params.encodeWidth = frame_width;
-  init_params.encodeHeight = frame_height;
+  init_params.encodeWidth = frame_width_;
+  init_params.encodeHeight = frame_height_;
   init_params.encodeConfig->profileGUID = NV_ENC_H264_PROFILE_BASELINE_GUID;
   init_params.encodeConfig->encodeCodecConfig.h264Config.level =
       NV_ENC_LEVEL::NV_ENC_LEVEL_H264_31;
@@ -108,6 +108,9 @@ int VideoEncoder::Encode(
   for (const auto &packet : encoded_packets_) {
     if (on_encoded_image) {
       on_encoded_image((char *)packet.data(), packet.size());
+      if (SAVE_ENCODER_STREAM) {
+        fwrite(packet.data(), 1, packet.size(), file_);
+      }
     } else {
       OnEncodedImage((char *)packet.data(), packet.size());
     }
@@ -128,8 +131,7 @@ int VideoEncoder::Encode(
 }
 
 int VideoEncoder::OnEncodedImage(char *encoded_packets, size_t size) {
-  LOG_INFO("output encoded image");
-  fwrite(encoded_packets, 1, size, file_);
+  LOG_INFO("OnEncodedImage not implemented");
   return 0;
 }
 

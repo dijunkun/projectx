@@ -25,8 +25,8 @@ class VideoEncoder {
   GUID preset_guid = NV_ENC_PRESET_P2_GUID;
   NV_ENC_TUNING_INFO tuning_info =
       NV_ENC_TUNING_INFO::NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY;
-  int frame_width = 1280;
-  int frame_height = 720;
+  int frame_width_ = 1280;
+  int frame_height_ = 720;
   int keyFrameInterval_ = 3000;
   int maxBitrate_ = 1000;
   int max_payload_size_ = 3000;

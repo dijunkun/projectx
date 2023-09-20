@@ -4,12 +4,20 @@
 #ifdef _WIN32
 extern "C" {
 #include "libavcodec/avcodec.h"
-};
+#include "libavformat/avformat.h"
+#include "libavutil/imgutils.h"
+#include "libavutil/opt.h"
+}
 #else
 #ifdef __cplusplus
 extern "C" {
 #endif
+extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/opt.h>
+}
 #ifdef __cplusplus
 };
 #endif
@@ -31,10 +39,11 @@ class VideoEncoder {
   void ForceIdr();
 
  private:
-  int frame_width = 1280;
+  int frame_width_ = 1280;
   int frame_height = 720;
   int keyFrameInterval_ = 3000;
-  int maxBitrate_ = 2000;
+  int maxBitrate_ = 1000;
+  int fps_ = 30;
   int max_payload_size_ = 3000;
 
   std::vector<std::vector<uint8_t>> encoded_packets_;
@@ -42,6 +51,13 @@ class VideoEncoder {
   FILE* file_ = nullptr;
   unsigned char* nv12_data_ = nullptr;
   unsigned int seq_ = 0;
+
+  const AVCodec* codec_ = nullptr;
+  AVCodecContext* codec_ctx_ = nullptr;
+  AVFrame* frame_ = nullptr;
+  AVPacket* packet_;
+  bool got_output_ = false;
+  uint32_t pts_ = 0;
 };
 
 #endif

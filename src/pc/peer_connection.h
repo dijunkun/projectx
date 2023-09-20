@@ -7,11 +7,11 @@
 
 #include "ice_transmission.h"
 #ifdef _WIN32
-#include "nv_decoder.h"
-#include "nv_encoder.h"
-#else
+
 #include "ffmpeg_decoder.h"
 #include "ffmpeg_encoder.h"
+// #include "nv_decoder.h"
+// #include "nv_encoder.h"
 #endif
 
 #include "ws_transmission.h"

@@ -85,8 +85,10 @@ int VideoDecoder::Decode(
     std::function<void(VideoFrame)> on_receive_decoded_frame) {
   if (!first_) {
     if ((*(data + 4) & 0x1f) != 0x07) {
+      LOG_ERROR("1");
       return -1;
     } else {
+      LOG_ERROR("2");
       first_ = true;
     }
   }
