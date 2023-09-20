@@ -1,15 +1,15 @@
-#ifndef _NV_DECODER_H_
-#define _NV_DECODER_H_
+#ifndef _NVIDIA_VIDEO_DECODER_H_
+#define _NVIDIA_VIDEO_DECODER_H_
 
 #include <functional>
 
 #include "NvDecoder.h"
-#include "frame.h"
+#include "video_decoder.h"
 
-class VideoDecoder {
+class NvidiaVideoDecoder : public VideoDecoder {
  public:
-  VideoDecoder();
-  ~VideoDecoder();
+  NvidiaVideoDecoder();
+  ~NvidiaVideoDecoder();
 
  public:
   int Init();

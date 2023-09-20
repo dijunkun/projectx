@@ -8,10 +8,8 @@
 #include "ice_transmission.h"
 #ifdef _WIN32
 
-#include "ffmpeg_decoder.h"
-#include "ffmpeg_encoder.h"
-// #include "nv_decoder.h"
-// #include "nv_encoder.h"
+#include "video_decoder_factory.h"
+#include "video_encoder_factory.h"
 #endif
 
 #include "ws_transmission.h"
@@ -31,7 +29,7 @@ typedef struct {
   NetStatusReport net_status_report;
 } PeerConnectionParams;
 
-class PeerConnection : public VideoEncoder, VideoDecoder {
+class PeerConnection {
  public:
   PeerConnection();
   ~PeerConnection();
@@ -100,6 +98,12 @@ class PeerConnection : public VideoEncoder, VideoDecoder {
   OnReceiveBuffer on_receive_audio_buffer_;
   OnReceiveBuffer on_receive_data_buffer_;
   char *nv12_data_ = nullptr;
+
+ private:
+  VideoEncoder *video_encoder = nullptr;
+  VideoDecoder *video_decoder = nullptr;
+  bool hardware_accelerated_encode_ = true;
+  bool hardware_accelerated_decode_ = true;
 };
 
 #endif

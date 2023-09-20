@@ -1,5 +1,5 @@
-#ifndef _FFMPEG_DECODER_H_
-#define _FFMPEG_DECODER_H_
+#ifndef _FFMPEG_VIDEO_DECODER_H_
+#define _FFMPEG_VIDEO_DECODER_H_
 
 #ifdef _WIN32
 extern "C" {
@@ -17,12 +17,12 @@ extern "C" {
 
 #include <functional>
 
-#include "frame.h"
+#include "video_decoder.h"
 
-class VideoDecoder {
+class FfmpegVideoDecoder : public VideoDecoder {
  public:
-  VideoDecoder();
-  ~VideoDecoder();
+  FfmpegVideoDecoder();
+  ~FfmpegVideoDecoder();
 
  public:
   int Init();

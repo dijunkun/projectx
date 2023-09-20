@@ -1,10 +1,10 @@
-#include "nv_decoder.h"
+#include "nvidia_video_decoder.h"
 
 #include "log.h"
 
 #define SAVE_ENCODER_STREAM 0
 
-VideoDecoder::VideoDecoder() {
+NvidiaVideoDecoder::NvidiaVideoDecoder() {
   if (SAVE_ENCODER_STREAM) {
     file_ = fopen("decode_stream.h264", "w+b");
     if (!file_) {
@@ -12,7 +12,7 @@ VideoDecoder::VideoDecoder() {
     }
   }
 }
-VideoDecoder::~VideoDecoder() {
+NvidiaVideoDecoder::~NvidiaVideoDecoder() {
   if (SAVE_ENCODER_STREAM && file_) {
     fflush(file_);
     fclose(file_);
@@ -20,7 +20,7 @@ VideoDecoder::~VideoDecoder() {
   }
 }
 
-int VideoDecoder::Init() {
+int NvidiaVideoDecoder::Init() {
   ck(cuInit(0));
   int nGpu = 0;
   int iGpu = 0;
@@ -43,7 +43,7 @@ int VideoDecoder::Init() {
   return 0;
 }
 
-int VideoDecoder::Decode(
+int NvidiaVideoDecoder::Decode(
     const uint8_t *data, int size,
     std::function<void(VideoFrame)> on_receive_decoded_frame) {
   if (!decoder) {

@@ -1,4 +1,4 @@
-#include "nv_encoder.h"
+#include "nvidia_video_encoder.h"
 
 #include <chrono>
 
@@ -6,7 +6,7 @@
 
 #define SAVE_ENCODER_STREAM 0
 
-VideoEncoder::VideoEncoder() {
+NvidiaVideoEncoder::NvidiaVideoEncoder() {
   if (SAVE_ENCODER_STREAM) {
     file_ = fopen("encode_stream.h264", "w+b");
     if (!file_) {
@@ -14,7 +14,7 @@ VideoEncoder::VideoEncoder() {
     }
   }
 }
-VideoEncoder::~VideoEncoder() {
+NvidiaVideoEncoder::~NvidiaVideoEncoder() {
   if (SAVE_ENCODER_STREAM && file_) {
     fflush(file_);
     fclose(file_);
@@ -27,7 +27,7 @@ VideoEncoder::~VideoEncoder() {
   }
 }
 
-int VideoEncoder::Init() {
+int NvidiaVideoEncoder::Init() {
   // Init cuda context
   int num_of_GPUs = 0;
   CUdevice cuda_device;
@@ -73,7 +73,7 @@ int VideoEncoder::Init() {
   return 0;
 }
 
-int VideoEncoder::Encode(
+int NvidiaVideoEncoder::Encode(
     const uint8_t *pData, int nSize,
     std::function<int(char *encoded_packets, size_t size)> on_encoded_image) {
   if (!encoder_) {
@@ -130,12 +130,12 @@ int VideoEncoder::Encode(
   return 0;
 }
 
-int VideoEncoder::OnEncodedImage(char *encoded_packets, size_t size) {
+int NvidiaVideoEncoder::OnEncodedImage(char *encoded_packets, size_t size) {
   LOG_INFO("OnEncodedImage not implemented");
   return 0;
 }
 
-void VideoEncoder::ForceIdr() {
+void NvidiaVideoEncoder::ForceIdr() {
   NV_ENC_RECONFIGURE_PARAMS reconfig_params;
   reconfig_params.version = NV_ENC_RECONFIGURE_PARAMS_VER;
 

@@ -1,4 +1,4 @@
-#include "ffmpeg_encoder.h"
+#include "ffmpeg_video_encoder.h"
 
 #include <chrono>
 
@@ -6,7 +6,7 @@
 
 #define SAVE_ENCODER_STREAM 0
 
-VideoEncoder::VideoEncoder() {
+FFmpegVideoEncoder::FFmpegVideoEncoder() {
   if (SAVE_ENCODER_STREAM) {
     file_ = fopen("encode_stream.h264", "w+b");
     if (!file_) {
@@ -14,7 +14,7 @@ VideoEncoder::VideoEncoder() {
     }
   }
 }
-VideoEncoder::~VideoEncoder() {
+FFmpegVideoEncoder::~FFmpegVideoEncoder() {
   if (SAVE_ENCODER_STREAM && file_) {
     fflush(file_);
     fclose(file_);
@@ -29,7 +29,7 @@ VideoEncoder::~VideoEncoder() {
   }
 }
 
-int VideoEncoder::Init() {
+int FFmpegVideoEncoder::Init() {
   av_log_set_level(AV_LOG_ERROR);
 
   codec_ = avcodec_find_encoder(AV_CODEC_ID_H264);
@@ -85,7 +85,7 @@ int VideoEncoder::Init() {
   return 0;
 }
 
-int VideoEncoder::Encode(
+int FFmpegVideoEncoder::Encode(
     const uint8_t *pData, int nSize,
     std::function<int(char *encoded_packets, size_t size)> on_encoded_image) {
   if (!codec_ctx_) {
@@ -132,9 +132,9 @@ int VideoEncoder::Encode(
   return 0;
 }
 
-int VideoEncoder::OnEncodedImage(char *encoded_packets, size_t size) {
+int FFmpegVideoEncoder::OnEncodedImage(char *encoded_packets, size_t size) {
   LOG_INFO("OnEncodedImage not implemented");
   return 0;
 }
 
-void VideoEncoder::ForceIdr() {}
+void FFmpegVideoEncoder::ForceIdr() {}

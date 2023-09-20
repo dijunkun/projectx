@@ -1,5 +1,5 @@
-#ifndef _FFMPEG_ENCODER_H_
-#define _FFMPEG_ENCODER_H_
+#ifndef _FFMPEG_VIDEO_ENCODER_H_
+#define _FFMPEG_VIDEO_ENCODER_H_
 
 #ifdef _WIN32
 extern "C" {
@@ -24,10 +24,12 @@ extern "C" {
 #endif
 #include <functional>
 
-class VideoEncoder {
+#include "video_encoder.h"
+
+class FFmpegVideoEncoder : public VideoEncoder {
  public:
-  VideoEncoder();
-  ~VideoEncoder();
+  FFmpegVideoEncoder();
+  ~FFmpegVideoEncoder();
 
   int Init();
   int Encode(

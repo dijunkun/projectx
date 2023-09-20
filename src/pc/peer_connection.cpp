@@ -60,7 +60,7 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   on_receive_video_ = [this](const char *data, size_t size, const char *user_id,
                              size_t user_id_size) {
-    int num_frame_returned = Decode(
+    int num_frame_returned = video_decoder->Decode(
         (uint8_t *)data, size,
         [this, user_id, user_id_size](VideoFrame video_frame) {
           if (on_receive_video_buffer_) {
@@ -101,8 +101,15 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   do {
   } while (SignalStatus::Connected != GetSignalStatus());
-  VideoEncoder::Init();
-  VideoDecoder::Init();
+
+  video_encoder =
+      VideoEncoderFactory::CreateVideoEncoder(hardware_accelerated_encode_);
+  video_encoder->Init();
+  video_decoder =
+      VideoDecoderFactory::CreateVideoDecoder(hardware_accelerated_decode_);
+  video_decoder->Init();
+  // VideoEncoder::Init();
+  // VideoDecoder::Init();
   nv12_data_ = new char[1280 * 720 * 3 / 2];
 
   return 0;
@@ -302,7 +309,7 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
     return -1;
   }
 
-  int ret = Encode(
+  int ret = video_encoder->Encode(
       (uint8_t *)data, size, [this](char *encoded_frame, size_t size) -> int {
         for (auto &ice_trans : ice_transmission_list_) {
           // LOG_ERROR("H264 frame size: [{}]", size);

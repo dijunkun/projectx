@@ -1,4 +1,4 @@
-#include "ffmpeg_decoder.h"
+#include "ffmpeg_video_decoder.h"
 
 #include "log.h"
 
@@ -10,7 +10,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 };
 
-VideoDecoder::VideoDecoder() {
+FfmpegVideoDecoder::FfmpegVideoDecoder() {
   if (SAVE_ENCODER_STREAM) {
     file_ = fopen("decode_stream.yuv", "w+b");
     if (!file_) {
@@ -19,7 +19,7 @@ VideoDecoder::VideoDecoder() {
   }
 }
 
-VideoDecoder::~VideoDecoder() {
+FfmpegVideoDecoder::~FfmpegVideoDecoder() {
   if (SAVE_ENCODER_STREAM && file_) {
     fflush(file_);
     fclose(file_);
@@ -38,7 +38,7 @@ VideoDecoder::~VideoDecoder() {
   av_free(codec_ctx_);
 }
 
-int VideoDecoder::Init() {
+int FfmpegVideoDecoder::Init() {
   // av_log_set_level(AV_LOG_DEBUG);
 
   codec_id_ = AV_CODEC_ID_H264;
@@ -80,7 +80,7 @@ int VideoDecoder::Init() {
   return 0;
 }
 
-int VideoDecoder::Decode(
+int FfmpegVideoDecoder::Decode(
     const uint8_t *data, int size,
     std::function<void(VideoFrame)> on_receive_decoded_frame) {
   if (!first_) {

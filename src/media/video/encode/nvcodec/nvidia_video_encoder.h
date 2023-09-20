@@ -1,14 +1,15 @@
-#ifndef _NV_ENCODER_H_
-#define _NV_ENCODER_H_
+#ifndef _NVIDIA_VIDEO_ENCODER_H_
+#define _NVIDIA_VIDEO_ENCODER_H_
 
 #include <functional>
 
 #include "NvEncoderCuda.h"
+#include "video_encoder.h"
 
-class VideoEncoder {
+class NvidiaVideoEncoder : public VideoEncoder {
  public:
-  VideoEncoder();
-  ~VideoEncoder();
+  NvidiaVideoEncoder();
+  ~NvidiaVideoEncoder();
 
   int Init();
   int Encode(
