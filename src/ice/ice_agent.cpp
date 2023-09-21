@@ -24,7 +24,6 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
                              juice_cb_recv_t on_recv, void *user_ptr) {
   // juice_set_log_level(JUICE_LOG_LEVEL_DEBUG);
 
-  LOG_ERROR("{} {} {} {}", stun_ip_, stun_port_, turn_ip_, turn_port_);
   juice_config_t config;
   memset(&config, 0, sizeof(config));
 

@@ -4,16 +4,9 @@
 
 #include "log.h"
 
-#define SAVE_ENCODER_STREAM 0
+#define SAVE_ENCODER_STREAM 1
 
-FFmpegVideoEncoder::FFmpegVideoEncoder() {
-  if (SAVE_ENCODER_STREAM) {
-    file_ = fopen("encode_stream.h264", "w+b");
-    if (!file_) {
-      LOG_WARN("Fail to open stream.h264");
-    }
-  }
-}
+FFmpegVideoEncoder::FFmpegVideoEncoder() {}
 FFmpegVideoEncoder::~FFmpegVideoEncoder() {
   if (SAVE_ENCODER_STREAM && file_) {
     fflush(file_);
@@ -21,11 +14,13 @@ FFmpegVideoEncoder::~FFmpegVideoEncoder() {
     file_ = nullptr;
   }
 
-  av_packet_free(&packet_);
-
   if (nv12_data_) {
     free(nv12_data_);
     nv12_data_ = nullptr;
+  }
+
+  if (packet_) {
+    av_packet_free(&packet_);
   }
 }
 
@@ -81,6 +76,13 @@ int FFmpegVideoEncoder::Init() {
   }
 
   packet_ = av_packet_alloc();
+
+  if (SAVE_ENCODER_STREAM) {
+    file_ = fopen("encode_stream.h264", "w+b");
+    if (!file_) {
+      LOG_WARN("Fail to open stream.h264");
+    }
+  }
 
   return 0;
 }

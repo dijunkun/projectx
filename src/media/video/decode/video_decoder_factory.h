@@ -7,10 +7,8 @@ class VideoDecoderFactory {
   VideoDecoderFactory();
   ~VideoDecoderFactory();
 
-  static VideoDecoder *CreateVideoDecoder(bool hardware_acceleration);
-
- private:
-  bool hardware_acceleration_ = false;
+  static std::unique_ptr<VideoDecoder> CreateVideoDecoder(
+      bool hardware_acceleration);
 };
 
 #endif

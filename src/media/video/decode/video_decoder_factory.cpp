@@ -7,11 +7,11 @@ VideoDecoderFactory::VideoDecoderFactory() {}
 
 VideoDecoderFactory::~VideoDecoderFactory() {}
 
-VideoDecoder *VideoDecoderFactory::CreateVideoDecoder(
+std::unique_ptr<VideoDecoder> VideoDecoderFactory::CreateVideoDecoder(
     bool hardware_acceleration) {
   if (hardware_acceleration) {
-    return new NvidiaVideoDecoder();
+    return std::make_unique<NvidiaVideoDecoder>(NvidiaVideoDecoder());
   } else {
-    return new FfmpegVideoDecoder();
+    return std::make_unique<FfmpegVideoDecoder>(FfmpegVideoDecoder());
   }
 }

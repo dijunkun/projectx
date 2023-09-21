@@ -68,9 +68,11 @@ class PeerConnection {
   std::string cfg_turn_server_port_;
   std::string cfg_turn_server_username_;
   std::string cfg_turn_server_password_;
+  std::string cfg_hardware_acceleration_;
   int signal_server_port_ = 0;
   int stun_server_port_ = 0;
   int turn_server_port_ = 0;
+  bool hardware_acceleration_ = false;
 
  private:
   std::shared_ptr<WsTransmission> ws_transport_ = nullptr;
@@ -100,10 +102,10 @@ class PeerConnection {
   char *nv12_data_ = nullptr;
 
  private:
-  VideoEncoder *video_encoder = nullptr;
-  VideoDecoder *video_decoder = nullptr;
-  bool hardware_accelerated_encode_ = true;
-  bool hardware_accelerated_decode_ = true;
+  std::unique_ptr<VideoEncoder> video_encoder = nullptr;
+  std::unique_ptr<VideoDecoder> video_decoder = nullptr;
+  bool hardware_accelerated_encode_ = false;
+  bool hardware_accelerated_decode_ = false;
 };
 
 #endif

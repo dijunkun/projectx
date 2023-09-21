@@ -2,7 +2,7 @@
 
 #include "log.h"
 
-#define SAVE_ENCODER_STREAM 1
+#define SAVE_DECODER_STREAM 1
 
 extern "C" {
 #include <libavformat/avformat.h>
@@ -10,17 +10,10 @@ extern "C" {
 #include <libswscale/swscale.h>
 };
 
-FfmpegVideoDecoder::FfmpegVideoDecoder() {
-  if (SAVE_ENCODER_STREAM) {
-    file_ = fopen("decode_stream.yuv", "w+b");
-    if (!file_) {
-      LOG_WARN("Fail to open stream.yuv");
-    }
-  }
-}
+FfmpegVideoDecoder::FfmpegVideoDecoder() {}
 
 FfmpegVideoDecoder::~FfmpegVideoDecoder() {
-  if (SAVE_ENCODER_STREAM && file_) {
+  if (SAVE_DECODER_STREAM && file_) {
     fflush(file_);
     fclose(file_);
     file_ = nullptr;
@@ -31,11 +24,26 @@ FfmpegVideoDecoder::~FfmpegVideoDecoder() {
     decoded_frame_ = nullptr;
   }
 
-  av_frame_free(&frame_);
-  av_frame_free(&frame_nv12_);
-  sws_freeContext(img_convert_ctx);
-  avcodec_close(codec_ctx_);
-  av_free(codec_ctx_);
+  if (packet_) {
+    av_packet_free(&packet_);
+  }
+
+  if (frame_) {
+    av_frame_free(&frame_);
+  }
+  if (frame_nv12_) {
+    av_frame_free(&frame_nv12_);
+  }
+
+  if (img_convert_ctx) {
+    sws_freeContext(img_convert_ctx);
+  }
+  if (codec_ctx_) {
+    avcodec_close(codec_ctx_);
+  }
+  if (codec_ctx_) {
+    av_free(codec_ctx_);
+  }
 }
 
 int FfmpegVideoDecoder::Init() {
@@ -71,12 +79,20 @@ int FfmpegVideoDecoder::Init() {
   frame_ = av_frame_alloc();
   frame_nv12_ = av_frame_alloc();
 
+  packet_ = av_packet_alloc();
+
   img_convert_ctx =
       sws_getContext(1280, 720, AV_PIX_FMT_YUV420P, 1280, 720, AV_PIX_FMT_NV12,
                      SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
 
   decoded_frame_ = new VideoFrame(1280 * 720 * 3 / 2);
 
+  if (SAVE_DECODER_STREAM) {
+    file_ = fopen("decode_stream.yuv", "w+b");
+    if (!file_) {
+      LOG_WARN("Fail to open stream.yuv");
+    }
+  }
   return 0;
 }
 
@@ -93,10 +109,11 @@ int FfmpegVideoDecoder::Decode(
     }
   }
 
-  packet_.data = (uint8_t *)data;
-  packet_.size = size;
+  packet_->data = (uint8_t *)data;
+  packet_->size = size;
 
-  int ret = avcodec_send_packet(codec_ctx_, &packet_);
+  int ret = avcodec_send_packet(codec_ctx_, packet_);
+  av_packet_unref(packet_);
 
   while (ret >= 0) {
     ret = avcodec_receive_frame(codec_ctx_, frame_);
@@ -135,9 +152,9 @@ int FfmpegVideoDecoder::Decode(
       LOG_ERROR("cost {}", now_ts - start_ts);
 
       on_receive_decoded_frame(*decoded_frame_);
-      if (SAVE_ENCODER_STREAM) {
-        fwrite((unsigned char *)frame_->data, 1,
-               frame_->width * frame_->height * 3 / 2, file_);
+      if (SAVE_DECODER_STREAM) {
+        fwrite((unsigned char *)decoded_frame_->Buffer(), 1,
+               decoded_frame_->Size(), file_);
       }
     }
   }

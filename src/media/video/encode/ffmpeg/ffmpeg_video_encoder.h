@@ -29,7 +29,7 @@ extern "C" {
 class FFmpegVideoEncoder : public VideoEncoder {
  public:
   FFmpegVideoEncoder();
-  ~FFmpegVideoEncoder();
+  virtual ~FFmpegVideoEncoder();
 
   int Init();
   int Encode(
@@ -57,7 +57,7 @@ class FFmpegVideoEncoder : public VideoEncoder {
   const AVCodec* codec_ = nullptr;
   AVCodecContext* codec_ctx_ = nullptr;
   AVFrame* frame_ = nullptr;
-  AVPacket* packet_;
+  AVPacket* packet_ = nullptr;
   bool got_output_ = false;
   uint32_t pts_ = 0;
 };

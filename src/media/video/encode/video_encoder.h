@@ -11,6 +11,9 @@ class VideoEncoder {
                          on_encoded_image) = 0;
   virtual int OnEncodedImage(char* encoded_packets, size_t size) = 0;
   virtual void ForceIdr() = 0;
+
+  VideoEncoder() = default;
+  virtual ~VideoEncoder() {}
 };
 
 #endif

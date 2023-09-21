@@ -22,7 +22,7 @@ extern "C" {
 class FfmpegVideoDecoder : public VideoDecoder {
  public:
   FfmpegVideoDecoder();
-  ~FfmpegVideoDecoder();
+  virtual ~FfmpegVideoDecoder();
 
  public:
   int Init();
@@ -33,7 +33,7 @@ class FfmpegVideoDecoder : public VideoDecoder {
   AVCodecID codec_id_;
   const AVCodec *codec_;
   AVCodecContext *codec_ctx_ = nullptr;
-  AVPacket packet_;
+  AVPacket *packet_ = nullptr;
   AVFrame *frame_ = nullptr;
   AVFrame *frame_nv12_ = nullptr;
   struct SwsContext *img_convert_ctx = nullptr;

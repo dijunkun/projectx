@@ -4,16 +4,9 @@
 
 #include "log.h"
 
-#define SAVE_ENCODER_STREAM 0
+#define SAVE_ENCODER_STREAM 1
 
-NvidiaVideoEncoder::NvidiaVideoEncoder() {
-  if (SAVE_ENCODER_STREAM) {
-    file_ = fopen("encode_stream.h264", "w+b");
-    if (!file_) {
-      LOG_WARN("Fail to open stream.h264");
-    }
-  }
-}
+NvidiaVideoEncoder::NvidiaVideoEncoder() {}
 NvidiaVideoEncoder::~NvidiaVideoEncoder() {
   if (SAVE_ENCODER_STREAM && file_) {
     fflush(file_);
@@ -70,6 +63,13 @@ int NvidiaVideoEncoder::Init() {
       max_payload_size_;
 
   encoder_->CreateEncoder(&init_params);
+
+  if (SAVE_ENCODER_STREAM) {
+    file_ = fopen("encode_stream.h264", "w+b");
+    if (!file_) {
+      LOG_WARN("Fail to open stream.h264");
+    }
+  }
   return 0;
 }
 

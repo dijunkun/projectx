@@ -2,18 +2,11 @@
 
 #include "log.h"
 
-#define SAVE_ENCODER_STREAM 0
+#define SAVE_DECODER_STREAM 1
 
-NvidiaVideoDecoder::NvidiaVideoDecoder() {
-  if (SAVE_ENCODER_STREAM) {
-    file_ = fopen("decode_stream.h264", "w+b");
-    if (!file_) {
-      LOG_WARN("Fail to open stream.h264");
-    }
-  }
-}
+NvidiaVideoDecoder::NvidiaVideoDecoder() {}
 NvidiaVideoDecoder::~NvidiaVideoDecoder() {
-  if (SAVE_ENCODER_STREAM && file_) {
+  if (SAVE_DECODER_STREAM && file_) {
     fflush(file_);
     fclose(file_);
     file_ = nullptr;
@@ -40,6 +33,13 @@ int NvidiaVideoDecoder::Init() {
   }
 
   decoder = new NvDecoder(cuContext, false, cudaVideoCodec_H264, true);
+
+  if (SAVE_DECODER_STREAM) {
+    file_ = fopen("decode_stream.h264", "w+b");
+    if (!file_) {
+      LOG_WARN("Fail to open stream.h264");
+    }
+  }
   return 0;
 }
 
@@ -52,10 +52,6 @@ int NvidiaVideoDecoder::Decode(
 
   if ((*(data + 4) & 0x1f) == 0x07) {
     // LOG_WARN("Receive key frame");
-  }
-
-  if (SAVE_ENCODER_STREAM) {
-    fwrite((unsigned char *)data, 1, size, file_);
   }
 
   int num_frame_returned = decoder->Decode(data, size);
@@ -71,6 +67,10 @@ int NvidiaVideoDecoder::Decode(
               data, decoder->GetWidth() * decoder->GetHeight() * 3 / 2,
               decoder->GetWidth(), decoder->GetHeight());
           on_receive_decoded_frame(decoded_frame);
+          if (SAVE_DECODER_STREAM) {
+            fwrite((unsigned char *)decoded_frame.Buffer(), 1,
+                   decoded_frame.Size(), file_);
+          }
         }
       }
     }

@@ -7,10 +7,8 @@ class VideoEncoderFactory {
   VideoEncoderFactory();
   ~VideoEncoderFactory();
 
-  static VideoEncoder *CreateVideoEncoder(bool hardware_acceleration);
-
- private:
-  bool hardware_acceleration_ = false;
+  static std::unique_ptr<VideoEncoder> CreateVideoEncoder(
+      bool hardware_acceleration);
 };
 
 #endif

@@ -9,7 +9,7 @@
 class NvidiaVideoDecoder : public VideoDecoder {
  public:
   NvidiaVideoDecoder();
-  ~NvidiaVideoDecoder();
+  virtual ~NvidiaVideoDecoder();
 
  public:
   int Init();

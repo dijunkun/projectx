@@ -33,6 +33,9 @@ int PeerConnection::Init(PeerConnectionParams params,
   cfg_turn_server_port_ = reader.Get("turn server", "port", "-1");
   cfg_turn_server_username_ = reader.Get("turn server", "username", "");
   cfg_turn_server_password_ = reader.Get("turn server", "password", "");
+  cfg_hardware_acceleration_ =
+      reader.Get("hardware acceleration", "turn_on", "false");
+
   std::regex regex("\n");
 
   LOG_INFO("Read config success");
@@ -51,6 +54,10 @@ int PeerConnection::Init(PeerConnectionParams params,
              cfg_turn_server_ip_, turn_server_port_, cfg_turn_server_username_,
              cfg_turn_server_password_);
   }
+
+  hardware_acceleration_ = cfg_hardware_acceleration_ == "true" ? true : false;
+  LOG_INFO("Hardware accelerated codec [{}]",
+           hardware_acceleration_ ? "ON" : "OFF");
 
   on_receive_video_buffer_ = params.on_receive_video_buffer;
   on_receive_audio_buffer_ = params.on_receive_audio_buffer;
@@ -103,13 +110,12 @@ int PeerConnection::Init(PeerConnectionParams params,
   } while (SignalStatus::Connected != GetSignalStatus());
 
   video_encoder =
-      VideoEncoderFactory::CreateVideoEncoder(hardware_accelerated_encode_);
+      VideoEncoderFactory::CreateVideoEncoder(hardware_acceleration_);
   video_encoder->Init();
   video_decoder =
-      VideoDecoderFactory::CreateVideoDecoder(hardware_accelerated_decode_);
+      VideoDecoderFactory::CreateVideoDecoder(hardware_acceleration_);
   video_decoder->Init();
-  // VideoEncoder::Init();
-  // VideoDecoder::Init();
+
   nv12_data_ = new char[1280 * 720 * 3 / 2];
 
   return 0;

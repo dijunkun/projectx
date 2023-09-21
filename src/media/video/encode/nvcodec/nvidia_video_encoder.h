@@ -9,7 +9,7 @@
 class NvidiaVideoEncoder : public VideoEncoder {
  public:
   NvidiaVideoEncoder();
-  ~NvidiaVideoEncoder();
+  virtual ~NvidiaVideoEncoder();
 
   int Init();
   int Encode(
