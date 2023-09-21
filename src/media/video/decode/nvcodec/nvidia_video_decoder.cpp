@@ -2,7 +2,7 @@
 
 #include "log.h"
 
-#define SAVE_DECODER_STREAM 1
+#define SAVE_DECODER_STREAM 0
 
 NvidiaVideoDecoder::NvidiaVideoDecoder() {}
 NvidiaVideoDecoder::~NvidiaVideoDecoder() {
@@ -51,7 +51,7 @@ int NvidiaVideoDecoder::Decode(
   }
 
   if ((*(data + 4) & 0x1f) == 0x07) {
-    // LOG_WARN("Receive key frame");
+    LOG_WARN("Receive key frame");
   }
 
   int num_frame_returned = decoder->Decode(data, size);

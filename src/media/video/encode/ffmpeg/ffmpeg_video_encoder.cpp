@@ -4,7 +4,7 @@
 
 #include "log.h"
 
-#define SAVE_ENCODER_STREAM 1
+#define SAVE_ENCODER_STREAM 0
 
 FFmpegVideoEncoder::FFmpegVideoEncoder() {}
 FFmpegVideoEncoder::~FFmpegVideoEncoder() {

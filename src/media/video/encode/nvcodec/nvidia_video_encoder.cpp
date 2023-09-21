@@ -4,7 +4,7 @@
 
 #include "log.h"
 
-#define SAVE_ENCODER_STREAM 1
+#define SAVE_ENCODER_STREAM 0
 
 NvidiaVideoEncoder::NvidiaVideoEncoder() {}
 NvidiaVideoEncoder::~NvidiaVideoEncoder() {
@@ -50,14 +50,15 @@ int NvidiaVideoEncoder::Init() {
   init_params.encodeConfig->profileGUID = NV_ENC_H264_PROFILE_BASELINE_GUID;
   init_params.encodeConfig->encodeCodecConfig.h264Config.level =
       NV_ENC_LEVEL::NV_ENC_LEVEL_H264_31;
-  // TO TEST: not tested yet
-  // init_params.encodeConfig->gopLength = NVENC_INFINITE_GOPLENGTH;
   init_params.encodeConfig->gopLength = keyFrameInterval_;
-  // Do not use B-frame for realtime application
   init_params.encodeConfig->frameIntervalP = 1;
   init_params.encodeConfig->rcParams.rateControlMode =
-      NV_ENC_PARAMS_RC_MODE::NV_ENC_PARAMS_RC_CBR;
+      NV_ENC_PARAMS_RC_MODE::NV_ENC_PARAMS_RC_VBR;
   init_params.encodeConfig->rcParams.maxBitRate = maxBitrate_ * 500;
+  // init_params.encodeConfig->rcParams.enableMinQP = 1;
+  // init_params.encodeConfig->rcParams.minQP.qpIntra = 10;
+  init_params.encodeConfig->rcParams.enableMaxQP = 1;
+  init_params.encodeConfig->rcParams.maxQP.qpIntra = 22;
   init_params.encodeConfig->encodeCodecConfig.h264Config.sliceMode = 1;
   init_params.encodeConfig->encodeCodecConfig.h264Config.sliceModeData =
       max_payload_size_;

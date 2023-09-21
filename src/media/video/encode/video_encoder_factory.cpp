@@ -1,6 +1,7 @@
 #include "video_encoder_factory.h"
 
 #include "ffmpeg/ffmpeg_video_encoder.h"
+#include "log.h"
 #include "nvcodec/nvidia_video_encoder.h"
 
 VideoEncoderFactory::VideoEncoderFactory() {}
@@ -26,11 +27,17 @@ bool VideoEncoderFactory::CheckIsHardwareAccerlerationSupported() {
 
   cuResult = cuInit(0);
   if (cuResult != CUDA_SUCCESS) {
+    LOG_WARN(
+        "System not support hardware accelerated encode, use default software "
+        "encoder");
     return false;
   }
 
   NVENCSTATUS nvEncStatus = NvEncodeAPICreateInstance(&functionList);
   if (nvEncStatus != NV_ENC_SUCCESS) {
+    LOG_WARN(
+        "System not support hardware accelerated encode, use default software "
+        "encoder");
     return false;
   }
 

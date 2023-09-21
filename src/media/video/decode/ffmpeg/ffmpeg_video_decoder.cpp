@@ -2,7 +2,7 @@
 
 #include "log.h"
 
-#define SAVE_DECODER_STREAM 1
+#define SAVE_DECODER_STREAM 0
 
 extern "C" {
 #include <libavformat/avformat.h>

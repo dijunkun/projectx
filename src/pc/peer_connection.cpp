@@ -119,17 +119,33 @@ int PeerConnection::Init(PeerConnectionParams params,
 }
 
 int PeerConnection::CreateVideoCodec(bool hardware_acceleration) {
+#ifdef __APPLE__
+  if (hardware_acceleration) {
+    hardware_acceleration = false;
+    LOG_WARN(
+        "MacOS not support hardware acceleration, use default software codec");
+  }
+#else
+#endif
+
   video_encoder_ =
       VideoEncoderFactory::CreateVideoEncoder(hardware_acceleration_);
   if (hardware_acceleration_ && !video_encoder_) {
+    LOG_WARN(
+        "Hardware accelerated encoder not available, use default software "
+        "encoder");
     video_encoder_ = VideoEncoderFactory::CreateVideoEncoder(false);
     if (!video_encoder_) {
+      LOG_ERROR(
+          "Hardware accelerated encoder and software encoder both not "
+          "available");
       return -1;
     }
   }
   if (0 != video_encoder_->Init()) {
     video_encoder_ = VideoEncoderFactory::CreateVideoEncoder(false);
     if (!video_encoder_ || 0 != video_encoder_->Init()) {
+      LOG_ERROR("Encoder init failed");
       return -1;
     }
   }
@@ -137,14 +153,21 @@ int PeerConnection::CreateVideoCodec(bool hardware_acceleration) {
   video_decoder_ =
       VideoDecoderFactory::CreateVideoDecoder(hardware_acceleration_);
   if (hardware_acceleration_ && !video_decoder_) {
+    LOG_WARN(
+        "Hardware accelerated decoder not available, use default software "
+        "decoder");
     video_decoder_ = VideoDecoderFactory::CreateVideoDecoder(false);
     if (!video_decoder_) {
+      LOG_ERROR(
+          "Hardware accelerated decoder and software decoder both not "
+          "available");
       return -1;
     }
   }
   if (0 != video_decoder_->Init()) {
     video_decoder_ = VideoDecoderFactory::CreateVideoDecoder(false);
     if (!video_decoder_ || video_decoder_->Init()) {
+      LOG_ERROR("Decoder init failed");
       return -1;
     }
   }

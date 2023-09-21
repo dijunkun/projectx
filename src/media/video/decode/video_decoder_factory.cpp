@@ -1,6 +1,7 @@
 #include "video_decoder_factory.h"
 
 #include "ffmpeg/ffmpeg_video_decoder.h"
+#include "log.h"
 #include "nvcodec/nvidia_video_decoder.h"
 
 VideoDecoderFactory::VideoDecoderFactory() {}
@@ -26,6 +27,9 @@ bool VideoDecoderFactory::CheckIsHardwareAccerlerationSupported() {
   CUvideoctxlock cudaCtxLock;
   cuResult = cuvidCtxLockCreate(&cudaCtxLock, 0);
   if (cuResult != CUDA_SUCCESS) {
+    LOG_WARN(
+        "System not support hardware accelerated decode, use default software "
+        "decoder");
     return false;
   }
 
