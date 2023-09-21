@@ -727,7 +727,10 @@ int NvDecoder::Decode(const uint8_t *pData, int nSize, int nFlags,
   if (!pData || nSize == 0) {
     packet.flags |= CUVID_PKT_ENDOFSTREAM;
   }
-  NVDEC_API_CALL(cuvidParseVideoData(m_hParser, &packet));
+  // NVDEC_API_CALL(cuvidParseVideoData(m_hParser, &packet));
+  if (CUDA_SUCCESS != cuvidParseVideoData(m_hParser, &packet)) {
+    return 0;
+  }
   m_cuvidStream = 0;
 
   return m_nDecodedFrame;

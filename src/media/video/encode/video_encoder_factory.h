@@ -9,6 +9,8 @@ class VideoEncoderFactory {
 
   static std::unique_ptr<VideoEncoder> CreateVideoEncoder(
       bool hardware_acceleration);
+
+  static bool CheckIsHardwareAccerlerationSupported();
 };
 
 #endif

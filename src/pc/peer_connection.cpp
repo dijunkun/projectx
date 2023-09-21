@@ -67,7 +67,7 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   on_receive_video_ = [this](const char *data, size_t size, const char *user_id,
                              size_t user_id_size) {
-    int num_frame_returned = video_decoder->Decode(
+    int num_frame_returned = video_decoder_->Decode(
         (uint8_t *)data, size,
         [this, user_id, user_id_size](VideoFrame video_frame) {
           if (on_receive_video_buffer_) {
@@ -109,15 +109,45 @@ int PeerConnection::Init(PeerConnectionParams params,
   do {
   } while (SignalStatus::Connected != GetSignalStatus());
 
-  video_encoder =
-      VideoEncoderFactory::CreateVideoEncoder(hardware_acceleration_);
-  video_encoder->Init();
-  video_decoder =
-      VideoDecoderFactory::CreateVideoDecoder(hardware_acceleration_);
-  video_decoder->Init();
-
   nv12_data_ = new char[1280 * 720 * 3 / 2];
 
+  if (0 != CreateVideoCodec(hardware_acceleration_)) {
+    return -1;
+  }
+
+  return 0;
+}
+
+int PeerConnection::CreateVideoCodec(bool hardware_acceleration) {
+  video_encoder_ =
+      VideoEncoderFactory::CreateVideoEncoder(hardware_acceleration_);
+  if (hardware_acceleration_ && !video_encoder_) {
+    video_encoder_ = VideoEncoderFactory::CreateVideoEncoder(false);
+    if (!video_encoder_) {
+      return -1;
+    }
+  }
+  if (0 != video_encoder_->Init()) {
+    video_encoder_ = VideoEncoderFactory::CreateVideoEncoder(false);
+    if (!video_encoder_ || 0 != video_encoder_->Init()) {
+      return -1;
+    }
+  }
+
+  video_decoder_ =
+      VideoDecoderFactory::CreateVideoDecoder(hardware_acceleration_);
+  if (hardware_acceleration_ && !video_decoder_) {
+    video_decoder_ = VideoDecoderFactory::CreateVideoDecoder(false);
+    if (!video_decoder_) {
+      return -1;
+    }
+  }
+  if (0 != video_decoder_->Init()) {
+    video_decoder_ = VideoDecoderFactory::CreateVideoDecoder(false);
+    if (!video_decoder_ || video_decoder_->Init()) {
+      return -1;
+    }
+  }
   return 0;
 }
 
@@ -315,7 +345,7 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
     return -1;
   }
 
-  int ret = video_encoder->Encode(
+  int ret = video_encoder_->Encode(
       (uint8_t *)data, size, [this](char *encoded_frame, size_t size) -> int {
         for (auto &ice_trans : ice_transmission_list_) {
           // LOG_ERROR("H264 frame size: [{}]", size);

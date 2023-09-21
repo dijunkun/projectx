@@ -10,8 +10,24 @@ VideoDecoderFactory::~VideoDecoderFactory() {}
 std::unique_ptr<VideoDecoder> VideoDecoderFactory::CreateVideoDecoder(
     bool hardware_acceleration) {
   if (hardware_acceleration) {
-    return std::make_unique<NvidiaVideoDecoder>(NvidiaVideoDecoder());
+    if (CheckIsHardwareAccerlerationSupported()) {
+      return std::make_unique<NvidiaVideoDecoder>(NvidiaVideoDecoder());
+    } else {
+      return nullptr;
+    }
   } else {
     return std::make_unique<FfmpegVideoDecoder>(FfmpegVideoDecoder());
   }
+}
+
+bool VideoDecoderFactory::CheckIsHardwareAccerlerationSupported() {
+  CUresult cuResult;
+
+  CUvideoctxlock cudaCtxLock;
+  cuResult = cuvidCtxLockCreate(&cudaCtxLock, 0);
+  if (cuResult != CUDA_SUCCESS) {
+    return false;
+  }
+
+  return true;
 }

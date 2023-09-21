@@ -54,6 +54,8 @@ class PeerConnection {
   int Init(PeerConnectionParams params, const std::string &transmission_id,
            const std::string &user_id);
 
+  int CreateVideoCodec(bool hardware_acceleration);
+
   void ProcessSignal(const std::string &signal);
 
   int RequestTransmissionMemberList(const std::string &transmission_id);
@@ -102,8 +104,8 @@ class PeerConnection {
   char *nv12_data_ = nullptr;
 
  private:
-  std::unique_ptr<VideoEncoder> video_encoder = nullptr;
-  std::unique_ptr<VideoDecoder> video_decoder = nullptr;
+  std::unique_ptr<VideoEncoder> video_encoder_ = nullptr;
+  std::unique_ptr<VideoDecoder> video_decoder_ = nullptr;
   bool hardware_accelerated_encode_ = false;
   bool hardware_accelerated_decode_ = false;
 };
