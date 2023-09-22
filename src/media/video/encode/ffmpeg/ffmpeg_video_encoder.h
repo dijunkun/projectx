@@ -23,6 +23,7 @@ extern "C" {
 #endif
 #endif
 #include <functional>
+#include <vector>
 
 #include "video_encoder.h"
 

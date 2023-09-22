@@ -32,8 +32,8 @@ if is_os("windows") then
     add_links("windowsapp", "User32", "Strmiids", "Mfuuid", "Secur32", "Bcrypt")
     add_requires("cuda")
 elseif is_os("linux") then 
-    add_links("pthread")
-    set_config("cxxflags", "-fPIC")
+    set_config("cflags", "-fPIC")
+    add_syslinks("pthread")
 end
 
 add_packages("spdlog")
