@@ -1,6 +1,8 @@
 #ifndef _VIDEO_ENCODER_FACTORY_H_
 #define _VIDEO_ENCODER_FACTORY_H_
 
+#include <memory>
+
 #include "video_encoder.h"
 class VideoEncoderFactory {
  public:

@@ -1,5 +1,7 @@
 #include "frame.h"
 
+#include <string.h>
+
 #include <string>
 
 VideoFrame::VideoFrame() {}

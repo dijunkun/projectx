@@ -24,8 +24,8 @@ class ThreadBase {
  private:
   std::unique_ptr<std::thread> thread_ = nullptr;
 
-  std::atomic<bool> stop_ = false;
-  std::atomic<bool> pause_ = false;
+  std::atomic<bool> stop_{false};
+  std::atomic<bool> pause_{false};
 };
 
 #endif

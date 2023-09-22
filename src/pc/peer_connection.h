@@ -6,12 +6,8 @@
 #include <mutex>
 
 #include "ice_transmission.h"
-#ifdef _WIN32
-
 #include "video_decoder_factory.h"
 #include "video_encoder_factory.h"
-#endif
-
 #include "ws_transmission.h"
 
 enum SignalStatus { Connecting = 0, Connected, Closed };

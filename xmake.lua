@@ -102,15 +102,14 @@ target("ws")
 target("media")
     set_kind("static")
     add_deps("log", "frame")
-    if is_os("windows") or is_os(("linux")) then
+    if is_os("windows") then
         add_packages("cuda")
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/nvcodec/*.cpp",
         "src/media/video/decode/nvcodec/*.cpp",
         "src/media/video/encode/ffmpeg/*.cpp",
-        "src/media/video/decode/ffmpeg/*.cpp"
-        )
+        "src/media/video/decode/ffmpeg/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/encode/nvcodec",
@@ -121,6 +120,24 @@ target("media")
         "thirdparty/nvcodec/Samples", {public = true})
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
         add_links("cuda", "nvencodeapi", "nvcuvid")
+    elseif is_os(("linux")) then
+        add_packages("cuda")
+        add_files("src/media/video/encode/*.cpp",
+        "src/media/video/decode/*.cpp",
+        "src/media/video/encode/nvcodec/*.cpp",
+        "src/media/video/decode/nvcodec/*.cpp",
+        "src/media/video/encode/ffmpeg/*.cpp",
+        "src/media/video/decode/ffmpeg/*.cpp")
+        add_includedirs("src/media/video/encode",
+        "src/media/video/decode",
+        "src/media/video/encode/nvcodec",
+        "src/media/video/decode/nvcodec",
+        "src/media/video/encode/ffmpeg",
+        "src/media/video/decode/ffmpeg",
+        "thirdparty/nvcodec/Interface",
+        "thirdparty/nvcodec/Samples", {public = true})
+        add_linkdirs("thirdparty/nvcodec/Lib/x64")
+        add_links("cuda", "nvidia-encode", "nvcuvid")
     elseif is_os("macosx") then
         add_files("src/media/video/encode/ffmpeg/*.cpp",
         "src/media/video/decode/ffmpeg/*.cpp")

@@ -1,7 +1,9 @@
 #ifndef _RTP_PACKET_H_
 #define _RTP_PACKET_H_
 
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include <vector>
 
