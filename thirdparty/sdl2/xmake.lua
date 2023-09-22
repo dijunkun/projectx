@@ -5,6 +5,7 @@ package("sdl2")
     add_deps("cmake")
     on_install(function (package)
         local configs = {}
+        table.insert(configs, "-DSDL_SHARED_ENABLED_BY_DEFAULT=OFF -DSDL_TEST_ENABLED_BY_DEFAULT=OFF")
         import("package.tools.cmake").install(package, configs)
     end)
 package_end()
