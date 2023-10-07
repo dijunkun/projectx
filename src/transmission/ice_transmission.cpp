@@ -276,8 +276,8 @@ int IceTransmission::SendData(DATA_TYPE type, const char *data, size_t size) {
       if (rtp_data_sender_) {
         if (data_rtp_codec_) {
           data_rtp_codec_->Encode((uint8_t *)data, size, packets);
+          rtp_data_sender_->Enqueue(packets);
         }
-        rtp_data_sender_->Enqueue(packets);
       }
     }
   }
