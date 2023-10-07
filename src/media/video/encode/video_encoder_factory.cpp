@@ -1,8 +1,13 @@
 #include "video_encoder_factory.h"
 
+#if __APPLE__
 #include "ffmpeg/ffmpeg_video_encoder.h"
-#include "log.h"
+#else
+#include "ffmpeg/ffmpeg_video_encoder.h"
 #include "nvcodec/nvidia_video_encoder.h"
+#endif
+
+#include "log.h"
 
 VideoEncoderFactory::VideoEncoderFactory() {}
 
@@ -10,6 +15,9 @@ VideoEncoderFactory::~VideoEncoderFactory() {}
 
 std::unique_ptr<VideoEncoder> VideoEncoderFactory::CreateVideoEncoder(
     bool hardware_acceleration) {
+#if __APPLE__
+  return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
+#else
   if (hardware_acceleration) {
     if (CheckIsHardwareAccerlerationSupported()) {
       return std::make_unique<NvidiaVideoEncoder>(NvidiaVideoEncoder());
@@ -19,9 +27,13 @@ std::unique_ptr<VideoEncoder> VideoEncoderFactory::CreateVideoEncoder(
   } else {
     return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
   }
+#endif
 }
 
 bool VideoEncoderFactory::CheckIsHardwareAccerlerationSupported() {
+#if __APPLE__
+  return false;
+#else
   CUresult cuResult;
   NV_ENCODE_API_FUNCTION_LIST functionList = {NV_ENCODE_API_FUNCTION_LIST_VER};
 
@@ -42,4 +54,5 @@ bool VideoEncoderFactory::CheckIsHardwareAccerlerationSupported() {
   }
 
   return true;
+#endif
 }

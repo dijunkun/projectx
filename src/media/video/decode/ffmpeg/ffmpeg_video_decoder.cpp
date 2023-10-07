@@ -101,10 +101,8 @@ int FfmpegVideoDecoder::Decode(
     std::function<void(VideoFrame)> on_receive_decoded_frame) {
   if (!first_) {
     if ((*(data + 4) & 0x1f) != 0x07) {
-      LOG_ERROR("1");
       return -1;
     } else {
-      LOG_ERROR("2");
       first_ = true;
     }
   }
@@ -149,7 +147,7 @@ int FfmpegVideoDecoder::Decode(
               std::chrono::high_resolution_clock::now().time_since_epoch())
               .count());
 
-      LOG_ERROR("cost {}", now_ts - start_ts);
+      // LOG_ERROR("cost {}", now_ts - start_ts);
 
       on_receive_decoded_frame(*decoded_frame_);
       if (SAVE_DECODER_STREAM) {

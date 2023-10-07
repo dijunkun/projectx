@@ -139,9 +139,13 @@ target("media")
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
         add_links("cuda", "nvidia-encode", "nvcuvid")
     elseif is_os("macosx") then
-        add_files("src/media/video/encode/ffmpeg/*.cpp",
+        add_files("src/media/video/encode/*.cpp",
+        "src/media/video/decode/*.cpp",
+        "src/media/video/encode/ffmpeg/*.cpp",
         "src/media/video/decode/ffmpeg/*.cpp")
-        add_includedirs("src/media/video/encode/ffmpeg",
+        add_includedirs("src/media/video/encode",
+        "src/media/video/decode",
+        "src/media/video/encode/ffmpeg",
         "src/media/video/decode/ffmpeg", {public = true})
     end
 
