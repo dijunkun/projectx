@@ -62,7 +62,7 @@ RtpPacket::RtpPacket(RtpPacket &&rtp_packet)
 RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
   if (&rtp_packet != this) {
     if (buffer_) {
-      delete buffer_;
+      delete[] buffer_;
       buffer_ = nullptr;
     }
     buffer_ = new uint8_t[rtp_packet.size_];
@@ -88,13 +88,13 @@ RtpPacket &RtpPacket::operator=(RtpPacket &&rtp_packet) {
 
 RtpPacket::~RtpPacket() {
   if (buffer_) {
-    delete buffer_;
+    delete[] buffer_;
     buffer_ = nullptr;
   }
   size_ = 0;
 
   if (extension_data_) {
-    delete extension_data_;
+    delete[] extension_data_;
     extension_data_ = nullptr;
   }
   extension_len_ = 0;

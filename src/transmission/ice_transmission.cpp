@@ -197,7 +197,11 @@ int IceTransmission::JoinTransmission() {
 }
 
 int IceTransmission::GatherCandidates() {
-  ice_agent_->GatherCandidates();
+  int ret = ice_agent_->GatherCandidates();
+  while (ret) {
+    LOG_ERROR("Gather candidates failed, retry");
+    ret = ice_agent_->GatherCandidates();
+  }
   LOG_INFO("[{}] Gather candidates", user_id_);
   return 0;
 }
