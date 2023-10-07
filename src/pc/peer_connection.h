@@ -104,6 +104,7 @@ class PeerConnection {
   std::unique_ptr<VideoDecoder> video_decoder_ = nullptr;
   bool hardware_accelerated_encode_ = false;
   bool hardware_accelerated_decode_ = false;
+  bool b_force_i_frame_ = false;
 };
 
 #endif

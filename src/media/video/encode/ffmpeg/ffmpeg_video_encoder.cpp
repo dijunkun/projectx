@@ -139,4 +139,4 @@ int FFmpegVideoEncoder::OnEncodedImage(char *encoded_packets, size_t size) {
   return 0;
 }
 
-void FFmpegVideoEncoder::ForceIdr() {}
+void FFmpegVideoEncoder::ForceIdr() { frame_->pict_type = AV_PICTURE_TYPE_I; }

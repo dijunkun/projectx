@@ -94,6 +94,7 @@ int PeerConnection::Init(PeerConnectionParams params,
   on_ice_status_change_ = [this](std::string ice_status) {
     if ("JUICE_STATE_COMPLETED" == ice_status) {
       ice_ready_ = true;
+      b_force_i_frame_ = true;
       LOG_INFO("Ice finish");
     } else {
       ice_ready_ = false;
@@ -368,6 +369,12 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
     return -1;
   }
 
+  if (b_force_i_frame_) {
+    video_encoder_->ForceIdr();
+    LOG_INFO("Force I frame");
+    b_force_i_frame_ = false;
+  }
+
   int ret = video_encoder_->Encode(
       (uint8_t *)data, size, [this](char *encoded_frame, size_t size) -> int {
         for (auto &ice_trans : ice_transmission_list_) {
@@ -377,6 +384,7 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
         }
         return 0;
       });
+
   if (0 != ret) {
     LOG_ERROR("Encode failed");
     return -1;
