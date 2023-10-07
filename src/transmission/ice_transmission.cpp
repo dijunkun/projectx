@@ -133,7 +133,7 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
         }
       },
       [](juice_agent_t *agent, const char *sdp, void *user_ptr) {
-        // LOG_INFO("candadite: {}", sdp);
+        LOG_INFO("candadite: {}", sdp);
         // trickle
         // static_cast<IceTransmission
         // *>(user_ptr)->SendOfferLocalCandidate(sdp);

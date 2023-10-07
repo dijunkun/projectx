@@ -22,7 +22,25 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
                              juice_cb_candidate_t on_candidate,
                              juice_cb_gathering_done_t on_gathering_done,
                              juice_cb_recv_t on_recv, void *user_ptr) {
-  // juice_set_log_level(JUICE_LOG_LEVEL_DEBUG);
+  juice_set_log_level(JUICE_LOG_LEVEL_DEBUG);
+
+  juice_set_log_handler([](juice_log_level_t level, const char *message) {
+    if (JUICE_LOG_LEVEL_VERBOSE == level) {
+      LOG_INFO("{}", message);
+    } else if (JUICE_LOG_LEVEL_DEBUG == level) {
+      LOG_INFO("{}", message);
+    } else if (JUICE_LOG_LEVEL_INFO == level) {
+      LOG_INFO("{}", message);
+    } else if (JUICE_LOG_LEVEL_WARN == level) {
+      LOG_WARN("{}", message);
+    } else if (JUICE_LOG_LEVEL_ERROR == level) {
+      LOG_ERROR("{}", message);
+    } else if (JUICE_LOG_LEVEL_FATAL == level) {
+      LOG_FATAL("{}", message);
+    } else if (JUICE_LOG_LEVEL_NONE == level) {
+      LOG_INFO("{}", message);
+    }
+  });
 
   juice_config_t config;
   memset(&config, 0, sizeof(config));
@@ -48,6 +66,9 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
   config.cb_gathering_done = on_gathering_done;
   config.cb_recv = on_recv;
   config.user_ptr = user_ptr;
+
+  // config.local_port_range_begin = 40000;
+  // config.local_port_range_end = 50000;
 
   agent_ = juice_create(&config);
 
