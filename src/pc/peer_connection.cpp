@@ -276,6 +276,12 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
         user_id_it->second->DestroyIceTransmission();
         ice_transmission_list_.erase(user_id_it);
         LOG_INFO("Terminate transmission to user [{}]", user_id);
+
+        if (std::string::npos != user_id.find("S-")) {
+          LOG_INFO("Server leaves, try to rejoin transmission");
+
+          RequestTransmissionMemberList(transmission_id_);
+        }
       }
       break;
     }

@@ -21,6 +21,7 @@ class TransmissionManager {
                             websocketpp::connection_hdl hdl);
 
   std::string ReleaseUserIdFromTransmission(websocketpp::connection_hdl hdl);
+  bool ReleaseAllUserIdFromTransmission(const std::string& transmission_id);
 
   websocketpp::connection_hdl GetWsHandle(const std::string& user_id);
   std::string GetUserId(websocketpp::connection_hdl hdl);

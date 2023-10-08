@@ -75,6 +75,16 @@ std::string TransmissionManager::ReleaseUserIdFromTransmission(
   return "";
 }
 
+bool TransmissionManager::ReleaseAllUserIdFromTransmission(
+    const std::string& transmission_id) {
+  if (transmission_user_id_list_.end() !=
+      transmission_user_id_list_.find(transmission_id)) {
+    transmission_user_id_list_[transmission_id].clear();
+    transmission_user_id_list_.erase(transmission_id);
+  }
+  return true;
+}
+
 websocketpp::connection_hdl TransmissionManager::GetWsHandle(
     const std::string& user_id) {
   if (user_id_ws_hdl_list_.find(user_id) != user_id_ws_hdl_list_.end()) {
@@ -88,7 +98,7 @@ websocketpp::connection_hdl TransmissionManager::GetWsHandle(
 std::string TransmissionManager::GetUserId(websocketpp::connection_hdl hdl) {
   for (auto it = user_id_ws_hdl_list_.begin(); it != user_id_ws_hdl_list_.end();
        ++it) {
-    LOG_INFO("[{}]", it->first);
+    // LOG_INFO("[{}]", it->first);
     if (it->second.lock().get() == hdl.lock().get()) return it->first;
   }
   return "";

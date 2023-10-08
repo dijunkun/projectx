@@ -59,21 +59,30 @@ bool SignalServer::on_close(websocketpp::connection_hdl hdl) {
   std::string transmission_id =
       transmission_manager_.ReleaseUserIdFromTransmission(hdl);
 
-  json message = {{"type", "user_leave_transmission"},
-                  {"transmission_id", transmission_id},
-                  {"user_id", user_id}};
+  if (!transmission_id.empty()) {
+    json message = {{"type", "user_leave_transmission"},
+                    {"transmission_id", transmission_id},
+                    {"user_id", user_id}};
 
-  std::vector<std::string> user_id_list =
-      transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
+    std::vector<std::string> user_id_list =
+        transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
 
-  if (user_id_list.empty()) {
-    transmission_list_.erase(transmission_id);
-    LOG_INFO("Release transmission [{}] due to no user in this transmission",
-             transmission_id);
-  }
+    if (user_id_list.empty()) {
+      transmission_list_.erase(transmission_id);
+      LOG_INFO("Release transmission [{}] due to no user in this transmission",
+               transmission_id);
+    }
 
-  for (const auto& user_id : user_id_list) {
-    send_msg(transmission_manager_.GetWsHandle(user_id), message);
+    if (std::string::npos != user_id.find("S-")) {
+      transmission_list_.erase(transmission_id);
+      transmission_manager_.ReleaseAllUserIdFromTransmission(transmission_id);
+      LOG_INFO("Release transmission [{}] due to server leaves",
+               transmission_id);
+    }
+
+    for (const auto& user_id : user_id_list) {
+      send_msg(transmission_manager_.GetWsHandle(user_id), message);
+    }
   }
   ws_connections_.erase(hdl);
 
