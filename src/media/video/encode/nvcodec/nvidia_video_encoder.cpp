@@ -48,8 +48,6 @@ int NvidiaVideoEncoder::Init() {
   init_params.encodeWidth = frame_width_;
   init_params.encodeHeight = frame_height_;
   init_params.encodeConfig->profileGUID = NV_ENC_H264_PROFILE_BASELINE_GUID;
-  init_params.encodeConfig->encodeCodecConfig.h264Config.level =
-      NV_ENC_LEVEL::NV_ENC_LEVEL_H264_31;
   init_params.encodeConfig->gopLength = keyFrameInterval_;
   init_params.encodeConfig->frameIntervalP = 1;
   init_params.encodeConfig->rcParams.rateControlMode =
@@ -59,9 +57,13 @@ int NvidiaVideoEncoder::Init() {
   // init_params.encodeConfig->rcParams.minQP.qpIntra = 10;
   init_params.encodeConfig->rcParams.enableMaxQP = 1;
   init_params.encodeConfig->rcParams.maxQP.qpIntra = 22;
+  init_params.encodeConfig->encodeCodecConfig.h264Config.level =
+      NV_ENC_LEVEL::NV_ENC_LEVEL_H264_31;
   init_params.encodeConfig->encodeCodecConfig.h264Config.sliceMode = 1;
   init_params.encodeConfig->encodeCodecConfig.h264Config.sliceModeData =
       max_payload_size_;
+  // init_params.encodeConfig->encodeCodecConfig.h264Config.disableSPSPPS = 1;
+  // init_params.encodeConfig->encodeCodecConfig.h264Config.repeatSPSPPS = 1;
 
   encoder_->CreateEncoder(&init_params);
 
@@ -82,7 +84,7 @@ int NvidiaVideoEncoder::Encode(
     return -1;
   }
 
-  if (0 == seq_++ % (300)) {
+  if (0 == seq_++ % 300) {
     ForceIdr();
   }
 
@@ -149,5 +151,7 @@ void NvidiaVideoEncoder::ForceIdr() {
   reconfig_params.forceIDR = 1;
   reconfig_params.resetEncoder = 1;
 
-  encoder_->Reconfigure(&reconfig_params);
+  if (!encoder_->Reconfigure(&reconfig_params)) {
+    LOG_ERROR("Failed to force I frame");
+  }
 }

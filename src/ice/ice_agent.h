@@ -47,6 +47,8 @@ class IceAgent {
   juice_agent_t* agent_ = nullptr;
   char local_sdp_[JUICE_MAX_SDP_STRING_LEN];
   juice_state_t state_;
+  juice_config_t config_;
+  juice_turn_server_t turn_server_;
 };
 
 #endif

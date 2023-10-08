@@ -22,7 +22,7 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
                              juice_cb_candidate_t on_candidate,
                              juice_cb_gathering_done_t on_gathering_done,
                              juice_cb_recv_t on_recv, void *user_ptr) {
-  juice_set_log_level(JUICE_LOG_LEVEL_DEBUG);
+  // juice_set_log_level(JUICE_LOG_LEVEL_DEBUG);
 
   juice_set_log_handler([](juice_log_level_t level, const char *message) {
     if (JUICE_LOG_LEVEL_VERBOSE == level) {
@@ -42,35 +42,32 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
     }
   });
 
-  juice_config_t config;
-  memset(&config, 0, sizeof(config));
+  memset(&config_, 0, sizeof(config_));
 
-  // STUN server example
-  config.stun_server_host = stun_ip_.c_str();
-  config.stun_server_port = stun_port_;
+  config_.stun_server_host = stun_ip_.c_str();
+  config_.stun_server_port = stun_port_;
 
   if (!turn_ip_.empty() && -1 != turn_port_ && !turn_username_.empty() &&
       !turn_password_.empty()) {
-    juice_turn_server_t turn_server;
-    memset(&turn_server, 0, sizeof(turn_server));
-    turn_server.host = turn_ip_.c_str();
-    turn_server.port = turn_port_;
-    turn_server.username = turn_username_.c_str();
-    turn_server.password = turn_password_.c_str();
-    config.turn_servers = &turn_server;
-    config.turn_servers_count = 1;
+    memset(&turn_server_, 0, sizeof(turn_server_));
+    turn_server_.host = turn_ip_.c_str();
+    turn_server_.port = turn_port_;
+    turn_server_.username = turn_username_.c_str();
+    turn_server_.password = turn_password_.c_str();
+    config_.turn_servers = &turn_server_;
+    config_.turn_servers_count = 1;
   }
 
-  config.cb_state_changed = on_state_changed;
-  config.cb_candidate = on_candidate;
-  config.cb_gathering_done = on_gathering_done;
-  config.cb_recv = on_recv;
-  config.user_ptr = user_ptr;
+  config_.cb_state_changed = on_state_changed;
+  config_.cb_candidate = on_candidate;
+  config_.cb_gathering_done = on_gathering_done;
+  config_.cb_recv = on_recv;
+  config_.user_ptr = user_ptr;
 
-  // config.local_port_range_begin = 40000;
-  // config.local_port_range_end = 50000;
+  config_.local_port_range_begin = 40000;
+  config_.local_port_range_end = 50000;
 
-  agent_ = juice_create(&config);
+  agent_ = juice_create(&config_);
 
   return 0;
 }
