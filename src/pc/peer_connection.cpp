@@ -180,7 +180,7 @@ int PeerConnection::Create(PeerConnectionParams params,
                            const std::string &user_id) {
   int ret = 0;
 
-  ret = Init(params, transmission_id, user_id);
+  // ret = Init(params, transmission_id, user_id);
 
   json message = {{"type", "create_transmission"},
                   {"user_id", user_id},
@@ -198,11 +198,21 @@ int PeerConnection::Join(PeerConnectionParams params,
                          const std::string &user_id) {
   int ret = 0;
 
-  ret = Init(params, transmission_id, user_id);
+  // ret = Init(params, transmission_id, user_id);
 
   transmission_id_ = transmission_id;
   ret = RequestTransmissionMemberList(transmission_id_);
   return ret;
+}
+
+int PeerConnection::Leave() {
+  for (auto &ice_transmission : ice_transmission_list_) {
+    ice_transmission.second->DestroyIceTransmission();
+  }
+
+  ice_transmission_list_.erase(ice_transmission_list_.begin(),
+                               ice_transmission_list_.end());
+  return 0;
 }
 
 void PeerConnection::ProcessSignal(const std::string &signal) {

@@ -33,6 +33,8 @@ int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id,
 int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
                    const char* user_id);
 
+int LeaveConnection(PeerPtr* peer_ptr);
+
 int SendData(PeerPtr* peer_ptr, DATA_TYPE data_type, const char* data,
              size_t size);
 

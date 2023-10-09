@@ -32,7 +32,9 @@ WsCore::~WsCore() {
     LOG_INFO("> Error closing connection {}", ec.message());
   }
 
-  m_thread_->join();
+  if (m_thread_->joinable()) {
+    m_thread_->join();
+  }
 }
 
 int WsCore::Connect(std::string const &uri) {

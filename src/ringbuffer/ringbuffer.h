@@ -62,6 +62,9 @@ class RingBuffer {
     if (isFull()) {
       return false;
     }
+    if (!m_data) {
+      return false;
+    }
     m_data[m_rear] = value;
     m_rear = (m_rear + 1) % m_size;
     return true;
@@ -69,6 +72,9 @@ class RingBuffer {
 
   bool push(const T* value) {
     if (isFull()) {
+      return false;
+    }
+    if (!m_data) {
       return false;
     }
     m_data[m_rear] = *value;

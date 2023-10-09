@@ -31,12 +31,17 @@ class PeerConnection {
   ~PeerConnection();
 
  public:
+  int Init(PeerConnectionParams params, const std::string &transmission_id,
+           const std::string &user_id);
+
   int Create(PeerConnectionParams params,
              const std::string &transmission_id = "",
              const std::string &user_id = "");
 
   int Join(PeerConnectionParams params, const std::string &transmission_id,
            const std::string &user_id = "");
+
+  int Leave();
 
   int Destroy();
 
@@ -47,9 +52,6 @@ class PeerConnection {
   int SendUserData(const char *data, size_t size);
 
  private:
-  int Init(PeerConnectionParams params, const std::string &transmission_id,
-           const std::string &user_id);
-
   int CreateVideoCodec(bool hardware_acceleration);
 
   void ProcessSignal(const std::string &signal);
