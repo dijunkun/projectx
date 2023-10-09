@@ -36,6 +36,7 @@ int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id,
 
   peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id,
                                     user_id);
+  LOG_INFO("CreateConnection");
   return 0;
 }
 
@@ -46,11 +47,13 @@ int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
 
   peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id,
                                   user_id);
+  LOG_INFO("JoinConnection");
   return 0;
 }
 
 int LeaveConnection(PeerPtr *peer_ptr) {
   peer_ptr->peer_connection->Leave();
+  LOG_INFO("LeaveConnection");
   return 0;
 }
 
