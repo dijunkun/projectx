@@ -27,11 +27,11 @@ typedef struct {
 
 PeerPtr* CreatePeer(const Params* params);
 
-int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id,
-                     const char* user_id);
+int Init(PeerPtr* peer_ptr, const char* user_id);
 
-int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
-                   const char* user_id);
+int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id);
+
+int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id);
 
 int LeaveConnection(PeerPtr* peer_ptr);
 

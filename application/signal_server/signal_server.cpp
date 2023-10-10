@@ -164,6 +164,14 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
 
       break;
     }
+    case "leave_transmission"_H: {
+      std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::string user_id = j["user_id"].get<std::string>();
+      LOG_INFO("[{}] leaves transmission [{}]", user_id.c_str(),
+               transmission_id.c_str());
+      transmission_manager_.ReleaseUserIdFromTransmission(hdl);
+      break;
+    }
     case "query_user_id_list"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::vector<std::string> user_id_list =

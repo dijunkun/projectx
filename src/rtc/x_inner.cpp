@@ -24,29 +24,19 @@ PeerPtr *CreatePeer(const Params *params) {
   return peer_ptr;
 }
 
-// int CreateConnection(PeerPtr *peer_ptr) {
-//   peer_ptr->peer_connection->Create(peer_ptr->pc_params);
-//   return 0;
-// }
+int Init(PeerPtr *peer_ptr, const char *user_id) {
+  peer_ptr->peer_connection->Init(peer_ptr->pc_params, user_id);
+  return 0;
+}
 
-int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id,
-                     const char *user_id) {
-  peer_ptr->peer_connection->Init(peer_ptr->pc_params, transmission_id,
-                                  user_id);
-
-  peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id,
-                                    user_id);
+int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id) {
+  peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id);
   LOG_INFO("CreateConnection");
   return 0;
 }
 
-int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
-                   const char *user_id) {
-  peer_ptr->peer_connection->Init(peer_ptr->pc_params, transmission_id,
-                                  user_id);
-
-  peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id,
-                                  user_id);
+int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id) {
+  peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id);
   LOG_INFO("JoinConnection");
   return 0;
 }

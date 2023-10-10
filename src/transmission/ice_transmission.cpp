@@ -125,11 +125,13 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
           IceTransmission *ice_transmission_obj =
               static_cast<IceTransmission *>(user_ptr);
           LOG_INFO("[{}->{}] state_change: {}", ice_transmission_obj->user_id_,
-                   ice_transmission_obj->remote_user_id_, ice_status[state]);
+                   ice_transmission_obj->remote_user_id_,
+                   juice_state_to_string(state));
           ice_transmission_obj->state_ = state;
-          ice_transmission_obj->on_ice_status_change_(ice_status[state]);
+          ice_transmission_obj->on_ice_status_change_(
+              juice_state_to_string(state));
         } else {
-          LOG_INFO("state_change: {}", ice_status[state]);
+          LOG_INFO("state_change: {}", juice_state_to_string(state));
         }
       },
       [](juice_agent_t *agent, const char *sdp, void *user_ptr) {

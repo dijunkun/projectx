@@ -19,8 +19,11 @@ PeerConnection::~PeerConnection() {
 }
 
 int PeerConnection::Init(PeerConnectionParams params,
-                         const std::string &transmission_id,
                          const std::string &user_id) {
+  if (inited_) {
+    LOG_INFO("Peer already inited");
+    return 0;
+  }
   // Todo: checkout user_id unique or not
   user_id_ = user_id;
 
@@ -116,6 +119,7 @@ int PeerConnection::Init(PeerConnectionParams params,
     return -1;
   }
 
+  inited_ = true;
   return 0;
 }
 
@@ -176,14 +180,11 @@ int PeerConnection::CreateVideoCodec(bool hardware_acceleration) {
 }
 
 int PeerConnection::Create(PeerConnectionParams params,
-                           const std::string &transmission_id,
-                           const std::string &user_id) {
+                           const std::string &transmission_id) {
   int ret = 0;
 
-  // ret = Init(params, transmission_id, user_id);
-
   json message = {{"type", "create_transmission"},
-                  {"user_id", user_id},
+                  {"user_id", user_id_},
                   {"transmission_id", transmission_id}};
   if (ws_transport_) {
     ws_transport_->Send(message.dump());
@@ -194,11 +195,8 @@ int PeerConnection::Create(PeerConnectionParams params,
 }
 
 int PeerConnection::Join(PeerConnectionParams params,
-                         const std::string &transmission_id,
-                         const std::string &user_id) {
+                         const std::string &transmission_id) {
   int ret = 0;
-
-  // ret = Init(params, transmission_id, user_id);
 
   transmission_id_ = transmission_id;
   ret = RequestTransmissionMemberList(transmission_id_);
@@ -206,12 +204,14 @@ int PeerConnection::Join(PeerConnectionParams params,
 }
 
 int PeerConnection::Leave() {
-  for (auto &ice_transmission : ice_transmission_list_) {
-    ice_transmission.second->DestroyIceTransmission();
+  json message = {{"type", "leave_transmission"},
+                  {"user_id", user_id_},
+                  {"transmission_id", transmission_id_}};
+  if (ws_transport_) {
+    ws_transport_->Send(message.dump());
+    LOG_INFO("[{}] sends leave transmission [{}] notification ",
+             transmission_id_);
   }
-
-  ice_transmission_list_.erase(ice_transmission_list_.begin(),
-                               ice_transmission_list_.end());
   return 0;
 }
 
@@ -256,6 +256,9 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       LOG_INFO("]");
 
       for (auto &remote_user_id : user_id_list_) {
+        if (remote_user_id == user_id_) {
+          continue;
+        }
         ice_transmission_list_[remote_user_id] =
             std::make_unique<IceTransmission>(true, transmission_id, user_id_,
                                               remote_user_id, ws_transport_,

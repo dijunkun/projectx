@@ -31,15 +31,12 @@ class PeerConnection {
   ~PeerConnection();
 
  public:
-  int Init(PeerConnectionParams params, const std::string &transmission_id,
-           const std::string &user_id);
+  int Init(PeerConnectionParams params, const std::string &user_id);
 
   int Create(PeerConnectionParams params,
-             const std::string &transmission_id = "",
-             const std::string &user_id = "");
+             const std::string &transmission_id = "");
 
-  int Join(PeerConnectionParams params, const std::string &transmission_id,
-           const std::string &user_id = "");
+  int Join(PeerConnectionParams params, const std::string &transmission_id);
 
   int Leave();
 
@@ -100,6 +97,7 @@ class PeerConnection {
   OnReceiveBuffer on_receive_audio_buffer_;
   OnReceiveBuffer on_receive_data_buffer_;
   char *nv12_data_ = nullptr;
+  bool inited_ = false;
 
  private:
   std::unique_ptr<VideoEncoder> video_encoder_ = nullptr;
