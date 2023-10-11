@@ -34,9 +34,11 @@ class PeerConnection {
   int Init(PeerConnectionParams params, const std::string &user_id);
 
   int Create(PeerConnectionParams params,
-             const std::string &transmission_id = "");
+             const std::string &transmission_id = "",
+             const std::string &password = "");
 
-  int Join(PeerConnectionParams params, const std::string &transmission_id);
+  int Join(PeerConnectionParams params, const std::string &transmission_id,
+           const std::string &password = "");
 
   int Leave();
 
@@ -53,7 +55,8 @@ class PeerConnection {
 
   void ProcessSignal(const std::string &signal);
 
-  int RequestTransmissionMemberList(const std::string &transmission_id);
+  int RequestTransmissionMemberList(const std::string &transmission_id,
+                                    const std::string &password);
 
  private:
   std::string uri_ = "";
@@ -98,6 +101,7 @@ class PeerConnection {
   OnReceiveBuffer on_receive_data_buffer_;
   char *nv12_data_ = nullptr;
   bool inited_ = false;
+  std::string password_;
 
  private:
   std::unique_ptr<VideoEncoder> video_encoder_ = nullptr;

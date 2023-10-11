@@ -29,15 +29,20 @@ int Init(PeerPtr *peer_ptr, const char *user_id) {
   return 0;
 }
 
-int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id) {
-  peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id);
-  LOG_INFO("CreateConnection");
+int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id,
+                     const char *password) {
+  peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id,
+                                    password);
+  LOG_INFO("CreateConnection [{}] with password [{}]", transmission_id,
+           password);
   return 0;
 }
 
-int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id) {
-  peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id);
-  LOG_INFO("JoinConnection");
+int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
+                   const char *password) {
+  peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id,
+                                  password);
+  LOG_INFO("JoinConnection[{}] with password [{}]", transmission_id, password);
   return 0;
 }
 

@@ -180,12 +180,17 @@ int PeerConnection::CreateVideoCodec(bool hardware_acceleration) {
 }
 
 int PeerConnection::Create(PeerConnectionParams params,
-                           const std::string &transmission_id) {
+                           const std::string &transmission_id,
+                           const std::string &password) {
   int ret = 0;
+
+  password_ = password;
 
   json message = {{"type", "create_transmission"},
                   {"user_id", user_id_},
-                  {"transmission_id", transmission_id}};
+                  {"transmission_id", transmission_id},
+                  {"password", password}};
+
   if (ws_transport_) {
     ws_transport_->Send(message.dump());
     LOG_INFO("Send create transmission request, transmission_id [{}]",
@@ -195,11 +200,14 @@ int PeerConnection::Create(PeerConnectionParams params,
 }
 
 int PeerConnection::Join(PeerConnectionParams params,
-                         const std::string &transmission_id) {
+                         const std::string &transmission_id,
+                         const std::string &password) {
   int ret = 0;
 
+  password_ = password;
+
   transmission_id_ = transmission_id;
-  ret = RequestTransmissionMemberList(transmission_id_);
+  ret = RequestTransmissionMemberList(transmission_id_, password);
   return ret;
 }
 
@@ -246,41 +254,47 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
     }
     case "user_id_list"_H: {
       user_id_list_ = j["user_id_list"];
-      std::string transmission_id = j["transmission_id"];
 
-      if (user_id_list_.empty()) {
-        LOG_WARN("Wait for host create transmission [{}]", transmission_id);
-        RequestTransmissionMemberList(transmission_id);
-        break;
-      }
-
-      LOG_INFO("Transmission [{}] members: [", transmission_id);
-      for (auto user_id : user_id_list_) {
-        LOG_INFO("{}", user_id);
-      }
-      LOG_INFO("]");
-
-      for (auto &remote_user_id : user_id_list_) {
-        if (remote_user_id == user_id_) {
-          continue;
+      std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::string status = j["status"].get<std::string>();
+      if (status == "failed") {
+        std::string reason = j["reason"].get<std::string>();
+        LOG_ERROR("{}", reason);
+      } else {
+        if (user_id_list_.empty()) {
+          LOG_WARN("Wait for host create transmission [{}]", transmission_id);
+          RequestTransmissionMemberList(transmission_id, password_);
+          break;
         }
-        ice_transmission_list_[remote_user_id] =
-            std::make_unique<IceTransmission>(true, transmission_id, user_id_,
-                                              remote_user_id, ws_transport_,
-                                              on_ice_status_change_);
 
-        ice_transmission_list_[remote_user_id]->SetOnReceiveVideoFunc(
-            on_receive_video_);
-        ice_transmission_list_[remote_user_id]->SetOnReceiveAudioFunc(
-            on_receive_audio_);
-        ice_transmission_list_[remote_user_id]->SetOnReceiveDataFunc(
-            on_receive_data_);
+        LOG_INFO("Transmission [{}] members: [", transmission_id);
+        for (auto user_id : user_id_list_) {
+          LOG_INFO("{}", user_id);
+        }
+        LOG_INFO("]");
 
-        ice_transmission_list_[remote_user_id]->InitIceTransmission(
-            cfg_stun_server_ip_, stun_server_port_, cfg_turn_server_ip_,
-            turn_server_port_, cfg_turn_server_username_,
-            cfg_turn_server_password_);
-        ice_transmission_list_[remote_user_id]->JoinTransmission();
+        for (auto &remote_user_id : user_id_list_) {
+          if (remote_user_id == user_id_) {
+            continue;
+          }
+          ice_transmission_list_[remote_user_id] =
+              std::make_unique<IceTransmission>(true, transmission_id, user_id_,
+                                                remote_user_id, ws_transport_,
+                                                on_ice_status_change_);
+
+          ice_transmission_list_[remote_user_id]->SetOnReceiveVideoFunc(
+              on_receive_video_);
+          ice_transmission_list_[remote_user_id]->SetOnReceiveAudioFunc(
+              on_receive_audio_);
+          ice_transmission_list_[remote_user_id]->SetOnReceiveDataFunc(
+              on_receive_data_);
+
+          ice_transmission_list_[remote_user_id]->InitIceTransmission(
+              cfg_stun_server_ip_, stun_server_port_, cfg_turn_server_ip_,
+              turn_server_port_, cfg_turn_server_username_,
+              cfg_turn_server_password_);
+          ice_transmission_list_[remote_user_id]->JoinTransmission();
+        }
       }
 
       break;
@@ -298,7 +312,7 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
         if (std::string::npos != user_id.find("S-")) {
           LOG_INFO("Server leaves, try to rejoin transmission");
 
-          RequestTransmissionMemberList(transmission_id_);
+          RequestTransmissionMemberList(transmission_id_, password_);
         }
       }
       break;
@@ -365,11 +379,12 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
 }
 
 int PeerConnection::RequestTransmissionMemberList(
-    const std::string &transmission_id) {
+    const std::string &transmission_id, const std::string &password) {
   LOG_INFO("Request member list");
 
   json message = {{"type", "query_user_id_list"},
-                  {"transmission_id", transmission_id_}};
+                  {"transmission_id", transmission_id_},
+                  {"password", password}};
 
   if (ws_transport_) {
     ws_transport_->Send(message.dump());

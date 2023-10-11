@@ -40,6 +40,25 @@ bool TransmissionManager::BindUserIdToTransmission(
   return true;
 }
 
+bool TransmissionManager::BindPasswordToTransmission(
+    const std::string& password, const std::string& transmission_id) {
+  if (transmission_password_list_.find(transmission_id) ==
+      transmission_password_list_.end()) {
+    transmission_password_list_[transmission_id] = password;
+    // LOG_INFO("Bind password [{}]  to transmission [{}]", password,
+    //          transmission_id);
+    return true;
+  } else {
+    auto old_password = transmission_password_list_[transmission_id];
+    transmission_password_list_[transmission_id] = password;
+    // LOG_WARN("Update password [{}]  to [{}] for transmission [{}]",
+    //          old_password, password, transmission_id);
+    return true;
+  }
+
+  return false;
+}
+
 bool TransmissionManager::BindUserIdToWsHandle(
     const std::string& user_id, websocketpp::connection_hdl hdl) {
   if (user_id_ws_hdl_list_.find(user_id) != user_id_ws_hdl_list_.end()) {
@@ -94,6 +113,19 @@ bool TransmissionManager::ReleaseAllUserIdFromTransmission(
   return true;
 }
 
+bool TransmissionManager::ReleasePasswordFromTransmission(
+    const std::string& transmission_id) {
+  if (transmission_password_list_.end() ==
+      transmission_password_list_.find(transmission_id)) {
+    LOG_ERROR("No transmission with id [{}]", transmission_id);
+    return false;
+  }
+
+  transmission_password_list_.erase(transmission_id);
+
+  return true;
+}
+
 websocketpp::connection_hdl TransmissionManager::GetWsHandle(
     const std::string& user_id) {
   if (user_id_ws_hdl_list_.find(user_id) != user_id_ws_hdl_list_.end()) {
@@ -111,4 +143,26 @@ std::string TransmissionManager::GetUserId(websocketpp::connection_hdl hdl) {
     if (it->second.lock().get() == hdl.lock().get()) return it->first;
   }
   return "";
+}
+
+bool TransmissionManager::CheckPassword(const std::string& password,
+                                        const std::string& transmission_id) {
+  if (transmission_password_list_.find(transmission_id) ==
+      transmission_password_list_.end()) {
+    LOG_ERROR("No transmission with id [{}]", transmission_id);
+    return false;
+  }
+
+  return transmission_password_list_[transmission_id] == password;
+}
+
+std::string TransmissionManager::GetPassword(
+    const std::string& transmission_id) {
+  if (transmission_password_list_.find(transmission_id) ==
+      transmission_password_list_.end()) {
+    LOG_ERROR("No transmission with id [{}]", transmission_id);
+    return "";
+  }
+
+  return transmission_password_list_[transmission_id];
 }

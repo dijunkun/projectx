@@ -29,9 +29,11 @@ PeerPtr* CreatePeer(const Params* params);
 
 int Init(PeerPtr* peer_ptr, const char* user_id);
 
-int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id);
+int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id,
+                     const char* password);
 
-int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id);
+int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
+                   const char* password);
 
 int LeaveConnection(PeerPtr* peer_ptr);
 

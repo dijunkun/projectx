@@ -130,6 +130,7 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
   switch (HASH_STRING_PIECE(type.c_str())) {
     case "create_transmission"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
+      std::string password = j["password"].get<std::string>();
       std::string user_id = j["user_id"].get<std::string>();
       LOG_INFO("Receive user id [{}] create transmission request with id [{}]",
                user_id, transmission_id);
@@ -151,6 +152,8 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
         transmission_manager_.BindUserIdToTransmission(user_id,
                                                        transmission_id);
         transmission_manager_.BindUserIdToWsHandle(user_id, hdl);
+        transmission_manager_.BindPasswordToTransmission(password,
+                                                         transmission_id);
 
         LOG_INFO("Create transmission id [{}]", transmission_id);
         json message = {{"type", "transmission_id"},
@@ -190,16 +193,36 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
     }
     case "query_user_id_list"_H: {
       std::string transmission_id = j["transmission_id"].get<std::string>();
-      std::vector<std::string> user_id_list =
-          transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
+      std::string password = j["password"].get<std::string>();
 
-      json message = {{"type", "user_id_list"},
-                      {"transmission_id", transmission_id},
-                      {"user_id_list", user_id_list},
-                      {"status", "success"}};
+      if (transmission_manager_.CheckPassword(password, transmission_id)) {
+        std::vector<std::string> user_id_list =
+            transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
+
+        json message = {{"type", "user_id_list"},
+                        {"transmission_id", transmission_id},
+                        {"user_id_list", user_id_list},
+                        {"status", "success"}};
+
+        send_msg(hdl, message);
+      } else {
+        std::vector<std::string> user_id_list;
+        json message = {{"type", "user_id_list"},
+                        {"transmission_id", transmission_id},
+                        {"user_id_list", user_id_list},
+                        {"status", "failed"},
+                        {"reason", "Incorrect password"}};
+        // LOG_INFO(
+        //     "Incorrect password [{}] for transmission [{}] with password is "
+        //     "[{}]",
+        //     password, transmission_id,
+        //     transmission_manager_.GetPassword(transmission_id));
+
+        send_msg(hdl, message);
+      }
 
       // LOG_INFO("Send member_list: [{}]", message.dump());
-      send_msg(hdl, message);
+
       break;
     }
     case "offer"_H: {
