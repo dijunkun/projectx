@@ -26,9 +26,9 @@ using namespace std::chrono;
 // SPDLOG_CRITICAL(...)
 
 #ifdef SIGNAL_LOGGER
-constexpr auto LOGGER_NAME = "siganl";
+constexpr auto LOGGER_NAME = "siganl_server";
 #else
-constexpr auto LOGGER_NAME = "rtc";
+constexpr auto LOGGER_NAME = "remote_desk";
 #endif
 
 #define LOG_INFO(...)                                                         \

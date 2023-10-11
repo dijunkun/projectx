@@ -102,6 +102,8 @@ bool SignalServer::on_pong(websocketpp::connection_hdl hdl, std::string s) {
 }
 
 void SignalServer::run(uint16_t port) {
+  LOG_INFO("Signal server runs on port [{}]", port);
+
   server_.set_reuse_addr(true);
   server_.listen(port);
 

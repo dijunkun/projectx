@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
   } else {
     port = "9090";
   }
-  std::cout << "Port: " << port << std::endl;
+
   s.run(std::stoi(port));
   return 0;
 }
