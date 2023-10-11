@@ -223,6 +223,8 @@ int PeerConnection::Leave() {
              transmission_id_);
   }
 
+  ice_ready_ = false;
+
   for (auto &user_id_it : ice_transmission_list_) {
     user_id_it.second->DestroyIceTransmission();
   }
@@ -312,6 +314,7 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       if (user_id_it != ice_transmission_list_.end()) {
         user_id_it->second->DestroyIceTransmission();
         ice_transmission_list_.erase(user_id_it);
+        ice_ready_ = false;
         LOG_INFO("Terminate transmission to user [{}]", user_id);
 
         if (std::string::npos != user_id.find("S-")) {

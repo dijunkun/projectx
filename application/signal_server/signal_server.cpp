@@ -176,7 +176,6 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
       std::string user_id = j["user_id"].get<std::string>();
       LOG_INFO("[{}] leaves transmission [{}]", user_id.c_str(),
                transmission_id.c_str());
-      transmission_manager_.ReleaseUserIdFromTransmission(hdl);
 
       json message = {{"type", "user_leave_transmission"},
                       {"transmission_id", transmission_id},
@@ -187,6 +186,14 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
 
       for (const auto& user_id : user_id_list) {
         send_msg(transmission_manager_.GetWsHandle(user_id), message);
+      }
+
+      transmission_manager_.ReleaseUserIdFromTransmission(hdl);
+      if (std::string::npos != user_id.find("S-")) {
+        transmission_list_.erase(transmission_id);
+        transmission_manager_.ReleaseAllUserIdFromTransmission(transmission_id);
+        LOG_INFO("Release transmission [{}] due to server leaves",
+                 transmission_id);
       }
 
       break;

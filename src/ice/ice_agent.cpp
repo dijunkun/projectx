@@ -143,5 +143,8 @@ int IceAgent::SetRemoteGatheringDone() {
 }
 
 int IceAgent::Send(const char *data, size_t size) {
+  if (juice_state_t::JUICE_STATE_COMPLETED != juice_get_state(agent_)) {
+    return -1;
+  }
   return juice_send(agent_, data, size);
 }
