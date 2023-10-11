@@ -11,11 +11,6 @@
 
 using nlohmann::json;
 
-const std::vector<std::string> ice_status = {
-    "JUICE_STATE_DISCONNECTED", "JUICE_STATE_GATHERING",
-    "JUICE_STATE_CONNECTING",   "JUICE_STATE_CONNECTED",
-    "JUICE_STATE_COMPLETED",    "JUICE_STATE_FAILED"};
-
 IceTransmission::IceTransmission(
     bool offer_peer, std::string &transmission_id, std::string &user_id,
     std::string &remote_user_id,

@@ -95,7 +95,7 @@ int PeerConnection::Init(PeerConnectionParams params,
   };
 
   on_ice_status_change_ = [this](std::string ice_status) {
-    if ("JUICE_STATE_COMPLETED" == ice_status) {
+    if ("completed" == ice_status) {
       ice_ready_ = true;
       b_force_i_frame_ = true;
       LOG_INFO("Ice finish");
@@ -209,7 +209,7 @@ int PeerConnection::Leave() {
                   {"transmission_id", transmission_id_}};
   if (ws_transport_) {
     ws_transport_->Send(message.dump());
-    LOG_INFO("[{}] sends leave transmission [{}] notification ",
+    LOG_INFO("[{}] sends leave transmission [{}] notification ", user_id_,
              transmission_id_);
   }
   return 0;
