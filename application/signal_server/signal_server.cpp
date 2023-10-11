@@ -113,7 +113,9 @@ void SignalServer::run(uint16_t port) {
 }
 
 void SignalServer::send_msg(websocketpp::connection_hdl hdl, json message) {
-  server_.send(hdl, message.dump(), websocketpp::frame::opcode::text);
+  if (!hdl.expired()) {
+    server_.send(hdl, message.dump(), websocketpp::frame::opcode::text);
+  }
 }
 
 void SignalServer::on_message(websocketpp::connection_hdl hdl,
@@ -170,6 +172,18 @@ void SignalServer::on_message(websocketpp::connection_hdl hdl,
       LOG_INFO("[{}] leaves transmission [{}]", user_id.c_str(),
                transmission_id.c_str());
       transmission_manager_.ReleaseUserIdFromTransmission(hdl);
+
+      json message = {{"type", "user_leave_transmission"},
+                      {"transmission_id", transmission_id},
+                      {"user_id", user_id}};
+
+      std::vector<std::string> user_id_list =
+          transmission_manager_.GetAllUserIdOfTransmission(transmission_id);
+
+      for (const auto& user_id : user_id_list) {
+        send_msg(transmission_manager_.GetWsHandle(user_id), message);
+      }
+
       break;
     }
     case "query_user_id_list"_H: {

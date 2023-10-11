@@ -212,6 +212,11 @@ int PeerConnection::Leave() {
     LOG_INFO("[{}] sends leave transmission [{}] notification ", user_id_,
              transmission_id_);
   }
+
+  for (auto &user_id_it : ice_transmission_list_) {
+    user_id_it.second->DestroyIceTransmission();
+  }
+
   return 0;
 }
 

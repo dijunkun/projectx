@@ -79,7 +79,16 @@ bool TransmissionManager::ReleaseAllUserIdFromTransmission(
     const std::string& transmission_id) {
   if (transmission_user_id_list_.end() !=
       transmission_user_id_list_.find(transmission_id)) {
-    transmission_user_id_list_[transmission_id].clear();
+    auto user_id_list = transmission_user_id_list_[transmission_id];
+    for (auto& user_id : user_id_list) {
+      if (user_id_ws_hdl_list_.find(user_id) != user_id_ws_hdl_list_.end()) {
+        LOG_INFO("Remove user id [{}] from transmission [{}]", user_id,
+                 transmission_id);
+        user_id_ws_hdl_list_.erase(user_id);
+      }
+    }
+
+    user_id_list.clear();
     transmission_user_id_list_.erase(transmission_id);
   }
   return true;
