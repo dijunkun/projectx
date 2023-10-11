@@ -168,7 +168,7 @@ target("pc")
     add_deps("ws", "ice", "transmission", "inih", "common", "media")
     add_files("src/pc/*.cpp")
     add_packages("asio", "nlohmann_json", "cuda")
-    add_includedirs("src/transmission", {public = true})
+    add_includedirs("src/transmission", "src/interface", {public = true})
 
 
 target("projectx")

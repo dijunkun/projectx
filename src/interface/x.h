@@ -4,8 +4,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-enum ws_status { WS_CONNECTING = 0, WS_OPEN, WS_FAILED, WS_CLOSED, WS_UNKNOWN };
 enum DATA_TYPE { VIDEO = 0, AUDIO, DATA };
+enum ConnectionStatus {
+  Connecting = 0,
+  Connected,
+  Failed,
+  Closed,
+  IncorrectPassword
+};
 
 #ifdef __cplusplus
 extern "C" {
@@ -15,6 +21,8 @@ typedef struct Peer PeerPtr;
 
 typedef void (*OnReceiveBuffer)(const char*, size_t, const char*, size_t);
 
+typedef void (*OnConnectionStatus)(ConnectionStatus status);
+
 typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
 
 typedef struct {
@@ -22,6 +30,7 @@ typedef struct {
   OnReceiveBuffer on_receive_video_buffer;
   OnReceiveBuffer on_receive_audio_buffer;
   OnReceiveBuffer on_receive_data_buffer;
+  OnConnectionStatus on_connection_status;
   NetStatusReport net_status_report;
 } Params;
 

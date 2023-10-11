@@ -19,6 +19,7 @@ PeerPtr *CreatePeer(const Params *params) {
   peer_ptr->pc_params.on_receive_video_buffer = params->on_receive_video_buffer;
   peer_ptr->pc_params.on_receive_audio_buffer = params->on_receive_audio_buffer;
   peer_ptr->pc_params.on_receive_data_buffer = params->on_receive_data_buffer;
+  peer_ptr->pc_params.on_connection_status = params->on_connection_status;
   peer_ptr->pc_params.net_status_report = params->net_status_report;
 
   return peer_ptr;

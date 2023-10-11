@@ -65,6 +65,7 @@ int PeerConnection::Init(PeerConnectionParams params,
   on_receive_video_buffer_ = params.on_receive_video_buffer;
   on_receive_audio_buffer_ = params.on_receive_audio_buffer;
   on_receive_data_buffer_ = params.on_receive_data_buffer;
+  on_connection_status_ = params.on_connection_status;
 
   on_receive_ws_msg_ = [this](const std::string &msg) { ProcessSignal(msg); };
 
@@ -97,6 +98,7 @@ int PeerConnection::Init(PeerConnectionParams params,
   on_ice_status_change_ = [this](std::string ice_status) {
     if ("completed" == ice_status) {
       ice_ready_ = true;
+      on_connection_status_(ConnectionStatus::Connected);
       b_force_i_frame_ = true;
       LOG_INFO("Ice finish");
     } else {
@@ -111,7 +113,7 @@ int PeerConnection::Init(PeerConnectionParams params,
   }
 
   do {
-  } while (SignalStatus::Connected != GetSignalStatus());
+  } while (SignalStatus::SignalConnected != GetSignalStatus());
 
   nv12_data_ = new char[1280 * 720 * 3 / 2];
 
@@ -238,7 +240,7 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       LOG_INFO("Receive local peer websocket connection id [{}]",
                ws_connection_id_);
       std::lock_guard<std::mutex> l(signal_status_mutex_);
-      signal_status_ = SignalStatus::Connected;
+      signal_status_ = SignalStatus::SignalConnected;
       break;
     }
     case "transmission_id"_H: {
@@ -260,6 +262,7 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       if (status == "failed") {
         std::string reason = j["reason"].get<std::string>();
         LOG_ERROR("{}", reason);
+        on_connection_status_(ConnectionStatus::IncorrectPassword);
       } else {
         if (user_id_list_.empty()) {
           LOG_WARN("Wait for host create transmission [{}]", transmission_id);
@@ -295,6 +298,8 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
               cfg_turn_server_password_);
           ice_transmission_list_[remote_user_id]->JoinTransmission();
         }
+
+        on_connection_status_(ConnectionStatus::Connecting);
       }
 
       break;

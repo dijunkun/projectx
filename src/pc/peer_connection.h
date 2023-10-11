@@ -9,11 +9,14 @@
 #include "video_decoder_factory.h"
 #include "video_encoder_factory.h"
 #include "ws_transmission.h"
+#include "x.h"
 
-enum SignalStatus { Connecting = 0, Connected, Closed };
+enum SignalStatus { SignalConnecting = 0, SignalConnected, SignalClosed };
 
 typedef void (*OnReceiveBuffer)(const char *, size_t, const char *,
                                 const size_t);
+
+typedef void (*OnConnectionStatus)(ConnectionStatus status);
 
 typedef void (*NetStatusReport)(const unsigned short, const unsigned short);
 
@@ -22,6 +25,7 @@ typedef struct {
   OnReceiveBuffer on_receive_video_buffer;
   OnReceiveBuffer on_receive_audio_buffer;
   OnReceiveBuffer on_receive_data_buffer;
+  OnConnectionStatus on_connection_status;
   NetStatusReport net_status_report;
 } PeerConnectionParams;
 
@@ -81,7 +85,7 @@ class PeerConnection {
   std::string user_id_ = "";
   std::string transmission_id_ = "";
   std::vector<std::string> user_id_list_;
-  SignalStatus signal_status_ = SignalStatus::Closed;
+  SignalStatus signal_status_ = SignalStatus::SignalClosed;
   std::mutex signal_status_mutex_;
 
  private:
@@ -99,6 +103,7 @@ class PeerConnection {
   OnReceiveBuffer on_receive_video_buffer_;
   OnReceiveBuffer on_receive_audio_buffer_;
   OnReceiveBuffer on_receive_data_buffer_;
+  OnConnectionStatus on_connection_status_;
   char *nv12_data_ = nullptr;
   bool inited_ = false;
   std::string password_;
