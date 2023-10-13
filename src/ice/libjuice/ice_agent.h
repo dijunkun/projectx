@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "juice/juice.h"
+#include "nice/agent.h"
 
 class IceAgent {
  public:

@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "congestion_control.h"
-#include "ice_agent.h"
 #include "ringbuffer.h"
 #include "rtp_codec.h"
 #include "rtp_data_receiver.h"
@@ -13,6 +12,14 @@
 #include "rtp_video_receiver.h"
 #include "rtp_video_sender.h"
 #include "ws_transmission.h"
+
+#define USE_NICE 1
+
+#ifdef USE_NICE
+#include "libnice/ice_agent.h"
+#else
+#include "libjuice/ice_agent.h"
+#endif
 
 class IceTransmission {
  public:
@@ -64,8 +71,6 @@ class IceTransmission {
 
   int SetRemoteSdp(const std::string &remote_sdp);
 
-  int AddRemoteCandidate(const std::string &remote_candidate);
-
   int CreateOffer();
 
   int SendOffer();
@@ -101,7 +106,11 @@ class IceTransmission {
   std::string remote_user_id_ = "";
   bool offer_peer_ = true;
   std::string remote_ice_username_ = "";
+#ifdef USE_NICE
+  NiceComponentState state_ = NICE_COMPONENT_STATE_DISCONNECTED;
+#else
   juice_state_t state_ = JUICE_STATE_DISCONNECTED;
+#endif
 
  private:
   std::unique_ptr<RtpCodec> video_rtp_codec_ = nullptr;

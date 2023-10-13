@@ -69,6 +69,8 @@ int IceAgent::CreateIceAgent(juice_cb_state_changed_t on_state_changed,
 
   agent_ = juice_create(&config_);
 
+  LOG_INFO("Juice agent init finish");
+
   return 0;
 }
 

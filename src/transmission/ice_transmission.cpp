@@ -114,6 +114,63 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
   ice_agent_ = std::make_unique<IceAgent>(
       stun_ip, stun_port, turn_ip, turn_port, turn_username, turn_password);
 
+#ifdef USE_NICE
+  ice_agent_->CreateIceAgent(
+      [](NiceAgent *agent, guint stream_id, guint component_id,
+         NiceComponentState state, gpointer user_ptr) {
+        if (user_ptr) {
+          IceTransmission *ice_transmission_obj =
+              static_cast<IceTransmission *>(user_ptr);
+          LOG_INFO("[{}->{}] state_change: {}", ice_transmission_obj->user_id_,
+                   ice_transmission_obj->remote_user_id_,
+                   nice_component_state_to_string(state));
+          ice_transmission_obj->state_ = state;
+          ice_transmission_obj->on_ice_status_change_(
+              nice_component_state_to_string(state));
+        } else {
+          LOG_INFO("state_change: {}", nice_component_state_to_string(state));
+        }
+      },
+      [](NiceAgent *agent, guint stream_id, guint component_id, const char *sdp,
+         gpointer user_ptr) { LOG_INFO("candadite: {}", sdp); },
+      [](NiceAgent *agent, guint stream_id, gpointer user_ptr) {
+        // non-trickle
+        if (user_ptr) {
+          IceTransmission *ice_transmission_obj =
+              static_cast<IceTransmission *>(user_ptr);
+          LOG_INFO("[{}] gather_done", ice_transmission_obj->user_id_);
+
+          if (ice_transmission_obj->offer_peer_) {
+            ice_transmission_obj->GetLocalSdp();
+            ice_transmission_obj->SendOffer();
+
+          } else {
+            ice_transmission_obj->CreateAnswer();
+            ice_transmission_obj->SendAnswer();
+          }
+        }
+      },
+      [](NiceAgent *agent, guint stream_id, guint component_id, guint size,
+         gchar *buffer, gpointer user_ptr) {
+        if (user_ptr) {
+          IceTransmission *ice_transmission_obj =
+              static_cast<IceTransmission *>(user_ptr);
+          if (ice_transmission_obj) {
+            if (ice_transmission_obj->CheckIsVideoPacket(buffer, size)) {
+              RtpPacket packet((uint8_t *)buffer, size);
+              ice_transmission_obj->rtp_video_receiver_->InsertRtpPacket(
+                  packet);
+            } else if (ice_transmission_obj->CheckIsDataPacket(buffer, size)) {
+              RtpPacket packet((uint8_t *)buffer, size);
+              ice_transmission_obj->rtp_data_receiver_->InsertRtpPacket(packet);
+            } else if (ice_transmission_obj->CheckIsRtcpPacket(buffer, size)) {
+              // LOG_ERROR("Rtcp packet [{}]", (uint8_t)(buffer[1]));
+            }
+          }
+        }
+      },
+      this);
+#else
   ice_agent_->CreateIceAgent(
       [](juice_agent_t *agent, juice_state_t state, void *user_ptr) {
         if (user_ptr) {
@@ -172,6 +229,7 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
         }
       },
       this);
+#endif
   return 0;
 }
 
@@ -216,11 +274,6 @@ int IceTransmission::SetRemoteSdp(const std::string &remote_sdp) {
   return 0;
 }
 
-int IceTransmission::AddRemoteCandidate(const std::string &remote_candidate) {
-  ice_agent_->AddRemoteCandidates(remote_candidate.c_str());
-  return 0;
-}
-
 int IceTransmission::CreateOffer() {
   LOG_INFO("[{}] create offer", user_id_);
   GatherCandidates();
@@ -262,7 +315,11 @@ int IceTransmission::SendAnswer() {
 }
 
 int IceTransmission::SendData(DATA_TYPE type, const char *data, size_t size) {
-  if (JUICE_STATE_COMPLETED == state_) {
+#ifdef USE_NICE
+  if (NiceComponentState::NICE_COMPONENT_STATE_READY == state_) {
+#else
+  if (juice_state_t::JUICE_STATE_COMPLETED == state_) {
+#endif
     std::vector<RtpPacket> packets;
 
     if (DATA_TYPE::VIDEO == type) {
