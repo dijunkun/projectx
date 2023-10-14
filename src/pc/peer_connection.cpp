@@ -96,7 +96,7 @@ int PeerConnection::Init(PeerConnectionParams params,
   };
 
   on_ice_status_change_ = [this](std::string ice_status) {
-    if ("completed" == ice_status) {
+    if ("completed" == ice_status || "ready" == ice_status) {
       ice_ready_ = true;
       on_connection_status_(ConnectionStatus::Connected);
       b_force_i_frame_ = true;

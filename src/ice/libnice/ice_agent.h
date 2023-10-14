@@ -2,6 +2,7 @@
 #define _ICE_AGENT_H_
 
 #include <iostream>
+#include <thread>
 
 #include "gio/gnetworking.h"
 #include "nice/agent.h"
@@ -23,8 +24,8 @@ typedef void (*nice_cb_recv_t)(NiceAgent* agent, guint stream_id,
 
 class IceAgent {
  public:
-  IceAgent(std::string& stun_ip, uint16_t stun_port, std::string& turn_ip,
-           uint16_t turn_port, std::string& turn_username,
+  IceAgent(bool offer_peer, std::string& stun_ip, uint16_t stun_port,
+           std::string& turn_ip, uint16_t turn_port, std::string& turn_username,
            std::string& turn_password);
   ~IceAgent();
 
@@ -47,20 +48,32 @@ class IceAgent {
 
   int Send(const char* data, size_t size);
 
- private:
+  static void* CreateNcieAgent(void* data);
+
+ public:
   std::string stun_ip_ = "";
   uint16_t stun_port_ = 0;
   std::string turn_ip_ = "";
   uint16_t turn_port_ = 0;
   std::string turn_username_ = "";
   std::string turn_password_ = "";
+
+  std::unique_ptr<std::thread> g_thread_;
   NiceAgent* agent_ = nullptr;
   GMainLoop* gloop_;
+  GThread* gexamplethread_;
+  gboolean exit_thread_;
   bool controlling_ = false;
   uint32_t stream_id_ = 0;
   // char local_sdp_[NICE_MAX_SDP_STRING_LEN];
   char* local_sdp_ = nullptr;
   NiceComponentState state_;
+
+  nice_cb_state_changed_t on_state_changed_;
+  nice_cb_candidate_t on_candidate_;
+  nice_cb_gathering_done_t on_gathering_done_;
+  nice_cb_recv_t on_recv_;
+  void* user_ptr_;
 };
 
 #endif

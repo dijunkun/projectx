@@ -111,8 +111,9 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
                          remote_user_id_.size());
       });
 
-  ice_agent_ = std::make_unique<IceAgent>(
-      stun_ip, stun_port, turn_ip, turn_port, turn_username, turn_password);
+  ice_agent_ =
+      std::make_unique<IceAgent>(offer_peer_, stun_ip, stun_port, turn_ip,
+                                 turn_port, turn_username, turn_password);
 
 #ifdef USE_NICE
   ice_agent_->CreateIceAgent(

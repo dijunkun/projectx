@@ -6,7 +6,7 @@
 
 #include "log.h"
 
-IceAgent::IceAgent(std::string &stun_ip, uint16_t stun_port,
+IceAgent::IceAgent(bool offer_peer, std::string &stun_ip, uint16_t stun_port,
                    std::string &turn_ip, uint16_t turn_port,
                    std::string &turn_username, std::string &turn_password)
     : stun_ip_(stun_ip),
@@ -14,49 +14,88 @@ IceAgent::IceAgent(std::string &stun_ip, uint16_t stun_port,
       turn_ip_(turn_ip),
       turn_port_(turn_port),
       turn_username_(turn_username),
-      turn_password_(turn_password) {}
+      turn_password_(turn_password),
+      controlling_(offer_peer) {}
 
-IceAgent::~IceAgent() {}
+IceAgent::~IceAgent() {
+  exit_thread_ = TRUE;
+  g_thread_join(gexamplethread_);
+}
+
+void *IceAgent::CreateNcieAgent(void *data) {
+  if (!data) {
+    return nullptr;
+  }
+
+  IceAgent *ice_agent_ptr = (IceAgent *)data;
+
+  ice_agent_ptr->gloop_ = g_main_loop_new(NULL, FALSE);
+
+  // Create the nice agent_
+  ice_agent_ptr->agent_ =
+      nice_agent_new_reliable(g_main_loop_get_context(ice_agent_ptr->gloop_),
+                              NICE_COMPATIBILITY_RFC5245);
+  if (ice_agent_ptr->agent_ == NULL) {
+    LOG_ERROR("Failed to create agent_");
+  }
+
+  g_object_set(ice_agent_ptr->agent_, "stun-server",
+               ice_agent_ptr->stun_ip_.c_str(), NULL);
+  g_object_set(ice_agent_ptr->agent_, "stun-server-port",
+               ice_agent_ptr->stun_port_, NULL);
+
+  g_object_set(ice_agent_ptr->agent_, "controlling-mode",
+               ice_agent_ptr->controlling_, NULL);
+
+  // Connect to the signals
+  g_signal_connect(ice_agent_ptr->agent_, "candidate-gathering-done",
+                   G_CALLBACK(ice_agent_ptr->on_gathering_done_),
+                   ice_agent_ptr->user_ptr_);
+  g_signal_connect(ice_agent_ptr->agent_, "new-selected-pair",
+                   G_CALLBACK(ice_agent_ptr->on_candidate_),
+                   ice_agent_ptr->user_ptr_);
+  g_signal_connect(ice_agent_ptr->agent_, "component-state-changed",
+                   G_CALLBACK(ice_agent_ptr->on_state_changed_),
+                   ice_agent_ptr->user_ptr_);
+
+  // Create a new stream with one component
+  ice_agent_ptr->stream_id_ = nice_agent_add_stream(ice_agent_ptr->agent_, 1);
+  if (ice_agent_ptr->stream_id_ == 0) {
+    LOG_ERROR("Failed to add stream");
+  }
+
+  // nice_agent_set_stream_name(ice_agent_ptr->agent_, stream_id_, "video");
+
+  // Attach to the component to receive the data
+  // Without this call, candidates cannot be gathered
+  nice_agent_attach_recv(ice_agent_ptr->agent_, ice_agent_ptr->stream_id_, 1,
+                         g_main_loop_get_context(ice_agent_ptr->gloop_),
+                         ice_agent_ptr->on_recv_, ice_agent_ptr->user_ptr_);
+
+  g_main_loop_run(ice_agent_ptr->gloop_);
+}
 
 int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
                              nice_cb_candidate_t on_candidate,
                              nice_cb_gathering_done_t on_gathering_done,
                              nice_cb_recv_t on_recv, void *user_ptr) {
+  on_state_changed_ = on_state_changed;
+  on_candidate_ = on_candidate;
+  on_gathering_done_ = on_gathering_done;
+  on_recv_ = on_recv;
+  user_ptr_ = user_ptr;
+
   g_networking_init();
 
-  gloop_ = g_main_loop_new(NULL, FALSE);
-  // Create the nice agent_
-  agent_ = nice_agent_new(g_main_loop_get_context(gloop_),
-                          NICE_COMPATIBILITY_RFC5245);
-  if (agent_ == NULL) {
-    LOG_ERROR("Failed to create agent_");
-  }
+  // gloop_ = g_main_loop_new(NULL, FALSE);
+  exit_thread_ = FALSE;
+  // gexamplethread_ = g_thread_new("example thread", &CreateNcieAgent, this);
 
-  g_object_set(agent_, "stun-server", stun_ip_.c_str(), NULL);
-  g_object_set(agent_, "stun-server-port", stun_port_, NULL);
-
-  g_object_set(agent_, "controlling-mode", controlling_, NULL);
-
-  // Connect to the signals
-  g_signal_connect(agent_, "candidate-gathering-done",
-                   G_CALLBACK(on_gathering_done), NULL);
-  g_signal_connect(agent_, "new-selected-pair", G_CALLBACK(on_candidate), NULL);
-  g_signal_connect(agent_, "component-state-changed",
-                   G_CALLBACK(on_state_changed), NULL);
-
-  // Create a new stream with one component
-  stream_id_ = nice_agent_add_stream(agent_, 1);
-  if (stream_id_ == 0) {
-    LOG_ERROR("Failed to add stream");
-  }
-  nice_agent_set_stream_name(agent_, stream_id_, "video");
-
-  // Attach to the component to receive the data
-  // Without this call, candidates cannot be gathered
-  nice_agent_attach_recv(agent_, stream_id_, 1, g_main_loop_get_context(gloop_),
-                         on_recv, NULL);
+  // g_main_loop_run(gloop_);
+  g_thread_.reset(new std::thread(std::bind(&IceAgent::CreateNcieAgent, this)));
 
   LOG_INFO("Nice agent init finish");
+  g_usleep(100000);
 
   return 0;
 }

@@ -6,7 +6,7 @@
 
 #include "log.h"
 
-IceAgent::IceAgent(std::string &stun_ip, uint16_t stun_port,
+IceAgent::IceAgent(bool offer_peer, std::string &stun_ip, uint16_t stun_port,
                    std::string &turn_ip, uint16_t turn_port,
                    std::string &turn_username, std::string &turn_password)
     : stun_ip_(stun_ip),

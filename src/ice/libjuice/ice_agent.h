@@ -8,8 +8,8 @@
 
 class IceAgent {
  public:
-  IceAgent(std::string& stun_ip, uint16_t stun_port, std::string& turn_ip,
-           uint16_t turn_port, std::string& turn_username,
+  IceAgent(bool offer_peer, std::string& stun_ip, uint16_t stun_port,
+           std::string& turn_ip, uint16_t turn_port, std::string& turn_username,
            std::string& turn_password);
   ~IceAgent();
 
