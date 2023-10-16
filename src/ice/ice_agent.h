@@ -5,6 +5,7 @@
 #include <thread>
 
 #include "gio/gnetworking.h"
+#include "glib.h"
 #include "nice/agent.h"
 
 #define NICE_MAX_SDP_STRING_LEN 4096
