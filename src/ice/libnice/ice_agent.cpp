@@ -22,7 +22,7 @@ IceAgent::~IceAgent() {
   g_thread_join(gexamplethread_);
 }
 
-void *IceAgent::CreateNcieAgent(void *data) {
+void *IceAgent::CreateNiceAgent(void *data) {
   if (!data) {
     return nullptr;
   }
@@ -89,10 +89,10 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
 
   // gloop_ = g_main_loop_new(NULL, FALSE);
   exit_thread_ = FALSE;
-  // gexamplethread_ = g_thread_new("example thread", &CreateNcieAgent, this);
+  // gexamplethread_ = g_thread_new("example thread", &CreateNiceAgent, this);
 
   // g_main_loop_run(gloop_);
-  g_thread_.reset(new std::thread(std::bind(&IceAgent::CreateNcieAgent, this)));
+  g_thread_.reset(new std::thread(std::bind(&IceAgent::CreateNiceAgent, this)));
 
   LOG_INFO("Nice agent init finish");
   g_usleep(100000);

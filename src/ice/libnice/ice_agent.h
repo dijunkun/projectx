@@ -48,7 +48,7 @@ class IceAgent {
 
   int Send(const char* data, size_t size);
 
-  static void* CreateNcieAgent(void* data);
+  static void* CreateNiceAgent(void* data);
 
  public:
   std::string stun_ip_ = "";

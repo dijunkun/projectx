@@ -7,18 +7,20 @@ set_languages("c++17")
 
 add_rules("mode.release", "mode.debug")
 
-add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0", "vcpkg::libnice 0.1.21")
+add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0")
 add_requires("libjuice", {system = false})
 
 if is_os("windows") then
     add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
     add_packages("vcpkg::ffmpeg")
+    add_requires("vcpkg::libnice 0.1.21")
+    add_packages("vcpkg::libnice")
 elseif is_os("linux") then
     add_requires("ffmpeg 5.1.2", {system = false})
     add_packages("ffmpeg")
 elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
-    add_packages("ffmpeg")
+    add_requires("brew::libnice", "brew::glib")
 end
 
 add_defines("JUICE_STATIC")
@@ -87,18 +89,28 @@ target("rtp")
 target("ice")
     set_kind("static")
     add_deps("log", "common", "ws")
-    add_packages("asio", "nlohmann_json", "libjuice", "vcpkg::libnice")
-    add_files("src/ice/libjuice/*.cpp")
+    add_packages("asio", "nlohmann_json", "libjuice")
     add_files("src/ice/libnice/*.cpp")
-    add_includedirs("src/ws", "src/ice/libjuice", "src/ice/libnice", {public = true})
-    add_includedirs("thirdparty/libjuice/include", {public = true})
-    add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/include/glib-2.0", {public = true})
-    add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib/glib-2.0/include", {public = true})
-    add_linkdirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib")
-    add_links("nice", "glib-2.0", "gio-2.0", "gmodule-2.0", "gobject-2.0", "gthread-2.0",
+    add_includedirs("src/ws", "src/ice/libnice", {public = true})
+    if is_os("windows") then
+        add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/include/glib-2.0", {public = true})
+        add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib/glib-2.0/include", {public = true})
+        add_linkdirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib")
+        add_links("nice", "glib-2.0", "gio-2.0", "gmodule-2.0", "gobject-2.0", "gthread-2.0",
         "pcre2-8", "pcre2-16", "pcre2-32", "pcre2-posix", 
         "zlib", "ffi", "libcrypto", "libssl", "intl", "iconv", "charset", "bz2",
         "Shell32", "Advapi32", "Dnsapi", "Shlwapi", "Iphlpapi")
+    elseif is_os("macosx") then
+        add_packages("glib", "libnice")
+        add_includedirs("/usr/local/Cellar/glib/2.78.0/include/glib-2.0", {public = true})
+        add_includedirs("/usr/local/Cellar/glib/2.78.0/lib/glib-2.0/include", {public = true})
+        add_includedirs("/usr/local/Cellar/glib/2.78.0/include", {public = true})
+        add_includedirs("/usr/local/Cellar/libnice/0.1.21/include", {public = true})
+        add_linkdirs("/usr/local/Cellar/libnice/0.1.21/lib")
+        add_linkdirs("/usr/local/Cellar/glib/2.78.0/lib")
+        add_links("nice", "glib-2.0", "gio-2.0", "gobject-2.0")
+    end
+    
 
 target("ws")
     set_kind("static")
@@ -147,6 +159,7 @@ target("media")
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
         add_links("cuda", "nvidia-encode", "nvcuvid")
     elseif is_os("macosx") then
+        add_packages("ffmpeg")
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/ffmpeg/*.cpp",
@@ -204,7 +217,6 @@ target("guest")
 
 target("nicetest")
     set_kind("binary")
-    add_packages("vcpkg::libnice")
     add_files("tests/peerconnection/nice.cpp")
     add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/include/glib-2.0")
     add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib/glib-2.0/include")
