@@ -34,6 +34,8 @@ if is_os("windows") then
 elseif is_os("linux") then 
     set_config("cflags", "-fPIC")
     add_syslinks("pthread")
+elseif is_os("macosx") then
+    add_ldflags("-ld_classic", {force = true})
 end
 
 add_packages("spdlog")
