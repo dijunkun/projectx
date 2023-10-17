@@ -175,7 +175,7 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
 
 int IceTransmission::DestroyIceTransmission() {
   LOG_INFO("[{}->{}] Destroy ice transmission", user_id_, remote_user_id_);
-  return ice_agent_->DestoryIceAgent();
+  return ice_agent_->DestroyIceAgent();
 }
 
 int IceTransmission::SetTransmissionId(const std::string &transmission_id) {

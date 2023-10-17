@@ -18,67 +18,17 @@ IceAgent::IceAgent(bool offer_peer, std::string &stun_ip, uint16_t stun_port,
       controlling_(offer_peer) {}
 
 IceAgent::~IceAgent() {
-  exit_thread_ = TRUE;
-  g_thread_join(gexamplethread_);
-}
-
-void *IceAgent::CreateNiceAgent(void *data) {
-  if (!data) {
-    return nullptr;
+  if (!destroyed_) {
+    DestroyIceAgent();
   }
-
-  IceAgent *ice_agent_ptr = (IceAgent *)data;
-
-  ice_agent_ptr->gloop_ = g_main_loop_new(NULL, FALSE);
-
-  // Create the nice agent_
-  ice_agent_ptr->agent_ =
-      nice_agent_new_reliable(g_main_loop_get_context(ice_agent_ptr->gloop_),
-                              NICE_COMPATIBILITY_RFC5245);
-  if (ice_agent_ptr->agent_ == NULL) {
-    LOG_ERROR("Failed to create agent_");
-  }
-
-  g_object_set(ice_agent_ptr->agent_, "stun-server",
-               ice_agent_ptr->stun_ip_.c_str(), NULL);
-  g_object_set(ice_agent_ptr->agent_, "stun-server-port",
-               ice_agent_ptr->stun_port_, NULL);
-
-  g_object_set(ice_agent_ptr->agent_, "controlling-mode",
-               ice_agent_ptr->controlling_, NULL);
-
-  // Connect to the signals
-  g_signal_connect(ice_agent_ptr->agent_, "candidate-gathering-done",
-                   G_CALLBACK(ice_agent_ptr->on_gathering_done_),
-                   ice_agent_ptr->user_ptr_);
-  g_signal_connect(ice_agent_ptr->agent_, "new-selected-pair",
-                   G_CALLBACK(ice_agent_ptr->on_candidate_),
-                   ice_agent_ptr->user_ptr_);
-  g_signal_connect(ice_agent_ptr->agent_, "component-state-changed",
-                   G_CALLBACK(ice_agent_ptr->on_state_changed_),
-                   ice_agent_ptr->user_ptr_);
-
-  // Create a new stream with one component
-  ice_agent_ptr->stream_id_ = nice_agent_add_stream(ice_agent_ptr->agent_, 1);
-  if (ice_agent_ptr->stream_id_ == 0) {
-    LOG_ERROR("Failed to add stream");
-  }
-
-  // nice_agent_set_stream_name(ice_agent_ptr->agent_, stream_id_, "video");
-
-  // Attach to the component to receive the data
-  // Without this call, candidates cannot be gathered
-  nice_agent_attach_recv(ice_agent_ptr->agent_, ice_agent_ptr->stream_id_, 1,
-                         g_main_loop_get_context(ice_agent_ptr->gloop_),
-                         ice_agent_ptr->on_recv_, ice_agent_ptr->user_ptr_);
-
-  g_main_loop_run(ice_agent_ptr->gloop_);
+  g_object_unref(agent_);
 }
 
 int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
                              nice_cb_candidate_t on_candidate,
                              nice_cb_gathering_done_t on_gathering_done,
                              nice_cb_recv_t on_recv, void *user_ptr) {
+  destroyed_ = false;
   on_state_changed_ = on_state_changed;
   on_candidate_ = on_candidate;
   on_gathering_done_ = on_gathering_done;
@@ -87,27 +37,85 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
 
   g_networking_init();
 
-  // gloop_ = g_main_loop_new(NULL, FALSE);
-  exit_thread_ = FALSE;
-  // gexamplethread_ = g_thread_new("example thread", &CreateNiceAgent, this);
+  exit_nice_thread_ = false;
 
-  // g_main_loop_run(gloop_);
-  g_thread_.reset(new std::thread(std::bind(&IceAgent::CreateNiceAgent, this)));
+  nice_thread_.reset(new std::thread([this]() {
+    gloop_ = g_main_loop_new(nullptr, false);
+
+    agent_ = nice_agent_new_reliable(g_main_loop_get_context(gloop_),
+                                     NICE_COMPATIBILITY_RFC5245);
+    if (agent_ == nullptr) {
+      LOG_ERROR("Failed to create agent_");
+    }
+
+    g_object_set(agent_, "stun-server", stun_ip_.c_str(), nullptr);
+    g_object_set(agent_, "stun-server-port", stun_port_, nullptr);
+    g_object_set(agent_, "controlling-mode", controlling_, nullptr);
+
+    g_signal_connect(agent_, "candidate-gathering-done",
+                     G_CALLBACK(on_gathering_done_), user_ptr_);
+    g_signal_connect(agent_, "new-selected-pair", G_CALLBACK(on_candidate_),
+                     user_ptr_);
+    g_signal_connect(agent_, "component-state-changed",
+                     G_CALLBACK(on_state_changed_), user_ptr_);
+
+    stream_id_ = nice_agent_add_stream(agent_, 1);
+    if (stream_id_ == 0) {
+      LOG_ERROR("Failed to add stream");
+    }
+
+    nice_agent_set_stream_name(agent_, stream_id_, "video");
+
+    nice_agent_attach_recv(agent_, stream_id_, 1,
+                           g_main_loop_get_context(gloop_), on_recv_,
+                           user_ptr_);
+
+    nice_inited_ = true;
+
+    g_main_loop_run(gloop_);
+    exit_nice_thread_ = true;
+    g_main_loop_unref(gloop_);
+  }));
+
+  do {
+    g_usleep(1000);
+  } while (!nice_inited_);
 
   LOG_INFO("Nice agent init finish");
-  g_usleep(100000);
 
   return 0;
 }
 
-int IceAgent::DestoryIceAgent() {
-  g_object_unref(agent_);
+int IceAgent::DestroyIceAgent() {
+  if (!nice_inited_) {
+    LOG_ERROR("Nice agent has not been initialized");
+    return -1;
+  }
+
+  destroyed_ = true;
+  g_main_loop_quit(gloop_);
+
+  if (nice_thread_->joinable()) {
+    nice_thread_->join();
+  }
+
+  LOG_ERROR("Destroy nice agent success");
   return 0;
 }
 
 char *IceAgent::GenerateLocalSdp() {
+  if (!nice_inited_) {
+    LOG_ERROR("Nice agent has not been initialized");
+    return nullptr;
+  }
+
   if (nullptr == agent_) {
-    LOG_INFO("agent_ is nullptr");
+    LOG_ERROR("Nice agent is nullptr");
+    return nullptr;
+  }
+
+  if (destroyed_) {
+    LOG_ERROR("Nice agent is destroyed");
     return nullptr;
   }
 
@@ -118,6 +126,21 @@ char *IceAgent::GenerateLocalSdp() {
 }
 
 int IceAgent::SetRemoteSdp(const char *remote_sdp) {
+  if (!nice_inited_) {
+    LOG_ERROR("Nice agent has not been initialized");
+    return -1;
+  }
+
+  if (nullptr == agent_) {
+    LOG_ERROR("Nice agent is nullptr");
+    return -1;
+  }
+
+  if (destroyed_) {
+    LOG_ERROR("Nice agent is destroyed");
+    return -1;
+  }
+
   int ret = nice_agent_parse_remote_sdp(agent_, remote_sdp);
   if (ret > 0) {
     return 0;
@@ -128,6 +151,21 @@ int IceAgent::SetRemoteSdp(const char *remote_sdp) {
 }
 
 int IceAgent::GatherCandidates() {
+  if (!nice_inited_) {
+    LOG_ERROR("Nice agent has not been initialized");
+    return -1;
+  }
+
+  if (nullptr == agent_) {
+    LOG_ERROR("Nice agent is nullptr");
+    return -1;
+  }
+
+  if (destroyed_) {
+    LOG_ERROR("Nice agent is destroyed");
+    return -1;
+  }
+
   if (!nice_agent_gather_candidates(agent_, stream_id_)) {
     LOG_ERROR("Failed to start candidate gathering");
     return -1;
@@ -137,12 +175,42 @@ int IceAgent::GatherCandidates() {
 }
 
 NiceComponentState IceAgent::GetIceState() {
+  if (!nice_inited_) {
+    LOG_ERROR("Nice agent has not been initialized");
+    return NiceComponentState::NICE_COMPONENT_STATE_LAST;
+  }
+
+  if (nullptr == agent_) {
+    LOG_ERROR("Nice agent is nullptr");
+    return NiceComponentState::NICE_COMPONENT_STATE_LAST;
+  }
+
+  if (destroyed_) {
+    LOG_ERROR("Nice agent is destroyed");
+    return NiceComponentState::NICE_COMPONENT_STATE_LAST;
+  }
+
   state_ = nice_agent_get_component_state(agent_, stream_id_, 1);
 
   return state_;
 }
 
 int IceAgent::Send(const char *data, size_t size) {
+  if (!nice_inited_) {
+    LOG_ERROR("Nice agent has not been initialized");
+    return -1;
+  }
+
+  if (nullptr == agent_) {
+    LOG_ERROR("Nice agent is nullptr");
+    return -1;
+  }
+
+  if (destroyed_) {
+    LOG_ERROR("Nice agent is destroyed");
+    return -1;
+  }
+
   if (NiceComponentState::NICE_COMPONENT_STATE_READY !=
       nice_agent_get_component_state(agent_, stream_id_, 1)) {
     return -1;
