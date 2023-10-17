@@ -42,14 +42,22 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
   nice_thread_.reset(new std::thread([this]() {
     gloop_ = g_main_loop_new(nullptr, false);
 
-    agent_ = nice_agent_new_reliable(g_main_loop_get_context(gloop_),
-                                     NICE_COMPATIBILITY_RFC5245);
+    agent_ = nice_agent_new_full(g_main_loop_get_context(gloop_),
+                                 NICE_COMPATIBILITY_RFC5245,
+                                 (NiceAgentOption)(NICE_AGENT_OPTION_RELIABLE));
+
     if (agent_ == nullptr) {
       LOG_ERROR("Failed to create agent_");
     }
 
     g_object_set(agent_, "stun-server", stun_ip_.c_str(), nullptr);
     g_object_set(agent_, "stun-server-port", stun_port_, nullptr);
+
+    g_object_set(agent_, "proxy-ip", turn_ip_.c_str(), nullptr);
+    g_object_set(agent_, "proxy-port", turn_port_, nullptr);
+    g_object_set(agent_, "proxy-username", turn_username_.c_str(), nullptr);
+    g_object_set(agent_, "proxy-password", turn_password_.c_str(), nullptr);
+
     g_object_set(agent_, "controlling-mode", controlling_, nullptr);
 
     g_signal_connect(agent_, "candidate-gathering-done",
