@@ -53,11 +53,6 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
     g_object_set(agent_, "stun-server", stun_ip_.c_str(), nullptr);
     g_object_set(agent_, "stun-server-port", stun_port_, nullptr);
 
-    g_object_set(agent_, "proxy-ip", turn_ip_.c_str(), nullptr);
-    g_object_set(agent_, "proxy-port", turn_port_, nullptr);
-    g_object_set(agent_, "proxy-username", turn_username_.c_str(), nullptr);
-    g_object_set(agent_, "proxy-password", turn_password_.c_str(), nullptr);
-
     g_object_set(agent_, "controlling-mode", controlling_, nullptr);
 
     g_signal_connect(agent_, "candidate-gathering-done",
@@ -73,6 +68,10 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
     }
 
     nice_agent_set_stream_name(agent_, stream_id_, "video");
+
+    nice_agent_set_relay_info(agent_, stream_id_, 1, turn_ip_.c_str(),
+                              turn_port_, turn_username_.c_str(),
+                              turn_password_.c_str(), NICE_RELAY_TYPE_TURN_UDP);
 
     nice_agent_attach_recv(agent_, stream_id_, 1,
                            g_main_loop_get_context(gloop_), on_recv_,
