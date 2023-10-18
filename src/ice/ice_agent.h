@@ -66,6 +66,7 @@ class IceAgent {
   char* local_sdp_ = nullptr;
   NiceComponentState state_ = NiceComponentState::NICE_COMPONENT_STATE_LAST;
   bool destroyed_ = false;
+  gboolean agent_closed_ = false;
 
   nice_cb_state_changed_t on_state_changed_;
   nice_cb_candidate_t on_candidate_;

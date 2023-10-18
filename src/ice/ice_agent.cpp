@@ -44,7 +44,7 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
 
     agent_ = nice_agent_new_full(g_main_loop_get_context(gloop_),
                                  NICE_COMPATIBILITY_RFC5245,
-                                 (NiceAgentOption)(NICE_AGENT_OPTION_RELIABLE));
+                                 (NiceAgentOption)(NICE_AGENT_OPTION_NONE));
 
     if (agent_ == nullptr) {
       LOG_ERROR("Failed to create agent_");
@@ -73,6 +73,8 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
                               turn_port_, turn_username_.c_str(),
                               turn_password_.c_str(), NICE_RELAY_TYPE_TURN_UDP);
 
+    g_object_set(agent_, "force-relay", true, NULL);
+
     nice_agent_attach_recv(agent_, stream_id_, 1,
                            g_main_loop_get_context(gloop_), on_recv_,
                            user_ptr_);
@@ -93,11 +95,22 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
   return 0;
 }
 
+void cb_closed(GObject *src, GAsyncResult *res, gpointer data) {
+  LOG_ERROR("cb_closed");
+  NiceAgent *agent = NICE_AGENT(src);
+  g_debug("test-turn:%s: %p", G_STRFUNC, agent);
+
+  *((gboolean *)data) = TRUE;
+}
+
 int IceAgent::DestroyIceAgent() {
   if (!nice_inited_) {
     LOG_ERROR("Nice agent has not been initialized");
     return -1;
   }
+
+  nice_agent_remove_stream(agent_, stream_id_);
+  nice_agent_close_async(agent_, cb_closed, &agent_closed_);
 
   destroyed_ = true;
   g_main_loop_quit(gloop_);
@@ -127,7 +140,7 @@ char *IceAgent::GenerateLocalSdp() {
   }
 
   local_sdp_ = nice_agent_generate_local_sdp(agent_);
-  // LOG_INFO("Generate local sdp:[\n{}]", local_sdp_);
+  LOG_INFO("Generate local sdp:[\n{}]", local_sdp_);
 
   return local_sdp_;
 }
@@ -220,6 +233,7 @@ int IceAgent::Send(const char *data, size_t size) {
 
   if (NiceComponentState::NICE_COMPONENT_STATE_READY !=
       nice_agent_get_component_state(agent_, stream_id_, 1)) {
+    LOG_ERROR("Nice agent not ready");
     return -1;
   }
 
