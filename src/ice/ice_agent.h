@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <thread>
+#include <atomic>
 
 #include "gio/gnetworking.h"
 #include "glib.h"

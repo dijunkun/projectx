@@ -16,7 +16,9 @@ if is_os("windows") then
     add_packages("vcpkg::libnice")
 elseif is_os("linux") then
     add_requires("ffmpeg 5.1.2", {system = false})
-    add_packages("ffmpeg")
+    add_requires("glib", {system = true})
+    add_requires("vcpkg::libnice 0.1.21")
+    add_packages("ffmpeg", "glib", "vcpkg::libnice")
 elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
     add_requires("brew::libnice", "brew::glib")
@@ -225,3 +227,9 @@ target("nicetest")
         "pcre2-8", "pcre2-16", "pcre2-32", "pcre2-posix", 
         "zlib", "ffi", "libcrypto", "libssl", "intl", "iconv", "charset", "bz2",
         "Shell32", "Advapi32", "Dnsapi", "Shlwapi", "Iphlpapi")
+
+target("linux_capture")
+    set_kind("binary")
+    add_packages("ffmpeg", "sdl2", "asound")
+    add_files("tests/peerconnection/linux_capture.cpp")
+    add_ldflags("-lasound", "-lX11", "-lXext", "-lxcb", "-lsndio")
