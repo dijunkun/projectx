@@ -86,17 +86,6 @@ int sfp_refresh_thread(void *opaque) {
   return 0;
 }
 
-// Show Dshow Device
-// void show_dshow_device() {
-//   AVFormatContext *pFormatCtx = avformat_alloc_context();
-//   AVDictionary *options = NULL;
-//   av_dict_set(&options, "list_devices", "true", 0);
-//   AVInputFormat *iformat = av_find_input_format("dshow");
-//   printf("========Device Info=============\n");
-//   avformat_open_input(&pFormatCtx, "video=dummy", iformat, &options);
-//   printf("================================\n");
-// }
-
 // Show AVFoundation Device
 void show_avfoundation_device() {
   const AVFormatContext *const_pFormatCtx = avformat_alloc_context();
@@ -133,18 +122,18 @@ int main(int argc, char *argv[]) {
   AVDictionary *options = NULL;
   // Set some options
   // grabbing frame rate
-  // av_dict_set(&options, "framerate", "5", 0);
+  av_dict_set(&options, "framerate", "5", 0);
   // Make the grabbed area follow the mouse
-  // av_dict_set(&options, "follow_mouse", "centered", 0);
+  av_dict_set(&options, "follow_mouse", "centered", 0);
   // Video frame size. The default is to capture the full screen
-  // av_dict_set(&options, "video_size", "640x480", 0);
+  av_dict_set(&options, "video_size", "640x480", 0);
   AVInputFormat *ifmt = (AVInputFormat *)av_find_input_format("x11grab");
-  if(!ifmt){
+  if (!ifmt) {
     printf("Couldn't find_input_format\n");
   }
 
   // Grab at position 10,20
-  if (avformat_open_input(&pFormatCtx, ":0.0", ifmt, &options) != 0) {
+  if (avformat_open_input(&pFormatCtx, ":0.0+10,20", ifmt, &options) != 0) {
     printf("Couldn't open input stream.\n");
     return -1;
   }
@@ -200,7 +189,7 @@ int main(int argc, char *argv[]) {
   // SDL_Surface *screen;
   // screen = SDL_SetVideoMode(screen_w, screen_h, 0, 0);
   SDL_Window *screen;
-  screen = SDL_CreateWindow("RTS Receiver", SDL_WINDOWPOS_UNDEFINED,
+  screen = SDL_CreateWindow("Linux Capture", SDL_WINDOWPOS_UNDEFINED,
                             SDL_WINDOWPOS_UNDEFINED, screen_w, screen_h,
                             SDL_WINDOW_RESIZABLE);
 
@@ -231,10 +220,6 @@ int main(int argc, char *argv[]) {
 
   AVPacket *packet = (AVPacket *)av_malloc(sizeof(AVPacket));
 
-#if OUTPUT_YUV420P
-  FILE *fp_yuv = fopen("output.yuv", "wb+");
-#endif
-
   struct SwsContext *img_convert_ctx;
   img_convert_ctx = sws_getContext(
       pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width,
@@ -245,16 +230,21 @@ int main(int argc, char *argv[]) {
   // SDL_WM_SetCaption("Simplest FFmpeg Grab Desktop", NULL);
   // Event Loop
   SDL_Event event;
-
+  printf("111111111\n");
   for (;;) {
     // Wait
     SDL_WaitEvent(&event);
+    printf("11112222\n");
     if (event.type == SFM_REFRESH_EVENT) {
+      printf("11111113333333\n");
       //------------------------------
       if (av_read_frame(pFormatCtx, packet) >= 0) {
+        printf("111111444444\n");
         if (packet->stream_index == videoindex) {
+          printf("11111155555\n");
           avcodec_send_packet(pCodecCtx, packet);
           got_picture = avcodec_receive_frame(pCodecCtx, pFrame);
+          printf("33333333\n");
           // ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture,
           // packet);
           if (ret < 0) {
@@ -262,6 +252,7 @@ int main(int argc, char *argv[]) {
             return -1;
           }
           if (got_picture) {
+            printf("44444444444\n");
             //             SDL_LockYUVOverlay(bmp);
             //             pFrameYUV->data[0] = bmp->pixels[0];
             //             pFrameYUV->data[1] = bmp->pixels[2];
@@ -317,13 +308,15 @@ int main(int argc, char *argv[]) {
 #if OUTPUT_YUV420P
   fclose(fp_yuv);
 #endif
-
+  printf("222222222\n");
   SDL_Quit();
 
   // av_free(out_buffer);
   av_free(pFrameYUV);
   avcodec_close(pCodecCtx);
   avformat_close_input(&pFormatCtx);
+
+  getchar();
 
   return 0;
 }

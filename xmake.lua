@@ -15,7 +15,7 @@ if is_os("windows") then
     add_requires("vcpkg::libnice 0.1.21")
     add_packages("vcpkg::libnice")
 elseif is_os("linux") then
-    add_requires("ffmpeg 5.1.2", {system = false})
+    add_requires("vcpkg::ffmpeg", {configs = {shared = false}})
     add_requires("glib", {system = true})
     add_requires("vcpkg::libnice 0.1.21")
     add_packages("ffmpeg", "glib", "vcpkg::libnice")
@@ -230,6 +230,6 @@ target("nicetest")
 
 target("linux_capture")
     set_kind("binary")
-    add_packages("ffmpeg", "sdl2", "asound")
+    add_packages("vcpkg::ffmpeg", "sdl2", "asound")
     add_files("tests/peerconnection/linux_capture.cpp")
-    add_ldflags("-lasound", "-lX11", "-lXext", "-lxcb", "-lsndio")
+    add_ldflags("-lasound", "-lX11", "-lXext", "-lxcb", "-lsndio", "-lpostproc", "-lXv")
