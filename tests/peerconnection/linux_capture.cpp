@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
   // Make the grabbed area follow the mouse
   av_dict_set(&options, "follow_mouse", "centered", 0);
   // Video frame size. The default is to capture the full screen
-  // av_dict_set(&options, "video_size", "1280x720", 0);
+  av_dict_set(&options, "video_size", "1280x720", 0);
   AVInputFormat *ifmt = (AVInputFormat *)av_find_input_format("x11grab");
   if (!ifmt) {
     printf("Couldn't find_input_format\n");
