@@ -40,10 +40,13 @@ extern "C" {
 
 #define SFM_BREAK_EVENT (SDL_USEREVENT + 2)
 
+#define NV12_BUFFER_SIZE 1280 * 720 * 3 / 2
+
 int thread_exit = 0;
 SDL_Texture *sdlTexture = nullptr;
 SDL_Renderer *sdlRenderer = nullptr;
 SDL_Rect sdlRect;
+unsigned char nv12_buffer[NV12_BUFFER_SIZE];
 
 int YUV420ToNV12FFmpeg(unsigned char *src_buffer, int width, int height,
                        unsigned char *des_buffer) {
@@ -76,29 +79,16 @@ int sfp_refresh_thread(void *opaque) {
     event.type = SFM_REFRESH_EVENT;
     SDL_PushEvent(&event);
     SDL_Delay(40);
+    printf("sfp_refresh_thread\n");
   }
   thread_exit = 0;
   // Break
   SDL_Event event;
   event.type = SFM_BREAK_EVENT;
   SDL_PushEvent(&event);
+  printf("exit sfp_refresh_thread\n");
 
   return 0;
-}
-
-// Show AVFoundation Device
-void show_avfoundation_device() {
-  const AVFormatContext *const_pFormatCtx = avformat_alloc_context();
-  AVFormatContext *pFormatCtx = const_cast<AVFormatContext *>(const_pFormatCtx);
-
-  AVDictionary *options = NULL;
-  av_dict_set(&options, "list_devices", "true", 0);
-  const AVInputFormat *const_iformat = av_find_input_format("avfoundation");
-  AVInputFormat *iformat = const_cast<AVInputFormat *>(const_iformat);
-
-  printf("==AVFoundation Device Info===\n");
-  avformat_open_input(&pFormatCtx, "", iformat, &options);
-  printf("=============================\n");
 }
 
 int main(int argc, char *argv[]) {
@@ -106,13 +96,14 @@ int main(int argc, char *argv[]) {
   int i, videoindex;
   AVCodecContext *pCodecCtx;
   AVCodec *pCodec;
+  AVCodecParameters *pCodecParam;
 
   // avformat_network_init();
   pFormatCtx = avformat_alloc_context();
 
   // Open File
-  // char filepath[]="src01_480x272_22.h265";
-  // avformat_open_input(&pFormatCtx,filepath,NULL,NULL)
+  char filepath[] = "out.h264";
+  // avformat_open_input(&pFormatCtx, filepath, NULL, NULL);
 
   // Register Device
   avdevice_register_all();
@@ -126,14 +117,14 @@ int main(int argc, char *argv[]) {
   // Make the grabbed area follow the mouse
   av_dict_set(&options, "follow_mouse", "centered", 0);
   // Video frame size. The default is to capture the full screen
-  av_dict_set(&options, "video_size", "640x480", 0);
+  // av_dict_set(&options, "video_size", "1280x720", 0);
   AVInputFormat *ifmt = (AVInputFormat *)av_find_input_format("x11grab");
   if (!ifmt) {
     printf("Couldn't find_input_format\n");
   }
 
   // Grab at position 10,20
-  if (avformat_open_input(&pFormatCtx, ":0.0+10,20", ifmt, &options) != 0) {
+  if (avformat_open_input(&pFormatCtx, ":0.0", ifmt, &options) != 0) {
     printf("Couldn't open input stream.\n");
     return -1;
   }
@@ -142,6 +133,7 @@ int main(int argc, char *argv[]) {
     printf("Couldn't find stream information.\n");
     return -1;
   }
+
   videoindex = -1;
   for (i = 0; i < pFormatCtx->nb_streams; i++)
     if (pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
@@ -152,14 +144,14 @@ int main(int argc, char *argv[]) {
     printf("Didn't find a video stream.\n");
     return -1;
   }
-  // pCodecCtx = pFormatCtx->streams[videoindex]->codec;
+
+  pCodecParam = pFormatCtx->streams[videoindex]->codecpar;
 
   pCodecCtx = avcodec_alloc_context3(NULL);
-  avcodec_parameters_to_context(pCodecCtx,
-                                pFormatCtx->streams[videoindex]->codecpar);
+  avcodec_parameters_to_context(pCodecCtx, pCodecParam);
 
+  // pCodec = const_cast<AVCodec *>(avcodec_find_decoder(AV_CODEC_ID_H264));
   pCodec = const_cast<AVCodec *>(avcodec_find_decoder(pCodecCtx->codec_id));
-  // pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
   if (pCodec == NULL) {
     printf("Codec not found.\n");
     return -1;
@@ -168,9 +160,10 @@ int main(int argc, char *argv[]) {
     printf("Could not open codec.\n");
     return -1;
   }
-  AVFrame *pFrame, *pFrameYUV;
+  AVFrame *pFrame, *pFrameYUV, *pFrameNV12;
   pFrame = av_frame_alloc();
   pFrameYUV = av_frame_alloc();
+  pFrameNV12 = av_frame_alloc();
   // unsigned char *out_buffer=(unsigned char
   // *)av_malloc(avpicture_get_size(AV_PIX_FMT_YUV420P, pCodecCtx->width,
   // pCodecCtx->height)); avpicture_fill((AVPicture *)pFrameYUV, out_buffer,
@@ -180,12 +173,12 @@ int main(int argc, char *argv[]) {
     printf("Could not initialize SDL - %s\n", SDL_GetError());
     return -1;
   }
-  const int pixel_w = 640, pixel_h = 360;
-  int screen_w = 640, screen_h = 360;
+  const int pixel_w = 1280, pixel_h = 720;
+  int screen_w = 1280, screen_h = 720;
   // const SDL_VideoInfo *vi = SDL_GetVideoInfo();
   // Half of the Desktop's width and height.
-  screen_w = 640;
-  screen_h = 360;
+  screen_w = 1280;
+  screen_h = 720;
   // SDL_Surface *screen;
   // screen = SDL_SetVideoMode(screen_w, screen_h, 0, 0);
   SDL_Window *screen;
@@ -223,7 +216,7 @@ int main(int argc, char *argv[]) {
   struct SwsContext *img_convert_ctx;
   img_convert_ctx = sws_getContext(
       pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt, pCodecCtx->width,
-      pCodecCtx->height, AV_PIX_FMT_YUV420P, SWS_BICUBIC, NULL, NULL, NULL);
+      pCodecCtx->height, AV_PIX_FMT_NV12, SWS_BICUBIC, NULL, NULL, NULL);
   //------------------------------
   SDL_Thread *video_tid = SDL_CreateThread(sfp_refresh_thread, NULL, NULL);
   //
@@ -251,52 +244,42 @@ int main(int argc, char *argv[]) {
             printf("Decode Error.\n");
             return -1;
           }
-          if (got_picture) {
+          if (!got_picture) {
             printf("44444444444\n");
-            //             SDL_LockYUVOverlay(bmp);
-            //             pFrameYUV->data[0] = bmp->pixels[0];
-            //             pFrameYUV->data[1] = bmp->pixels[2];
-            //             pFrameYUV->data[2] = bmp->pixels[1];
-            //             pFrameYUV->linesize[0] = bmp->pitches[0];
-            //             pFrameYUV->linesize[1] = bmp->pitches[2];
-            //             pFrameYUV->linesize[2] = bmp->pitches[1];
-            //             sws_scale(img_convert_ctx,
-            //                       (const unsigned char *const *)pFrame->data,
-            //                       pFrame->linesize, 0, pCodecCtx->height,
-            //                       pFrameYUV->data, pFrameYUV->linesize);
 
-            // #if OUTPUT_YUV420P
-            //             int y_size = pCodecCtx->width * pCodecCtx->height;
-            //             fwrite(pFrameYUV->data[0], 1, y_size, fp_yuv); // Y
-            //             fwrite(pFrameYUV->data[1], 1, y_size / 4, fp_yuv); //
-            //             U fwrite(pFrameYUV->data[2], 1, y_size / 4, fp_yuv);
-            //             // V
-            // #endif
-            //             SDL_UnlockYUVOverlay(bmp);
+            // memcpy(nv12_buffer, pFrame->data[0],
+            //        pFrame->width * pFrame->height);
+            // memcpy(nv12_buffer + pFrame->width * pFrame->height,
+            //        pFrame->data[1], pFrame->width * pFrame->height / 2);
 
-            //             SDL_DisplayYUVOverlay(bmp, &rect);
+            av_image_fill_arrays(pFrameNV12->data, pFrameNV12->linesize,
+                                 nv12_buffer, AV_PIX_FMT_NV12, pFrame->width,
+                                 pFrame->height, 1);
 
-            // YUV420ToNV12FFmpeg(buffer, pixel_w, pixel_h, dst_buffer);
+            sws_scale(img_convert_ctx, pFrame->data, pFrame->linesize, 0,
+                      pFrame->height, pFrameNV12->data, pFrameNV12->linesize);
 
-            // SDL_UpdateTexture(sdlTexture, NULL, dst_buffer, pixel_w);
+            SDL_UpdateTexture(sdlTexture, NULL, nv12_buffer, pixel_w);
 
-            // // FIX: If window is resize
-            // sdlRect.x = 0;
-            // sdlRect.y = 0;
-            // sdlRect.w = screen_w;
-            // sdlRect.h = screen_h;
+            // FIX: If window is resize
+            sdlRect.x = 0;
+            sdlRect.y = 0;
+            sdlRect.w = screen_w;
+            sdlRect.h = screen_h;
 
-            // SDL_RenderClear(sdlRenderer);
-            // SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
-            // SDL_RenderPresent(sdlRenderer);
+            SDL_RenderClear(sdlRenderer);
+            SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, &sdlRect);
+            SDL_RenderPresent(sdlRenderer);
           }
         }
         // av_free_packet(packet);
       } else {
         // Exit Thread
-        thread_exit = 1;
+        // thread_exit = 1;
+        // printf("No frame read\n");
       }
     } else if (event.type == SDL_QUIT) {
+      printf("SDL_QUIT\n");
       thread_exit = 1;
     } else if (event.type == SFM_BREAK_EVENT) {
       break;
@@ -312,6 +295,7 @@ int main(int argc, char *argv[]) {
   SDL_Quit();
 
   // av_free(out_buffer);
+  av_frame_free(&pFrameNV12);
   av_free(pFrameYUV);
   avcodec_close(pCodecCtx);
   avformat_close_input(&pFormatCtx);
