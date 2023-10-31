@@ -29,6 +29,8 @@ extern "C" {
 #endif
 #endif
 
+#include <chrono>
+
 // Output YUV420P
 #define OUTPUT_YUV420P 0
 //'1' Use Dshow
@@ -47,6 +49,10 @@ SDL_Texture *sdlTexture = nullptr;
 SDL_Renderer *sdlRenderer = nullptr;
 SDL_Rect sdlRect;
 unsigned char nv12_buffer[NV12_BUFFER_SIZE];
+std::chrono::_V2::system_clock::time_point last_frame_time;
+const int pixel_w = 1280, pixel_h = 720;
+int screen_w = 1280, screen_h = 720;
+bool done = false;
 
 int YUV420ToNV12FFmpeg(unsigned char *src_buffer, int width, int height,
                        unsigned char *des_buffer) {
@@ -78,7 +84,7 @@ int sfp_refresh_thread(void *opaque) {
     SDL_Event event;
     event.type = SFM_REFRESH_EVENT;
     SDL_PushEvent(&event);
-    SDL_Delay(40);
+    SDL_Delay(30);
     printf("sfp_refresh_thread\n");
   }
   thread_exit = 0;
@@ -113,7 +119,7 @@ int main(int argc, char *argv[]) {
   AVDictionary *options = NULL;
   // Set some options
   // grabbing frame rate
-  av_dict_set(&options, "framerate", "5", 0);
+  av_dict_set(&options, "framerate", "30", 0);
   // Make the grabbed area follow the mouse
   av_dict_set(&options, "follow_mouse", "centered", 0);
   // Video frame size. The default is to capture the full screen
@@ -173,8 +179,7 @@ int main(int argc, char *argv[]) {
     printf("Could not initialize SDL - %s\n", SDL_GetError());
     return -1;
   }
-  const int pixel_w = 1280, pixel_h = 720;
-  int screen_w = 1280, screen_h = 720;
+
   // const SDL_VideoInfo *vi = SDL_GetVideoInfo();
   // Half of the Desktop's width and height.
   screen_w = 1280;
@@ -223,34 +228,32 @@ int main(int argc, char *argv[]) {
   // SDL_WM_SetCaption("Simplest FFmpeg Grab Desktop", NULL);
   // Event Loop
   SDL_Event event;
-  printf("111111111\n");
+
+  last_frame_time = std::chrono::high_resolution_clock::now();
+
   for (;;) {
     // Wait
     SDL_WaitEvent(&event);
-    printf("11112222\n");
-    if (event.type == SFM_REFRESH_EVENT) {
-      printf("11111113333333\n");
+
+    if (1) {
       //------------------------------
       if (av_read_frame(pFormatCtx, packet) >= 0) {
-        printf("111111444444\n");
         if (packet->stream_index == videoindex) {
-          printf("11111155555\n");
           avcodec_send_packet(pCodecCtx, packet);
           got_picture = avcodec_receive_frame(pCodecCtx, pFrame);
-          printf("33333333\n");
           // ret = avcodec_decode_video2(pCodecCtx, pFrame, &got_picture,
           // packet);
           if (ret < 0) {
             printf("Decode Error.\n");
             return -1;
           }
+          printf("xxxxxxxxxxxxxxxxxxx\n");
           if (!got_picture) {
-            printf("44444444444\n");
-
-            // memcpy(nv12_buffer, pFrame->data[0],
-            //        pFrame->width * pFrame->height);
-            // memcpy(nv12_buffer + pFrame->width * pFrame->height,
-            //        pFrame->data[1], pFrame->width * pFrame->height / 2);
+            auto now_time = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> duration = now_time - last_frame_time;
+            auto tc = duration.count() * 1000;
+            printf("duration: %f\n", tc);
+            last_frame_time = now_time;
 
             av_image_fill_arrays(pFrameNV12->data, pFrameNV12->linesize,
                                  nv12_buffer, AV_PIX_FMT_NV12, pFrame->width,
@@ -291,7 +294,7 @@ int main(int argc, char *argv[]) {
 #if OUTPUT_YUV420P
   fclose(fp_yuv);
 #endif
-  printf("222222222\n");
+
   SDL_Quit();
 
   // av_free(out_buffer);

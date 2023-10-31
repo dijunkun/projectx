@@ -7,23 +7,6 @@ set_languages("c++17")
 
 add_rules("mode.release", "mode.debug")
 
-add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0")
-
-if is_os("windows") then
-    add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
-    add_packages("vcpkg::ffmpeg")
-    add_requires("vcpkg::libnice 0.1.21")
-    add_packages("vcpkg::libnice")
-elseif is_os("linux") then
-    add_requires("vcpkg::ffmpeg", {configs = {shared = false}})
-    add_requires("glib", {system = true})
-    add_requires("vcpkg::libnice 0.1.21")
-    add_packages("ffmpeg", "glib", "vcpkg::libnice")
-elseif is_os("macosx") then
-    add_requires("ffmpeg 5.1.2", {system = false})
-    add_requires("brew::libnice", "brew::glib")
-end
-
 add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_PTR", 
     "ASIO_HAS_STD_ADDRESSOF", "ASIO_HAS_STD_ATOMIC", "ASIO_HAS_STD_CHRONO", "ASIO_HAS_CSTDINT", "ASIO_HAS_STD_ARRAY",
     "ASIO_HAS_STD_SYSTEM_ERROR")
@@ -38,6 +21,22 @@ elseif is_os("linux") then
     add_syslinks("pthread")
 elseif is_os("macosx") then
     add_ldflags("-ld_classic", {force = true})
+end
+
+add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0")
+
+if is_os("windows") then
+    add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
+    add_requires("vcpkg::libnice 0.1.21")
+    add_packages("vcpkg::libnice")
+elseif is_os("linux") then
+    add_requires("ffmpeg 5.1.2", {shared = true})
+    add_requires("glib", {system = true})
+    add_requires("vcpkg::libnice 0.1.21")
+    add_packages("glib", "vcpkg::libnice")
+elseif is_os("macosx") then
+    add_requires("ffmpeg 5.1.2", {system = false})
+    add_requires("brew::libnice", "brew::glib")
 end
 
 add_packages("spdlog")
@@ -125,7 +124,7 @@ target("media")
     set_kind("static")
     add_deps("log", "frame")
     if is_os("windows") then
-        add_packages("cuda")
+        add_packages("cuda", "vcpkg::ffmpeg")
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/nvcodec/*.cpp",
@@ -143,7 +142,7 @@ target("media")
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
         add_links("cuda", "nvencodeapi", "nvcuvid")
     elseif is_os(("linux")) then
-        add_packages("cuda")
+        add_packages("cuda", "ffmpeg")
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/nvcodec/*.cpp",
@@ -230,6 +229,6 @@ target("nicetest")
 
 target("linux_capture")
     set_kind("binary")
-    add_packages("vcpkg::ffmpeg", "sdl2", "asound")
+    add_packages("ffmpeg", "sdl2", "asound")
     add_files("tests/peerconnection/linux_capture.cpp")
     add_ldflags("-lasound", "-lX11", "-lXext", "-lxcb", "-lsndio", "-lpostproc", "-ldl", {force = true})
