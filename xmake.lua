@@ -8,8 +8,8 @@ set_languages("c++17")
 add_rules("mode.release", "mode.debug")
 
 add_defines("ASIO_STANDALONE", "ASIO_HAS_STD_TYPE_TRAITS", "ASIO_HAS_STD_SHARED_PTR", 
-    "ASIO_HAS_STD_ADDRESSOF", "ASIO_HAS_STD_ATOMIC", "ASIO_HAS_STD_CHRONO", "ASIO_HAS_CSTDINT", "ASIO_HAS_STD_ARRAY",
-    "ASIO_HAS_STD_SYSTEM_ERROR")
+    "ASIO_HAS_STD_ADDRESSOF", "ASIO_HAS_STD_ATOMIC", "ASIO_HAS_STD_CHRONO", 
+    "ASIO_HAS_CSTDINT", "ASIO_HAS_STD_ARRAY",  "ASIO_HAS_STD_SYSTEM_ERROR")
 
 if is_os("windows") then
     add_defines("_WEBSOCKETPP_CPP11_INTERNAL_")
@@ -30,7 +30,8 @@ if is_os("windows") then
     add_requires("vcpkg::libnice 0.1.21")
     add_packages("vcpkg::libnice")
 elseif is_os("linux") then
-    add_requires("ffmpeg 5.1.2", {shared = true})
+    add_requireconfs("ffmpeg.x264", {configs = {pic = true}})
+    add_requires("ffmpeg 5.1.2")
     add_requires("glib", {system = true})
     add_requires("vcpkg::libnice 0.1.21")
     add_packages("glib", "vcpkg::libnice")
@@ -229,6 +230,9 @@ target("nicetest")
 
 target("linux_capture")
     set_kind("binary")
-    add_packages("ffmpeg", "sdl2", "asound")
+    add_packages("ffmpeg", "sdl2")
     add_files("tests/peerconnection/linux_capture.cpp")
-    add_ldflags("-lasound", "-lX11", "-lXext", "-lxcb", "-lsndio", "-lpostproc", "-ldl", {force = true})
+    add_ldflags("-lavformat", "-lavdevice", "-lavfilter", "-lavcodec",
+    "-lswscale", "-lavutil", "-lswresample", "-lpostproc",
+    "-lasound", "-lxcb-shape", "-lxcb-xfixes", "-lsndio", "-lxcb", 
+    "-lxcb-shm", "-lXext", "-lX11", "-lXv", "-lpthread", "-lx264", "-ldl", {force = true})
