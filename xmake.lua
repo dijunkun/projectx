@@ -227,12 +227,3 @@ target("nicetest")
         "pcre2-8", "pcre2-16", "pcre2-32", "pcre2-posix", 
         "zlib", "ffi", "libcrypto", "libssl", "intl", "iconv", "charset", "bz2",
         "Shell32", "Advapi32", "Dnsapi", "Shlwapi", "Iphlpapi")
-
-target("linux_capture")
-    set_kind("binary")
-    add_packages("ffmpeg", "sdl2")
-    add_files("tests/peerconnection/linux_capture.cpp")
-    add_ldflags("-lavformat", "-lavdevice", "-lavfilter", "-lavcodec",
-    "-lswscale", "-lavutil", "-lswresample", "-lpostproc",
-    "-lasound", "-lxcb-shape", "-lxcb-xfixes", "-lsndio", "-lxcb", 
-    "-lxcb-shm", "-lXext", "-lX11", "-lXv", "-lpthread", "-lx264", "-ldl", {force = true})

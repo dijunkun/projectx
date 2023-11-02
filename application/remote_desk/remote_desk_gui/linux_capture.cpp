@@ -121,7 +121,7 @@ int main(int argc, char *argv[]) {
   // grabbing frame rate
   av_dict_set(&options, "framerate", "30", 0);
   // Make the grabbed area follow the mouse
-  av_dict_set(&options, "follow_mouse", "centered", 0);
+  // av_dict_set(&options, "follow_mouse", "centered", 0);
   // Video frame size. The default is to capture the full screen
   av_dict_set(&options, "video_size", "1280x720", 0);
   AVInputFormat *ifmt = (AVInputFormat *)av_find_input_format("x11grab");
@@ -156,7 +156,6 @@ int main(int argc, char *argv[]) {
   pCodecCtx = avcodec_alloc_context3(NULL);
   avcodec_parameters_to_context(pCodecCtx, pCodecParam);
 
-  // pCodec = const_cast<AVCodec *>(avcodec_find_decoder(AV_CODEC_ID_H264));
   pCodec = const_cast<AVCodec *>(avcodec_find_decoder(pCodecCtx->codec_id));
   if (pCodec == NULL) {
     printf("Codec not found.\n");
