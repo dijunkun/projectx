@@ -14,10 +14,12 @@ extern "C" {
 #endif
 extern "C" {
 #include <libavcodec/avcodec.h>
+#include <libavdevice/avdevice.h>
+#include <libavfilter/avfilter.h>
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
-#include <libavutil/opt.h>
-}
+#include <libswscale/swscale.h>
+};
 #ifdef __cplusplus
 };
 #endif
@@ -51,9 +53,11 @@ class FFmpegVideoEncoder : public VideoEncoder {
 
   std::vector<std::vector<uint8_t>> encoded_packets_;
   unsigned char* encoded_image_ = nullptr;
-  FILE* file_ = nullptr;
+  FILE* file_h264_ = nullptr;
+  FILE* file_nv12_ = nullptr;
   unsigned char* nv12_data_ = nullptr;
   unsigned int seq_ = 0;
+  bool use_libx264_ = false;
 
   const AVCodec* codec_ = nullptr;
   AVCodecContext* codec_ctx_ = nullptr;

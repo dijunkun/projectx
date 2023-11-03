@@ -85,7 +85,7 @@ int RtpVideoSender::SendRtpPacket(RtpPacket& rtp_packet) {
 
     rtcp_sr.Encode();
 
-    SendRtcpSR(rtcp_sr);
+    // SendRtcpSR(rtcp_sr);
   }
 
   return 0;

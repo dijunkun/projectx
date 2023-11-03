@@ -5,6 +5,7 @@
 #else
 #include "ffmpeg/ffmpeg_video_encoder.h"
 #include "nvcodec/nvidia_video_encoder.h"
+#include "openh264/openh264_encoder.h"
 #endif
 
 #include "log.h"
@@ -25,7 +26,8 @@ std::unique_ptr<VideoEncoder> VideoEncoderFactory::CreateVideoEncoder(
       return nullptr;
     }
   } else {
-    return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
+    // return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
+    return std::make_unique<OpenH264Encoder>(OpenH264Encoder());
   }
 #endif
 }

@@ -1,6 +1,6 @@
 set_project("projectx")
 set_version("0.0.1")
-set_license("GPL-3.0")
+set_license("LGPL-3.0")
 
 add_rules("mode.release", "mode.debug")
 set_languages("c++17")
@@ -34,6 +34,7 @@ elseif is_os("linux") then
     add_requires("ffmpeg 5.1.2")
     add_requires("glib", {system = true})
     add_requires("vcpkg::libnice 0.1.21")
+    add_requires("openh264")
     add_packages("glib", "vcpkg::libnice")
 elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
@@ -143,19 +144,23 @@ target("media")
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
         add_links("cuda", "nvencodeapi", "nvcuvid")
     elseif is_os(("linux")) then
-        add_packages("cuda", "ffmpeg")
+        add_packages("cuda", "ffmpeg", "openh264")
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/nvcodec/*.cpp",
         "src/media/video/decode/nvcodec/*.cpp",
         "src/media/video/encode/ffmpeg/*.cpp",
-        "src/media/video/decode/ffmpeg/*.cpp")
+        "src/media/video/decode/ffmpeg/*.cpp",
+        "src/media/video/encode/openh264/*.cpp",
+        "src/media/video/decode/openh264/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/encode/nvcodec",
         "src/media/video/decode/nvcodec",
         "src/media/video/encode/ffmpeg",
         "src/media/video/decode/ffmpeg",
+        "src/media/video/encode/openh264",
+        "src/media/video/decode/openh264",
         "thirdparty/nvcodec/Interface",
         "thirdparty/nvcodec/Samples", {public = true})
         add_linkdirs("thirdparty/nvcodec/Lib/x64")

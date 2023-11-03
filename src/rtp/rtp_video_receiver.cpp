@@ -48,7 +48,7 @@ void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
 
     rtcp_rr.Encode();
 
-    SendRtcpRR(rtcp_rr);
+    // SendRtcpRR(rtcp_rr);
   }
 
   if (RtpPacket::NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {

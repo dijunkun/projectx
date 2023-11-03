@@ -4,14 +4,48 @@
 
 #include "log.h"
 
-#define SAVE_ENCODER_STREAM 0
+#define SAVE_NV12_STREAM 0
+#define SAVE_H264_STREAM 1
+
+#define YUV420P_BUFFER_SIZE 1280 * 720 * 3 / 2
+unsigned char yuv420p_buffer[YUV420P_BUFFER_SIZE];
+
+int NV12ToYUV420PFFmpeg(unsigned char *src_buffer, int width, int height,
+                        unsigned char *dst_buffer) {
+  AVFrame *Input_pFrame = av_frame_alloc();
+  AVFrame *Output_pFrame = av_frame_alloc();
+  struct SwsContext *img_convert_ctx = sws_getContext(
+      width, height, AV_PIX_FMT_NV12, 1280, 720, AV_PIX_FMT_YUV420P,
+      SWS_FAST_BILINEAR, nullptr, nullptr, nullptr);
+
+  av_image_fill_arrays(Input_pFrame->data, Input_pFrame->linesize, src_buffer,
+                       AV_PIX_FMT_NV12, width, height, 1);
+  av_image_fill_arrays(Output_pFrame->data, Output_pFrame->linesize, dst_buffer,
+                       AV_PIX_FMT_YUV420P, 1280, 720, 1);
+
+  sws_scale(img_convert_ctx, (uint8_t const **)Input_pFrame->data,
+            Input_pFrame->linesize, 0, height, Output_pFrame->data,
+            Output_pFrame->linesize);
+
+  if (Input_pFrame) av_free(Input_pFrame);
+  if (Output_pFrame) av_free(Output_pFrame);
+  if (img_convert_ctx) sws_freeContext(img_convert_ctx);
+
+  return 0;
+}
 
 FFmpegVideoEncoder::FFmpegVideoEncoder() {}
 FFmpegVideoEncoder::~FFmpegVideoEncoder() {
-  if (SAVE_ENCODER_STREAM && file_) {
-    fflush(file_);
-    fclose(file_);
-    file_ = nullptr;
+  if (SAVE_NV12_STREAM && file_nv12_) {
+    fflush(file_nv12_);
+    fclose(file_nv12_);
+    file_nv12_ = nullptr;
+  }
+
+  if (SAVE_H264_STREAM && file_h264_) {
+    fflush(file_h264_);
+    fclose(file_h264_);
+    file_h264_ = nullptr;
   }
 
   if (nv12_data_) {
@@ -25,14 +59,19 @@ FFmpegVideoEncoder::~FFmpegVideoEncoder() {
 }
 
 int FFmpegVideoEncoder::Init() {
-  av_log_set_level(AV_LOG_ERROR);
+  av_log_set_level(AV_LOG_VERBOSE);
 
   codec_ = avcodec_find_encoder(AV_CODEC_ID_H264);
-
   if (!codec_) {
     LOG_ERROR("Failed to find H.264 encoder");
     return -1;
+  } else {
+    LOG_INFO("Use H264 encoder [{}]", codec_->name);
+    if (0 == strcmp(codec_->name, "libx264")) {
+      use_libx264_ = true;
+    }
   }
+  use_libx264_ = true;
 
   codec_ctx_ = avcodec_alloc_context3(codec_);
   if (!codec_ctx_) {
@@ -46,7 +85,11 @@ int FFmpegVideoEncoder::Init() {
   codec_ctx_->height = frame_height;
   codec_ctx_->time_base.num = 1;
   codec_ctx_->time_base.den = fps_;
-  codec_ctx_->pix_fmt = AV_PIX_FMT_NV12;
+  if (use_libx264_) {
+    codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
+  } else {
+    codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
+  }
   codec_ctx_->gop_size = keyFrameInterval_;
   codec_ctx_->keyint_min = keyFrameInterval_;
   codec_ctx_->max_b_frames = 0;
@@ -77,10 +120,17 @@ int FFmpegVideoEncoder::Init() {
 
   packet_ = av_packet_alloc();
 
-  if (SAVE_ENCODER_STREAM) {
-    file_ = fopen("encode_stream.h264", "w+b");
-    if (!file_) {
-      LOG_WARN("Fail to open stream.h264");
+  if (SAVE_H264_STREAM) {
+    file_h264_ = fopen("encoded_stream.h264", "w+b");
+    if (!file_h264_) {
+      LOG_WARN("Fail to open encoded_stream.h264");
+    }
+  }
+
+  if (SAVE_NV12_STREAM) {
+    file_nv12_ = fopen("raw_stream.yuv", "w+b");
+    if (!file_nv12_) {
+      LOG_WARN("Fail to open raw_stream.yuv");
     }
   }
 
@@ -95,9 +145,33 @@ int FFmpegVideoEncoder::Encode(
     return -1;
   }
 
-  memcpy(frame_->data[0], pData, frame_->width * frame_->height);
-  memcpy(frame_->data[1], pData + frame_->width * frame_->height,
-         frame_->width * frame_->height / 2);
+  if (use_libx264_) {
+    NV12ToYUV420PFFmpeg((unsigned char *)pData, frame_->width, frame_->height,
+                        (unsigned char *)yuv420p_buffer);
+    memcpy(frame_->data[0], yuv420p_buffer, frame_->width * frame_->height);
+    memcpy(frame_->data[1], yuv420p_buffer + frame_->width * frame_->height,
+           frame_->width * frame_->height / 2);
+    memcpy(frame_->data[2],
+           yuv420p_buffer + frame_->width * frame_->height * 3 / 2,
+           frame_->width * frame_->height / 2);
+
+    // frame_->data[0] = yuv420p_buffer;
+    // frame_->data[1] = yuv420p_buffer + frame_->width * frame_->height;
+    // frame_->data[2] = yuv420p_buffer + frame_->width * frame_->height * 3 /
+    // 2;
+
+    if (SAVE_NV12_STREAM) {
+      fwrite(yuv420p_buffer, 1, nSize, file_nv12_);
+    }
+  } else {
+    memcpy(frame_->data[0], pData, frame_->width * frame_->height);
+    memcpy(frame_->data[1], pData + frame_->width * frame_->height,
+           frame_->width * frame_->height / 2);
+
+    if (SAVE_NV12_STREAM) {
+      fwrite(pData, 1, nSize, file_nv12_);
+    }
+  }
 
   frame_->pts = pts_++;
 
@@ -113,17 +187,17 @@ int FFmpegVideoEncoder::Encode(
     }
 
     // Remove first 6 bytes in I frame, SEI ?
-    if (0x00 == packet_->data[0] && 0x00 == packet_->data[1] &&
-        0x00 == packet_->data[2] && 0x01 == packet_->data[3] &&
-        0x09 == packet_->data[4] && 0x10 == packet_->data[5]) {
-      packet_->data += 6;
-      packet_->size -= 6;
-    }
+    // if (0x00 == packet_->data[0] && 0x00 == packet_->data[1] &&
+    //     0x00 == packet_->data[2] && 0x01 == packet_->data[3] &&
+    //     0x09 == packet_->data[4] && 0x10 == packet_->data[5]) {
+    //   packet_->data += 6;
+    //   packet_->size -= 6;
+    // }
 
     if (on_encoded_image) {
       on_encoded_image((char *)packet_->data, packet_->size);
-      if (SAVE_ENCODER_STREAM) {
-        fwrite(packet_->data, 1, packet_->size, file_);
+      if (SAVE_H264_STREAM) {
+        fwrite(packet_->data, 1, packet_->size, file_h264_);
       }
     } else {
       OnEncodedImage((char *)packet_->data, packet_->size);
