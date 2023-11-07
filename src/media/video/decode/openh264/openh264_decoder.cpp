@@ -19,8 +19,39 @@ extern "C" {
 };
 #endif
 
-#define SAVE_DECODER_STREAM 0
+#define SAVE_NV12_STREAM 0
+#define SAVE_H264_STREAM 0
+
 static const int YUV420P_BUFFER_SIZE = 1280 * 720 * 3 / 2;
+
+void CopyYUVWithStride(uint8_t *srcY, uint8_t *srcU, uint8_t *srcV, int width,
+                       int height, int strideY, int strideU, int strideV,
+                       uint8_t *dst) {
+  int actualWidth = width;
+  int actualHeight = height;
+
+  int actualStrideY = actualWidth;
+  int actualStrideU = actualWidth / 2;
+  int actualStrideV = actualWidth / 2;
+
+  for (int row = 0; row < actualHeight; row++) {
+    memcpy(dst, srcY, actualStrideY);
+    srcY += strideY;
+    dst += actualStrideY;
+  }
+
+  for (int row = 0; row < actualHeight / 2; row++) {
+    memcpy(dst, srcU, actualStrideU);
+    srcU += strideU;
+    dst += actualStrideU;
+  }
+
+  for (int row = 0; row < actualHeight / 2; row++) {
+    memcpy(dst, srcV, actualStrideV);
+    srcV += strideV;
+    dst += actualStrideV;
+  }
+}
 
 int YUV420ToNV12PFFmpeg(unsigned char *src_buffer, int width, int height,
                         unsigned char *dst_buffer) {
@@ -48,6 +79,11 @@ int YUV420ToNV12PFFmpeg(unsigned char *src_buffer, int width, int height,
 
 OpenH264Decoder::OpenH264Decoder() {}
 OpenH264Decoder::~OpenH264Decoder() {
+  if (openh264_decoder_) {
+    openh264_decoder_->Uninitialize();
+    WelsDestroyDecoder(openh264_decoder_);
+  }
+
   if (nv12_frame_) {
     delete nv12_frame_;
   }
@@ -63,23 +99,60 @@ OpenH264Decoder::~OpenH264Decoder() {
   if (pData[2]) {
     delete pData[2];
   }
+
+  if (pData_tmp) {
+    delete pData_tmp;
+    pData_tmp = nullptr;
+  }
+
+  if (SAVE_H264_STREAM && h264_stream_) {
+    fflush(h264_stream_);
+    h264_stream_ = nullptr;
+  }
+
+  if (SAVE_NV12_STREAM && nv12_stream_) {
+    fflush(nv12_stream_);
+    nv12_stream_ = nullptr;
+  }
 }
 
 int OpenH264Decoder::Init() {
-  SEncParamExt sParam;
-  sParam.iPicWidth = 1280;
-  sParam.iPicHeight = 720;
-  sParam.iTargetBitrate = 1000;
-  sParam.iTemporalLayerNum = 1;
-  sParam.fMaxFrameRate = 30;
-  sParam.iSpatialLayerNum = 1;
+  if (SAVE_NV12_STREAM) {
+    nv12_stream_ = fopen("nv12_receive_.yuv", "w+b");
+    if (!nv12_stream_) {
+      LOG_WARN("Fail to open nv12_receive_.yuv");
+    }
+  }
+
+  if (SAVE_NV12_STREAM) {
+    h264_stream_ = fopen("h264_receive.h264", "w+b");
+    if (!h264_stream_) {
+      LOG_WARN("Fail to open h264_receive.h264");
+    }
+  }
+
+  frame_width_ = 1280;
+  frame_height_ = 720;
+
+  // SEncParamExt sParam;
+  // sParam.iPicWidth = frame_width_;
+  // sParam.iPicHeight = frame_height_;
+  // sParam.iTargetBitrate = 1000000000;
+  // sParam.iTemporalLayerNum = 1;
+  // sParam.fMaxFrameRate = 30;
+  // sParam.iSpatialLayerNum = 1;
 
   decoded_frame_size_ = YUV420P_BUFFER_SIZE;
   decoded_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
   nv12_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
-  pData[0] = new uint8_t[1280 * 720];
-  pData[1] = new uint8_t[1280 * 720];
-  pData[2] = new uint8_t[1280 * 720];
+  // pData[0] = new uint8_t[1280 * 720];
+  // pData[1] = new uint8_t[1280 * 720 / 4];
+  // pData[2] = new uint8_t[1280 * 720 / 4];
+
+  pData_tmp = new uint8_t[frame_width_ * frame_height_ * 3 / 2];
+  // *pData = pData_tmp;
+  // *(pData + 1) = pData_tmp + frame_width_ * frame_height_;
+  // *(pData + 2) = pData_tmp + (frame_width_ * frame_height_ * 5) / 4;
 
   if (WelsCreateDecoder(&openh264_decoder_) != 0) {
     LOG_ERROR("Failed to create OpenH264 decoder");
@@ -89,12 +162,15 @@ int OpenH264Decoder::Init() {
   SDecodingParam sDecParam;
 
   memset(&sDecParam, 0, sizeof(SDecodingParam));
+  sDecParam.uiTargetDqLayer = UCHAR_MAX;
+  sDecParam.eEcActiveIdc = ERROR_CON_SLICE_COPY;
   sDecParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
-  sDecParam.bParseOnly = false;
 
   int32_t iRet = openh264_decoder_->Initialize(&sDecParam);
 
-  LOG_ERROR("inited decoded_frame_size_ {}", decoded_frame_size_);
+  int trace_level = WELS_LOG_WARNING;
+  openh264_decoder_->SetOption(DECODER_OPTION_TRACE_LEVEL, &trace_level);
+
   LOG_ERROR("inited");
   printf("1 this is %p\n", this);
   return 0;
@@ -107,11 +183,17 @@ int OpenH264Decoder::Decode(
     return -1;
   }
 
-  SBufferInfo sDstBufInfo;
+  if (SAVE_H264_STREAM) {
+    fwrite((unsigned char *)data, 1, size, h264_stream_);
+  }
+
+  SBufferInfo sDstBufInfo = {0};
   memset(&sDstBufInfo, 0, sizeof(SBufferInfo));
 
-  int32_t iRet =
-      openh264_decoder_->DecodeFrameNoDelay(data, size, pData, &sDstBufInfo);
+  unsigned char *dst[3];
+
+  int iRet =
+      openh264_decoder_->DecodeFrameNoDelay(data, size, dst, &sDstBufInfo);
 
   if (iRet != 0) {
     return -1;
@@ -119,21 +201,28 @@ int OpenH264Decoder::Decode(
 
   if (sDstBufInfo.iBufferStatus == 1) {
     if (on_receive_decoded_frame) {
-      memcpy(decoded_frame_, pData[0], frame_width_ * frame_height_);
-      memcpy(decoded_frame_ + frame_width_ * frame_height_, pData[1],
-             frame_width_ * frame_height_ / 2);
-      memcpy(decoded_frame_ + frame_width_ * frame_height_ * 3 / 2, pData[2],
-             frame_width_ * frame_height_ / 2);
+      CopyYUVWithStride(
+          dst[0], dst[1], dst[2], sDstBufInfo.UsrData.sSystemBuffer.iWidth,
+          sDstBufInfo.UsrData.sSystemBuffer.iHeight,
+          sDstBufInfo.UsrData.sSystemBuffer.iStride[0],
+          sDstBufInfo.UsrData.sSystemBuffer.iStride[1],
+          sDstBufInfo.UsrData.sSystemBuffer.iStride[1], decoded_frame_);
+
+      if (SAVE_NV12_STREAM) {
+        fwrite((unsigned char *)decoded_frame_, 1,
+               frame_width_ * frame_height_ * 3 / 2, nv12_stream_);
+      }
       YUV420ToNV12PFFmpeg(decoded_frame_, frame_width_, frame_height_,
                           nv12_frame_);
 
       VideoFrame decoded_frame(nv12_frame_,
                                frame_width_ * frame_height_ * 3 / 2,
                                frame_width_, frame_height_);
+
       on_receive_decoded_frame(decoded_frame);
-      if (SAVE_DECODER_STREAM) {
+      if (SAVE_NV12_STREAM) {
         fwrite((unsigned char *)decoded_frame.Buffer(), 1, decoded_frame.Size(),
-               file_);
+               nv12_stream_);
       }
     }
   }

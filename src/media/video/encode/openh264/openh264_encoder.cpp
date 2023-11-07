@@ -19,6 +19,9 @@ extern "C" {
 };
 #endif
 
+#define SAVE_NV12_STREAM 0
+#define SAVE_H264_STREAM 0
+
 #define YUV420P_BUFFER_SIZE 1280 * 720 * 3 / 2
 unsigned char yuv420p_buffer[YUV420P_BUFFER_SIZE];
 
@@ -46,7 +49,20 @@ int NV12ToYUV420PFFmpeg(unsigned char *src_buffer, int width, int height,
   return 0;
 }
 
-OpenH264Encoder::OpenH264Encoder() { delete encoded_frame_; }
+OpenH264Encoder::OpenH264Encoder() {
+  if (SAVE_NV12_STREAM && file_nv12_) {
+    fflush(file_nv12_);
+    fclose(file_nv12_);
+    file_nv12_ = nullptr;
+  }
+
+  if (SAVE_H264_STREAM && file_h264_) {
+    fflush(file_h264_);
+    fclose(file_h264_);
+    file_h264_ = nullptr;
+  }
+  delete encoded_frame_;
+}
 OpenH264Encoder::~OpenH264Encoder() { Release(); }
 
 SEncParamExt OpenH264Encoder::CreateEncoderParams() const {
@@ -63,8 +79,8 @@ SEncParamExt OpenH264Encoder::CreateEncoderParams() const {
   encoder_params.iTargetBitrate = target_bitrate_;
   encoder_params.iMaxBitrate = max_bitrate_;
   encoder_params.iRCMode = RC_BITRATE_MODE;
-  encoder_params.fMaxFrameRate = max_frame_rate_;
-  encoder_params.bEnableFrameSkip = false;
+  encoder_params.fMaxFrameRate = 0.000030;
+  encoder_params.bEnableFrameSkip = true;
   encoder_params.uiIntraPeriod = key_frame_interval_;
   encoder_params.uiMaxNalSize = 0;
   // Threading model: use auto.
@@ -107,8 +123,8 @@ int OpenH264Encoder::Init() {
 
   encoded_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
 
-  int trace_level = WELS_LOG_WARNING;
-  openh264_encoder_->SetOption(ENCODER_OPTION_TRACE_LEVEL, &trace_level);
+  // int trace_level = WELS_LOG_WARNING;
+  // openh264_encoder_->SetOption(ENCODER_OPTION_TRACE_LEVEL, &trace_level);
 
   // Create encoder parameters based on the layer configuration.
   SEncParamExt encoder_params = CreateEncoderParams();
@@ -122,6 +138,20 @@ int OpenH264Encoder::Init() {
   int video_format = EVideoFormatType::videoFormatI420;
   openh264_encoder_->SetOption(ENCODER_OPTION_DATAFORMAT, &video_format);
 
+  if (SAVE_H264_STREAM) {
+    file_h264_ = fopen("encoded_stream.h264", "w+b");
+    if (!file_h264_) {
+      LOG_WARN("Fail to open encoded_stream.h264");
+    }
+  }
+
+  if (SAVE_NV12_STREAM) {
+    file_nv12_ = fopen("raw_stream.yuv", "w+b");
+    if (!file_nv12_) {
+      LOG_WARN("Fail to open raw_stream.yuv");
+    }
+  }
+
   return 0;
 }
 int OpenH264Encoder::Encode(
@@ -132,7 +162,11 @@ int OpenH264Encoder::Encode(
     return -1;
   }
 
-  if (0 == seq_++ % 300) {
+  if (SAVE_NV12_STREAM) {
+    fwrite(yuv420p_buffer, 1, nSize, file_nv12_);
+  }
+
+  if (0 == seq_++ % 3) {
     ForceIdr();
   }
 
@@ -228,6 +262,9 @@ int OpenH264Encoder::Encode(
 
     if (on_encoded_image) {
       on_encoded_image((char *)encoded_frame_, encoded_frame_size_);
+      if (SAVE_H264_STREAM) {
+        fwrite(encoded_frame_, 1, encoded_frame_size_, file_h264_);
+      }
     } else {
       OnEncodedImage((char *)encoded_frame_, encoded_frame_size_);
     }

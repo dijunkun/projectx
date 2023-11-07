@@ -5,7 +5,7 @@
 #include "log.h"
 
 #define SAVE_NV12_STREAM 0
-#define SAVE_H264_STREAM 1
+#define SAVE_H264_STREAM 0
 
 #define YUV420P_BUFFER_SIZE 1280 * 720 * 3 / 2
 unsigned char yuv420p_buffer[YUV420P_BUFFER_SIZE];
@@ -98,7 +98,7 @@ int FFmpegVideoEncoder::Init() {
   // av_opt_set_int(codec_ctx_->priv_data, "qp", 51, 0);
   // av_opt_set_int(codec_ctx_->priv_data, "crf", 23, 0);
 
-  av_opt_set(codec_ctx_->priv_data, "profile", "baseline", 0);
+  // av_opt_set(codec_ctx_->priv_data, "profile", "baseline", 0);
   av_opt_set(codec_ctx_->priv_data, "preset", "ultrafast", 0);
   av_opt_set(codec_ctx_->priv_data, "tune", "zerolatency", 0);
 

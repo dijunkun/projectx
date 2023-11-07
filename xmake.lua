@@ -29,6 +29,7 @@ if is_os("windows") then
     add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
     add_requires("vcpkg::libnice 0.1.21")
     add_packages("vcpkg::libnice")
+    add_requires("openh264")
 elseif is_os("linux") then
     add_requireconfs("ffmpeg.x264", {configs = {pic = true}})
     add_requires("ffmpeg 5.1.2")
@@ -126,19 +127,23 @@ target("media")
     set_kind("static")
     add_deps("log", "frame")
     if is_os("windows") then
-        add_packages("cuda", "vcpkg::ffmpeg")
+        add_packages("cuda", "vcpkg::ffmpeg", "openh264")
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/nvcodec/*.cpp",
         "src/media/video/decode/nvcodec/*.cpp",
         "src/media/video/encode/ffmpeg/*.cpp",
-        "src/media/video/decode/ffmpeg/*.cpp")
+        "src/media/video/decode/ffmpeg/*.cpp",
+        "src/media/video/encode/openh264/*.cpp",
+        "src/media/video/decode/openh264/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/encode/nvcodec",
         "src/media/video/decode/nvcodec",
         "src/media/video/encode/ffmpeg",
         "src/media/video/decode/ffmpeg",
+        "src/media/video/encode/openh264",
+        "src/media/video/decode/openh264",
         "thirdparty/nvcodec/Interface",
         "thirdparty/nvcodec/Samples", {public = true})
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
