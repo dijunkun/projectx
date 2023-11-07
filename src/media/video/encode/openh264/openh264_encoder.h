@@ -38,10 +38,10 @@ class OpenH264Encoder : public VideoEncoder {
  private:
   int frame_width_ = 1280;
   int frame_height_ = 720;
-  int key_frame_interval_ = 5;
+  int key_frame_interval_ = 3000;
   int target_bitrate_ = 1000;
-  int max_bitrate_ = 1000;
-  int max_payload_size_ = 3000;
+  int max_bitrate_ = 500000;
+  int max_payload_size_ = 1400;
   int max_frame_rate_ = 30;
   std::vector<std::vector<uint8_t>> encoded_packets_;
   unsigned char* encoded_image_ = nullptr;

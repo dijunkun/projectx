@@ -134,14 +134,6 @@ int OpenH264Decoder::Init() {
   frame_width_ = 1280;
   frame_height_ = 720;
 
-  // SEncParamExt sParam;
-  // sParam.iPicWidth = frame_width_;
-  // sParam.iPicHeight = frame_height_;
-  // sParam.iTargetBitrate = 1000000000;
-  // sParam.iTemporalLayerNum = 1;
-  // sParam.fMaxFrameRate = 30;
-  // sParam.iSpatialLayerNum = 1;
-
   decoded_frame_size_ = YUV420P_BUFFER_SIZE;
   decoded_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
   nv12_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
@@ -192,14 +184,27 @@ int OpenH264Decoder::Decode(
 
   unsigned char *dst[3];
 
-  int iRet =
-      openh264_decoder_->DecodeFrameNoDelay(data, size, dst, &sDstBufInfo);
+  int iRet = openh264_decoder_->DecodeFrame2(data, size, dst, &sDstBufInfo);
+  // int iRet =
+  //     openh264_decoder_->DecodeFrameNoDelay(data, size, dst, &sDstBufInfo);
 
   if (iRet != 0) {
     return -1;
   }
 
-  if (sDstBufInfo.iBufferStatus == 1) {
+  // int num_of_buffer = 0;
+  // iRet = openh264_decoder_->GetOption(
+  //     DECODER_OPTION_NUM_OF_FRAMES_REMAINING_IN_BUFFER, &num_of_buffer);
+
+  // LOG_ERROR("Number of buffer {} {}", num_of_buffer, iRet);
+
+  // iRet = openh264_decoder_->FlushFrame(dst, &sDstBufInfo);
+  // if (iRet != 0) {
+  //   LOG_ERROR("FlushFrame state: {}", iRet);
+  //   return -1;
+  // }
+
+  if (1) {
     if (on_receive_decoded_frame) {
       CopyYUVWithStride(
           dst[0], dst[1], dst[2], sDstBufInfo.UsrData.sSystemBuffer.iWidth,

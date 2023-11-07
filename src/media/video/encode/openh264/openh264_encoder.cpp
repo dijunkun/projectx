@@ -69,9 +69,9 @@ SEncParamExt OpenH264Encoder::CreateEncoderParams() const {
   SEncParamExt encoder_params;
   openh264_encoder_->GetDefaultParams(&encoder_params);
   // if (codec_.mode == VideoCodecMode::kRealtimeVideo) {  //
-  encoder_params.iUsageType = CAMERA_VIDEO_REAL_TIME;
+  // encoder_params.iUsageType = CAMERA_VIDEO_REAL_TIME;
   // } else if (codec_.mode == VideoCodecMode::kScreensharing) {
-  // encoder_params.iUsageType = SCREEN_CONTENT_REAL_TIME;
+  encoder_params.iUsageType = SCREEN_CONTENT_REAL_TIME;
   // }
 
   encoder_params.iPicWidth = frame_width_;
@@ -80,9 +80,11 @@ SEncParamExt OpenH264Encoder::CreateEncoderParams() const {
   encoder_params.iMaxBitrate = max_bitrate_;
   encoder_params.iRCMode = RC_BITRATE_MODE;
   encoder_params.fMaxFrameRate = 0.000030;
-  encoder_params.bEnableFrameSkip = true;
+  encoder_params.bEnableFrameSkip = false;
   encoder_params.uiIntraPeriod = key_frame_interval_;
   encoder_params.uiMaxNalSize = 0;
+  encoder_params.iMaxQp = 38;
+  encoder_params.iMinQp = 16;
   // Threading model: use auto.
   //  0: auto (dynamic imp. internal encoder)
   //  1: single thread (default value)
@@ -96,11 +98,6 @@ SEncParamExt OpenH264Encoder::CreateEncoderParams() const {
       encoder_params.iTargetBitrate;
   encoder_params.sSpatialLayers[0].iMaxSpatialBitrate =
       encoder_params.iMaxBitrate;
-  encoder_params.iTemporalLayerNum = 1;
-  if (encoder_params.iTemporalLayerNum > 1) {
-    encoder_params.iNumRefFrame = 1;
-  }
-  LOG_INFO("OpenH264 version is [{}.{}]", OPENH264_MAJOR, OPENH264_MINOR);
 
   // SingleNalUnit
   encoder_params.sSpatialLayers[0].sSliceArgument.uiSliceNum = 1;
@@ -166,18 +163,12 @@ int OpenH264Encoder::Encode(
     fwrite(yuv420p_buffer, 1, nSize, file_nv12_);
   }
 
-  if (0 == seq_++ % 3) {
+  if (0 == seq_++ % 300) {
     ForceIdr();
   }
 
   NV12ToYUV420PFFmpeg((unsigned char *)pData, frame_width_, frame_height_,
                       (unsigned char *)yuv420p_buffer);
-  // memcpy(frame_->data[0], yuv420p_buffer, frame_width_ * frame_height_);
-  // memcpy(frame_->data[1], yuv420p_buffer + frame_width_ * frame_height_,
-  //        frame_width_ * frame_height_ / 2);
-  // memcpy(frame_->data[2], yuv420p_buffer + frame_width_ * frame_height_ * 3 /
-  // 2,
-  //        frame_width_ * frame_height_ / 2);
 
   raw_frame_ = {0};
   raw_frame_.iPicWidth = frame_width_;
@@ -205,23 +196,35 @@ int OpenH264Encoder::Encode(
     return -1;
   }
 
-#if 0 
-    int encoded_frame_size = 0;
-
-    for (int layer = 0; layer < info.iLayerNum; ++layer) {
-      const SLayerBSInfo &layerInfo = info.sLayerInfo[layer];
-      size_t layer_len = 0;
-      memcpy(encoded_frame_ + encoded_frame_size, layerInfo.pBsBuf, layer_len);
-      encoded_frame_size += layer_len;
+#if 0
+  size_t required_capacity = 0;
+  size_t fragments_count = 0;
+  for (int layer = 0; layer < info.iLayerNum; ++layer) {
+    const SLayerBSInfo &layerInfo = info.sLayerInfo[layer];
+    for (int nal = 0; nal < layerInfo.iNalCount; ++nal, ++fragments_count) {
+      required_capacity += layerInfo.pNalLengthInByte[nal];
     }
+  }
 
-    encoded_frame_size_ = encoded_frame_size;
-
-    if (on_encoded_image) {
-      on_encoded_image((char *)encoded_frame_, encoded_frame_size_);
-    } else {
-      OnEncodedImage((char *)encoded_frame_, encoded_frame_size_);
+  const uint8_t start_code[4] = {0, 0, 0, 1};
+  size_t frag = 0;
+  int encoded_frame_size = 0;
+  for (int layer = 0; layer < info.iLayerNum; ++layer) {
+    const SLayerBSInfo &layerInfo = info.sLayerInfo[layer];
+    size_t layer_len = 0;
+    for (int nal = 0; nal < layerInfo.iNalCount; ++nal, ++frag) {
+      layer_len += layerInfo.pNalLengthInByte[nal];
     }
+    memcpy(encoded_frame_ + encoded_frame_size, layerInfo.pBsBuf, layer_len);
+    encoded_frame_size += layer_len;
+  }
+  encoded_frame_size_ = encoded_frame_size;
+
+  if (on_encoded_image) {
+    on_encoded_image((char *)encoded_frame_, encoded_frame_size_);
+  } else {
+    OnEncodedImage((char *)encoded_frame_, encoded_frame_size_);
+  }
 #else
   if (info.eFrameType == videoFrameTypeInvalid) {
     LOG_ERROR("videoFrameTypeInvalid");

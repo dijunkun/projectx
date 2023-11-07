@@ -7,6 +7,7 @@ extern "C" {
 #include "libavformat/avformat.h"
 #include "libavutil/imgutils.h"
 #include "libavutil/opt.h"
+#include "libswscale/swscale.h"
 }
 #else
 #ifdef __cplusplus

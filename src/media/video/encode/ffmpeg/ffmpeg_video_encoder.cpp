@@ -59,19 +59,20 @@ FFmpegVideoEncoder::~FFmpegVideoEncoder() {
 }
 
 int FFmpegVideoEncoder::Init() {
-  av_log_set_level(AV_LOG_VERBOSE);
+  // av_log_set_level(AV_LOG_VERBOSE);
 
   codec_ = avcodec_find_encoder(AV_CODEC_ID_H264);
   if (!codec_) {
     LOG_ERROR("Failed to find H.264 encoder");
     return -1;
-  } else {
-    LOG_INFO("Use H264 encoder [{}]", codec_->name);
-    if (0 == strcmp(codec_->name, "libx264")) {
-      use_libx264_ = true;
-    }
   }
-  use_libx264_ = true;
+  // else {
+  //   LOG_INFO("Use H264 encoder [{}]", codec_->name);
+  //   if (0 == strcmp(codec_->name, "libx264")) {
+  //     use_libx264_ = true;
+  //   }
+  // }
+  // use_libx264_ = true;
 
   codec_ctx_ = avcodec_alloc_context3(codec_);
   if (!codec_ctx_) {
@@ -88,17 +89,17 @@ int FFmpegVideoEncoder::Init() {
   if (use_libx264_) {
     codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
   } else {
-    codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
+    codec_ctx_->pix_fmt = AV_PIX_FMT_NV12;
   }
   codec_ctx_->gop_size = keyFrameInterval_;
   codec_ctx_->keyint_min = keyFrameInterval_;
   codec_ctx_->max_b_frames = 0;
-  codec_ctx_->bit_rate = maxBitrate_ * 500;
+  codec_ctx_->bit_rate = maxBitrate_ * 2500;
 
-  // av_opt_set_int(codec_ctx_->priv_data, "qp", 51, 0);
-  // av_opt_set_int(codec_ctx_->priv_data, "crf", 23, 0);
+  av_opt_set_int(codec_ctx_->priv_data, "qp", 51, 0);
+  av_opt_set_int(codec_ctx_->priv_data, "crf", 23, 0);
 
-  // av_opt_set(codec_ctx_->priv_data, "profile", "baseline", 0);
+  av_opt_set(codec_ctx_->priv_data, "profile", "baseline", 0);
   av_opt_set(codec_ctx_->priv_data, "preset", "ultrafast", 0);
   av_opt_set(codec_ctx_->priv_data, "tune", "zerolatency", 0);
 
@@ -150,10 +151,10 @@ int FFmpegVideoEncoder::Encode(
                         (unsigned char *)yuv420p_buffer);
     memcpy(frame_->data[0], yuv420p_buffer, frame_->width * frame_->height);
     memcpy(frame_->data[1], yuv420p_buffer + frame_->width * frame_->height,
-           frame_->width * frame_->height / 2);
+           frame_->width * frame_->height / 4);
     memcpy(frame_->data[2],
-           yuv420p_buffer + frame_->width * frame_->height * 3 / 2,
-           frame_->width * frame_->height / 2);
+           yuv420p_buffer + frame_->width * frame_->height * 5 / 4,
+           frame_->width * frame_->height / 4);
 
     // frame_->data[0] = yuv420p_buffer;
     // frame_->data[1] = yuv420p_buffer + frame_->width * frame_->height;
@@ -187,12 +188,12 @@ int FFmpegVideoEncoder::Encode(
     }
 
     // Remove first 6 bytes in I frame, SEI ?
-    // if (0x00 == packet_->data[0] && 0x00 == packet_->data[1] &&
-    //     0x00 == packet_->data[2] && 0x01 == packet_->data[3] &&
-    //     0x09 == packet_->data[4] && 0x10 == packet_->data[5]) {
-    //   packet_->data += 6;
-    //   packet_->size -= 6;
-    // }
+    if (0x00 == packet_->data[0] && 0x00 == packet_->data[1] &&
+        0x00 == packet_->data[2] && 0x01 == packet_->data[3] &&
+        0x09 == packet_->data[4] && 0x10 == packet_->data[5]) {
+      packet_->data += 6;
+      packet_->size -= 6;
+    }
 
     if (on_encoded_image) {
       on_encoded_image((char *)packet_->data, packet_->size);
