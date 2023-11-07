@@ -65,14 +65,13 @@ int FFmpegVideoEncoder::Init() {
   if (!codec_) {
     LOG_ERROR("Failed to find H.264 encoder");
     return -1;
+  } else {
+    if (0 == strcmp(codec_->name, "openh264")) {
+      use_openh264_ = true;
+      LOG_INFO("Use H264 encoder [OpenH264]");
+    }
   }
-  // else {
-  //   LOG_INFO("Use H264 encoder [{}]", codec_->name);
-  //   if (0 == strcmp(codec_->name, "libx264")) {
-  //     use_libx264_ = true;
-  //   }
-  // }
-  // use_libx264_ = true;
+  use_openh264_ = true;
 
   codec_ctx_ = avcodec_alloc_context3(codec_);
   if (!codec_ctx_) {
@@ -86,7 +85,7 @@ int FFmpegVideoEncoder::Init() {
   codec_ctx_->height = frame_height;
   codec_ctx_->time_base.num = 1;
   codec_ctx_->time_base.den = fps_;
-  if (use_libx264_) {
+  if (use_openh264_) {
     codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;
   } else {
     codec_ctx_->pix_fmt = AV_PIX_FMT_NV12;
@@ -99,7 +98,9 @@ int FFmpegVideoEncoder::Init() {
   av_opt_set_int(codec_ctx_->priv_data, "qp", 51, 0);
   av_opt_set_int(codec_ctx_->priv_data, "crf", 23, 0);
 
-  av_opt_set(codec_ctx_->priv_data, "profile", "baseline", 0);
+  if (!use_openh264_) {
+    av_opt_set(codec_ctx_->priv_data, "profile", "baseline", 0);
+  }
   av_opt_set(codec_ctx_->priv_data, "preset", "ultrafast", 0);
   av_opt_set(codec_ctx_->priv_data, "tune", "zerolatency", 0);
 
@@ -146,20 +147,13 @@ int FFmpegVideoEncoder::Encode(
     return -1;
   }
 
-  if (use_libx264_) {
+  if (use_openh264_) {
     NV12ToYUV420PFFmpeg((unsigned char *)pData, frame_->width, frame_->height,
                         (unsigned char *)yuv420p_buffer);
-    memcpy(frame_->data[0], yuv420p_buffer, frame_->width * frame_->height);
-    memcpy(frame_->data[1], yuv420p_buffer + frame_->width * frame_->height,
-           frame_->width * frame_->height / 4);
-    memcpy(frame_->data[2],
-           yuv420p_buffer + frame_->width * frame_->height * 5 / 4,
-           frame_->width * frame_->height / 4);
 
-    // frame_->data[0] = yuv420p_buffer;
-    // frame_->data[1] = yuv420p_buffer + frame_->width * frame_->height;
-    // frame_->data[2] = yuv420p_buffer + frame_->width * frame_->height * 3 /
-    // 2;
+    frame_->data[0] = yuv420p_buffer;
+    frame_->data[1] = yuv420p_buffer + frame_->width * frame_->height;
+    frame_->data[2] = yuv420p_buffer + frame_->width * frame_->height * 5 / 4;
 
     if (SAVE_NV12_STREAM) {
       fwrite(yuv420p_buffer, 1, nSize, file_nv12_);

@@ -58,7 +58,7 @@ class FFmpegVideoEncoder : public VideoEncoder {
   FILE* file_nv12_ = nullptr;
   unsigned char* nv12_data_ = nullptr;
   unsigned int seq_ = 0;
-  bool use_libx264_ = false;
+  bool use_openh264_ = false;
 
   const AVCodec* codec_ = nullptr;
   AVCodecContext* codec_ctx_ = nullptr;
