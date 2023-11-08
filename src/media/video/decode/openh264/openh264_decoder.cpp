@@ -26,7 +26,7 @@ static const int YUV420P_BUFFER_SIZE = 1280 * 720 * 3 / 2;
 
 void CopyYUVWithStride(uint8_t *srcY, uint8_t *srcU, uint8_t *srcV, int width,
                        int height, int strideY, int strideU, int strideV,
-                       uint8_t *dst) {
+                       uint8_t *yuv_data_) {
   int actualWidth = width;
   int actualHeight = height;
 
@@ -35,21 +35,21 @@ void CopyYUVWithStride(uint8_t *srcY, uint8_t *srcU, uint8_t *srcV, int width,
   int actualStrideV = actualWidth / 2;
 
   for (int row = 0; row < actualHeight; row++) {
-    memcpy(dst, srcY, actualStrideY);
+    memcpy(yuv_data_, srcY, actualStrideY);
     srcY += strideY;
-    dst += actualStrideY;
+    yuv_data_ += actualStrideY;
   }
 
   for (int row = 0; row < actualHeight / 2; row++) {
-    memcpy(dst, srcU, actualStrideU);
+    memcpy(yuv_data_, srcU, actualStrideU);
     srcU += strideU;
-    dst += actualStrideU;
+    yuv_data_ += actualStrideU;
   }
 
   for (int row = 0; row < actualHeight / 2; row++) {
-    memcpy(dst, srcV, actualStrideV);
+    memcpy(yuv_data_, srcV, actualStrideV);
     srcV += strideV;
-    dst += actualStrideV;
+    yuv_data_ += actualStrideV;
   }
 }
 
@@ -88,23 +88,6 @@ OpenH264Decoder::~OpenH264Decoder() {
     delete nv12_frame_;
   }
 
-  if (pData[0]) {
-    delete pData[0];
-  }
-
-  if (pData[1]) {
-    delete pData[1];
-  }
-
-  if (pData[2]) {
-    delete pData[2];
-  }
-
-  if (pData_tmp) {
-    delete pData_tmp;
-    pData_tmp = nullptr;
-  }
-
   if (SAVE_H264_STREAM && h264_stream_) {
     fflush(h264_stream_);
     h264_stream_ = nullptr;
@@ -137,14 +120,6 @@ int OpenH264Decoder::Init() {
   decoded_frame_size_ = YUV420P_BUFFER_SIZE;
   decoded_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
   nv12_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
-  // pData[0] = new uint8_t[1280 * 720];
-  // pData[1] = new uint8_t[1280 * 720 / 4];
-  // pData[2] = new uint8_t[1280 * 720 / 4];
-
-  pData_tmp = new uint8_t[frame_width_ * frame_height_ * 3 / 2];
-  // *pData = pData_tmp;
-  // *(pData + 1) = pData_tmp + frame_width_ * frame_height_;
-  // *(pData + 2) = pData_tmp + (frame_width_ * frame_height_ * 5) / 4;
 
   if (WelsCreateDecoder(&openh264_decoder_) != 0) {
     LOG_ERROR("Failed to create OpenH264 decoder");
@@ -160,11 +135,9 @@ int OpenH264Decoder::Init() {
 
   int32_t iRet = openh264_decoder_->Initialize(&sDecParam);
 
-  int trace_level = WELS_LOG_WARNING;
+  int trace_level = WELS_LOG_QUIET;
   openh264_decoder_->SetOption(DECODER_OPTION_TRACE_LEVEL, &trace_level);
 
-  LOG_ERROR("inited");
-  printf("1 this is %p\n", this);
   return 0;
 }
 
@@ -182,36 +155,18 @@ int OpenH264Decoder::Decode(
   SBufferInfo sDstBufInfo = {0};
   memset(&sDstBufInfo, 0, sizeof(SBufferInfo));
 
-  unsigned char *dst[3];
+  int iRet = openh264_decoder_->DecodeFrameNoDelay(data, size, yuv_data_,
+                                                   &sDstBufInfo);
 
-  int iRet = openh264_decoder_->DecodeFrame2(data, size, dst, &sDstBufInfo);
-  // int iRet =
-  //     openh264_decoder_->DecodeFrameNoDelay(data, size, dst, &sDstBufInfo);
-
-  if (iRet != 0) {
-    return -1;
-  }
-
-  // int num_of_buffer = 0;
-  // iRet = openh264_decoder_->GetOption(
-  //     DECODER_OPTION_NUM_OF_FRAMES_REMAINING_IN_BUFFER, &num_of_buffer);
-
-  // LOG_ERROR("Number of buffer {} {}", num_of_buffer, iRet);
-
-  // iRet = openh264_decoder_->FlushFrame(dst, &sDstBufInfo);
-  // if (iRet != 0) {
-  //   LOG_ERROR("FlushFrame state: {}", iRet);
-  //   return -1;
-  // }
-
-  if (1) {
+  if (sDstBufInfo.iBufferStatus == 1) {
     if (on_receive_decoded_frame) {
-      CopyYUVWithStride(
-          dst[0], dst[1], dst[2], sDstBufInfo.UsrData.sSystemBuffer.iWidth,
-          sDstBufInfo.UsrData.sSystemBuffer.iHeight,
-          sDstBufInfo.UsrData.sSystemBuffer.iStride[0],
-          sDstBufInfo.UsrData.sSystemBuffer.iStride[1],
-          sDstBufInfo.UsrData.sSystemBuffer.iStride[1], decoded_frame_);
+      CopyYUVWithStride(yuv_data_[0], yuv_data_[1], yuv_data_[2],
+                        sDstBufInfo.UsrData.sSystemBuffer.iWidth,
+                        sDstBufInfo.UsrData.sSystemBuffer.iHeight,
+                        sDstBufInfo.UsrData.sSystemBuffer.iStride[0],
+                        sDstBufInfo.UsrData.sSystemBuffer.iStride[1],
+                        sDstBufInfo.UsrData.sSystemBuffer.iStride[1],
+                        decoded_frame_);
 
       if (SAVE_NV12_STREAM) {
         fwrite((unsigned char *)decoded_frame_, 1,

@@ -120,8 +120,8 @@ int OpenH264Encoder::Init() {
 
   encoded_frame_ = new uint8_t[YUV420P_BUFFER_SIZE];
 
-  // int trace_level = WELS_LOG_WARNING;
-  // openh264_encoder_->SetOption(ENCODER_OPTION_TRACE_LEVEL, &trace_level);
+  int trace_level = WELS_LOG_QUIET;
+  openh264_encoder_->SetOption(ENCODER_OPTION_TRACE_LEVEL, &trace_level);
 
   // Create encoder parameters based on the layer configuration.
   SEncParamExt encoder_params = CreateEncoderParams();
@@ -196,7 +196,7 @@ int OpenH264Encoder::Encode(
     return -1;
   }
 
-#if 0
+#if 1
   size_t required_capacity = 0;
   size_t fragments_count = 0;
   for (int layer = 0; layer < info.iLayerNum; ++layer) {

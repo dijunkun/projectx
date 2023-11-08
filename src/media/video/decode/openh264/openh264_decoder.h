@@ -35,12 +35,9 @@ class OpenH264Decoder : public VideoDecoder {
   uint8_t* decoded_frame_ = nullptr;
   int decoded_frame_size_ = 0;
   uint8_t* nv12_frame_ = nullptr;
-  unsigned char* pData[3] = {};
   int frame_width_ = 1280;
   int frame_height_ = 720;
-
-  uint8_t* pData_tmp = nullptr;
-  uint8_t* pData_tmp_2 = nullptr;
+  unsigned char* yuv_data_[3];
 };
 
 #endif

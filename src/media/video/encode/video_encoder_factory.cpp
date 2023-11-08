@@ -26,8 +26,8 @@ std::unique_ptr<VideoEncoder> VideoEncoderFactory::CreateVideoEncoder(
       return nullptr;
     }
   } else {
-    return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
-    // return std::make_unique<OpenH264Encoder>(OpenH264Encoder());
+    // return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
+    return std::make_unique<OpenH264Encoder>(OpenH264Encoder());
   }
 #endif
 }
