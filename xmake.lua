@@ -29,17 +29,18 @@ if is_os("windows") then
     add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
     add_requires("vcpkg::libnice 0.1.21")
     add_packages("vcpkg::libnice")
-    add_requires("openh264")
+    add_requires("openh264 2.1.1", {configs = {shared = false}})
 elseif is_os("linux") then
     add_requireconfs("ffmpeg.x264", {configs = {pic = true}})
     add_requires("ffmpeg 5.1.2")
     add_requires("glib", {system = true})
     add_requires("vcpkg::libnice 0.1.21")
-    add_requires("openh264")
+    add_requires("openh264 2.1.1", {configs = {shared = false}})
     add_packages("glib", "vcpkg::libnice")
 elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
     add_requires("brew::libnice", "brew::glib")
+    add_requires("openh264 2.1.1", {configs = {shared = false}})
 end
 
 add_packages("spdlog")

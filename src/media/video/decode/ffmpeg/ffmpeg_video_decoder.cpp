@@ -47,7 +47,7 @@ FfmpegVideoDecoder::~FfmpegVideoDecoder() {
 }
 
 int FfmpegVideoDecoder::Init() {
-  // av_log_set_level(AV_LOG_DEBUG);
+  av_log_set_level(AV_LOG_ERROR);
 
   codec_id_ = AV_CODEC_ID_H264;
   codec_ = avcodec_find_decoder(codec_id_);
@@ -59,6 +59,8 @@ int FfmpegVideoDecoder::Init() {
   if (!codec_ctx_) {
     printf("Could not allocate video codec context\n");
     return -1;
+  } else {
+    LOG_INFO("Use H264 decoder [{}]", codec_->name);
   }
 
   codec_ctx_->time_base.num = 1;
@@ -68,8 +70,8 @@ int FfmpegVideoDecoder::Init() {
   codec_ctx_->time_base.den = 29;
   codec_ctx_->width = 1280;
   codec_ctx_->height = 720;
-  // codec_ctx_->pix_fmt = AV_PIX_FMT_NV12; // yuv420 default?
-  codec_ctx_->color_range = AVCOL_RANGE_JPEG;
+  codec_ctx_->pix_fmt = AV_PIX_FMT_YUV420P;  // yuv420 default?
+  codec_ctx_->color_range = AVCOL_RANGE_MPEG;
 
   if (avcodec_open2(codec_ctx_, codec_, NULL) < 0) {
     printf("Could not open codec\n");
