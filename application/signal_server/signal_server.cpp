@@ -90,14 +90,10 @@ bool SignalServer::on_close(websocketpp::connection_hdl hdl) {
 }
 
 bool SignalServer::on_ping(websocketpp::connection_hdl hdl, std::string s) {
-  /* Do something */
-  LOG_INFO("Receive ping");
   return true;
 }
 
 bool SignalServer::on_pong(websocketpp::connection_hdl hdl, std::string s) {
-  /* Do something */
-  LOG_INFO("pong");
   return true;
 }
 

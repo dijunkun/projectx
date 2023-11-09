@@ -4,6 +4,7 @@
 #include <map>
 #include <sstream>
 #include <string>
+#include <thread>
 
 #include "websocketpp/client.hpp"
 #include "websocketpp/common/memory.hpp"
@@ -24,7 +25,7 @@ class WsCore {
 
   void Send(std::string message);
 
-  void Ping();
+  void Ping(websocketpp::connection_hdl hdl);
 
   const std::string &GetStatus();
 
@@ -35,11 +36,13 @@ class WsCore {
 
   void OnClose(client *c, websocketpp::connection_hdl hdl);
 
-  void OnPong(websocketpp::connection_hdl, std::string msg);
+  bool OnPing(websocketpp::connection_hdl hdl, std::string msg);
 
-  void OnPongTimeout(websocketpp::connection_hdl, std::string msg);
+  bool OnPong(websocketpp::connection_hdl hdl, std::string msg);
 
-  void OnMessage(websocketpp::connection_hdl, client::message_ptr msg);
+  void OnPongTimeout(websocketpp::connection_hdl hdl, std::string msg);
+
+  void OnMessage(websocketpp::connection_hdl hdl, client::message_ptr msg);
 
   virtual void OnReceiveMessage(const std::string &msg) = 0;
 
@@ -47,8 +50,10 @@ class WsCore {
   client m_endpoint_;
   websocketpp::connection_hdl connection_handle_;
   websocketpp::lib::shared_ptr<websocketpp::lib::thread> m_thread_;
+  websocketpp::lib::shared_ptr<websocketpp::lib::thread> ping_thread_;
 
   std::string connection_status_ = "Connecting";
+  int timeout_count_ = 0;
 };
 
 #endif
