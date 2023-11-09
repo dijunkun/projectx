@@ -69,7 +69,7 @@ int WsCore::Connect(std::string const &uri) {
       &WsCore::OnPong, this, websocketpp::lib::placeholders::_1,
       websocketpp::lib::placeholders::_2));
 
-  con->set_pong_timeout(10);
+  con->set_pong_timeout(1000);
 
   con->set_pong_timeout_handler(websocketpp::lib::bind(
       &WsCore::OnPongTimeout, this, websocketpp::lib::placeholders::_1,
