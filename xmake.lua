@@ -33,6 +33,7 @@ includes("thirdparty")
 if has_config("server_only") then
     includes("application/signal_server")
 else
+    add_requires("openfec")
     if is_os("windows") then
         add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
         add_requires("vcpkg::libnice 0.1.21")
@@ -242,4 +243,16 @@ else
             "pcre2-8", "pcre2-16", "pcre2-32", "pcre2-posix", 
             "zlib", "ffi", "libcrypto", "libssl", "intl", "iconv", "charset", "bz2",
             "Shell32", "Advapi32", "Dnsapi", "Shlwapi", "Iphlpapi")
+
+    target("fec_client")
+        set_kind("binary")
+        add_packages("openfec")
+        add_files("tests/fec/simple_client.cpp")
+        add_includedirs("tests/fec")
+
+    target("fec_server")
+        set_kind("binary")
+        add_packages("openfec")
+        add_files("tests/fec/simple_server.cpp")
+        add_includedirs("tests/fec")
 end
