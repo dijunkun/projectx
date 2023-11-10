@@ -431,7 +431,7 @@ of_status_t	of_2d_parity_get_control_parameter  (of_2d_parity_cb_t*	ofcb,
 	switch (type) {
 	case OF_CTRL_GET_MAX_K:
 		if (value == NULL || length != sizeof(UINT32)) {
-			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_K ERROR: null value or bad length (got %d, expected %ld)\n",
+			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_K ERROR: null value or bad length (got %d, expected %zu)\n",
 				__FUNCTION__, length, sizeof(UINT32)))
 			goto error;
 		}
@@ -441,7 +441,7 @@ of_status_t	of_2d_parity_get_control_parameter  (of_2d_parity_cb_t*	ofcb,
 
 	case OF_CTRL_GET_MAX_N:
 		if (value == NULL || length != sizeof(UINT32)) {
-			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_N ERROR: null value or bad length (got %d, expected %ld)\n",
+			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_N ERROR: null value or bad length (got %d, expected %zu)\n",
 				__FUNCTION__, length, sizeof(UINT32)))
 			goto error;
 		}

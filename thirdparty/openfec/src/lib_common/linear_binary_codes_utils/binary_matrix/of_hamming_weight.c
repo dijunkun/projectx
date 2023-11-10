@@ -6,27 +6,27 @@
  *
  * You are free:
  *
- *   to Share â€” to copy, distribute and transmit the work
- *   to Remix â€” to adapt the work
+ *   to Share ¡ª to copy, distribute and transmit the work
+ *   to Remix ¡ª to adapt the work
  *
  * Under the following conditions:
  *
- *   Attribution â€” You must attribute the work in the manner specified by the author or licensor
+ *   Attribution ¡ª You must attribute the work in the manner specified by the author or licensor
  *                 (but not in any way that suggests that they endorse you or your use of the work).
- *   Share Alike â€” If you alter, transform, or build upon this work, you may distribute the
+ *   Share Alike ¡ª If you alter, transform, or build upon this work, you may distribute the
  *                  resulting work only under the same, similar or a compatible license.
  *
  * With the understanding that:
  *
- *   Waiver â€” Any of the above conditions can be waived if you get permission from the copyright holder.
- *   Public Domain â€” Where the work or any of its elements is in the public domain under applicable law,
+ *   Waiver ¡ª Any of the above conditions can be waived if you get permission from the copyright holder.
+ *   Public Domain ¡ª Where the work or any of its elements is in the public domain under applicable law,
  *                   that status is in no way affected by the license.
- *   Other Rights â€” In no way are any of the following rights affected by the license:
+ *   Other Rights ¡ª In no way are any of the following rights affected by the license:
  *     Your fair dealing or fair use rights, or other applicable copyright exceptions and limitations;
  *     The author's moral rights;
  *     Rights other persons may have either in the work itself or in how the work is used, such as publicity
  *                   or privacy rights.
- *   Notice â€” For any reuse or distribution, you must make clear to others the license terms of this work.
+ *   Notice ¡ª For any reuse or distribution, you must make clear to others the license terms of this work.
  *
  * The best way to do this is with a link to this web page: http://creativecommons.org/licenses/by-sa/3.0/
  */

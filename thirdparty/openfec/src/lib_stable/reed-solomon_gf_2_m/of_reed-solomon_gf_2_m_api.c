@@ -374,11 +374,11 @@ of_status_t	of_rs_2_m_finish_decoding (of_rs_2_m_cb_t*	ofcb)
 {
 	UINT32 		k;
 	UINT32 		n;
-	char		*tmp_buf[ofcb->nb_source_symbols];/* keep available source/repair symbol buffers here... */
-	int		tmp_esi[ofcb->nb_source_symbols]; /* ...and their esi here. In fact we only need k entries
-							   * in these tables, but in order to avoid using malloc (time
-							   * consumming), we use an automatic table of maximum size for
-							   * both tmp_buf[] and tmp_esi[]. */
+	// char		*tmp_buf[ofcb->nb_source_symbols];/* keep available source/repair symbol buffers here... */
+	// int		tmp_esi[ofcb->nb_source_symbols]; /* ...and their esi here. In fact we only need k entries
+							  //  * in these tables, but in order to avoid using malloc (time
+							  //  * consumming), we use an automatic table of maximum size for
+							  //  * both tmp_buf[] and tmp_esi[]. */
 	INT32		tmp_idx;		/* index in tmp_buf[] and tmp_esi[] tabs */
 	char		*large_buf = NULL;	/* single large buffer where to copy all source/repair symbols */
 	UINT32		off;			/* offset, in unit of characters, in large_buf */
@@ -394,8 +394,11 @@ of_status_t	of_rs_2_m_finish_decoding (of_rs_2_m_cb_t*	ofcb)
 		}
 	k = ofcb->nb_source_symbols;
 	n = ofcb->nb_encoding_symbols;
-	//int *tmp_esi = (int*)malloc(ofcb->field_size*sizeof(int));
-	//char ** tmp_buf = (char**)malloc(n*sizeof(char*)); // ???? WRT RS(255)
+	int *tmp_esi = (int*)malloc(ofcb->field_size*sizeof(int));
+	char ** tmp_buf = (char**)malloc(n*sizeof(char*)); // ???? WRT RS(255)
+	for(int i=0; i<n; i++){
+		tmp_buf[i] = NULL;
+	}
 	if (ofcb->nb_available_symbols < k)
 	{
 		OF_PRINT_ERROR(("ERROR: nb received symbols < nb source symbols\n"))
@@ -528,12 +531,19 @@ of_status_t	of_rs_2_m_finish_decoding (of_rs_2_m_cb_t*	ofcb)
 					tmp_idx, tmp_idx))
 	}
 	of_free(large_buf);
+	free(tmp_esi);
+	for(int i=0;i<n;i++){
+		free(tmp_buf[i]);
+	}
 	OF_EXIT_FUNCTION
 		return OF_STATUS_OK;
 
 no_mem:
 	OF_PRINT_ERROR(("ERROR: out of memory.\n"))
-
+	free(tmp_esi);
+	for(int i=0;i<n;i++){
+		free(tmp_buf[i]);
+	}
 		error:
 		OF_EXIT_FUNCTION
 		return OF_STATUS_ERROR;
@@ -589,7 +599,7 @@ of_status_t	of_rs_2_m_set_control_parameter (of_rs_2_m_cb_t*	ofcb,
 	switch (type) {
 		case OF_RS_CTRL_SET_FIELD_SIZE:
 			if (value == NULL || length != sizeof(UINT16)) {
-				OF_PRINT_ERROR(("OF_CTRL_SET_FIELD_SIZE ERROR: null value or bad length (got %d, expected %ld)\n", length, sizeof(UINT16)))
+				OF_PRINT_ERROR(("OF_CTRL_SET_FIELD_SIZE ERROR: null value or bad length (got %d, expected %zu)\n", length, sizeof(UINT16)))
 				goto error;
 			}
 			m = *(UINT16*)value;
@@ -624,7 +634,7 @@ of_status_t	of_rs_2_m_get_control_parameter (of_rs_2_m_cb_t*	ofcb,
 	switch (type) {
 	case OF_CTRL_GET_MAX_K:
 		if (value == NULL || length != sizeof(UINT32)) {
-			OF_PRINT_ERROR(("OF_CTRL_GET_MAX_K ERROR: null value or bad length (got %d, expected %ld)\n", length, sizeof(UINT32)))
+			OF_PRINT_ERROR(("OF_CTRL_GET_MAX_K ERROR: null value or bad length (got %d, expected %zu)\n", length, sizeof(UINT32)))
 			goto error;
 		}
 		if (ofcb->max_nb_source_symbols == 0) {
@@ -637,7 +647,7 @@ of_status_t	of_rs_2_m_get_control_parameter (of_rs_2_m_cb_t*	ofcb,
 
 	case OF_CTRL_GET_MAX_N:
 		if (value == NULL || length != sizeof(UINT32)) {
-			OF_PRINT_ERROR(("OF_CTRL_GET_MAX_N ERROR: null value or bad length (got %d, expected %ld)\n", length, sizeof(UINT32)))
+			OF_PRINT_ERROR(("OF_CTRL_GET_MAX_N ERROR: null value or bad length (got %d, expected %zu)\n", length, sizeof(UINT32)))
 			goto error;
 		}
 		if (ofcb->max_nb_encoding_symbols == 0) {

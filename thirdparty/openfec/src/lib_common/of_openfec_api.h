@@ -202,7 +202,7 @@ extern UINT32 of_verbosity;
  * @fn of_status_t	of_create_codec_instance (of_session_t** ses,
  *of_codec_id_t codec_id, of_codec_type_t codec_type, UINT32 verbosity)
  * @brief		create a codec instance
- * @param ses		(IN/OUT) address of the pointer to a session. This
+ *聛0聞2@param ses		(IN/OUT) address of the pointer to a session. This
  *pointer is updated by this function. In case of success, it points to a
  *session structure allocated by the library. In case of failure it points to
  *NULL.
@@ -225,7 +225,7 @@ of_status_t of_create_codec_instance(of_session_t** ses, of_codec_id_t codec_id,
  *
  * @fn of_status_t	of_release_codec_instance (of_session_t* ses)
  * @brief release all resources used by the codec
- * @param ses		(IN) Pointer to the session.
+ *聛0聞2@param ses		(IN) Pointer to the session.
  * @return		Error status.
  */
 of_status_t of_release_codec_instance(of_session_t* ses);
@@ -248,7 +248,7 @@ of_status_t of_release_codec_instance(of_session_t* ses);
  * @fn of_status_t	of_set_fec_parameters  (of_session_t* ses,
  *of_parameters_t* params)
  * @brief		set all the FEC codec parameters (e.g. k, n, or symbol
- *size)  @param ses		(IN) Pointer to the session.
+ *size) 聛0聞2@param ses		(IN) Pointer to the session.
  * @param params	(IN) pointer to a structure containing the FEC
  *parameters associated to a specific FEC codec.
  * @return		Error status.
@@ -284,7 +284,7 @@ of_status_t of_set_fec_parameters(of_session_t* ses, of_parameters_t* params);
  *esi),	void* (*decoded_repair_symbol_callback) (void	*context,UINT32
  *size,UINT32	esi),void*	context_4_callback)
  * @brief		set various callbock functions (see header
- *of_open_fec_api.h)  @param ses		(IN) Pointer to the session.
+ *of_open_fec_api.h) 聛0聞2@param ses		(IN) Pointer to the session.
  *
  * @param decoded_source_symbol_callback
  *				(IN) Pointer to the function, within the
@@ -334,7 +334,7 @@ of_status_t of_set_callback_functions(
  * @fn		of_status_t	of_build_repair_symbol (of_session_t* ses, void*
  *encoding_symbols_tab[], UINT32	esi_of_symbol_to_build)
  * @brief			build a repair symbol (encoder only)
- * @param ses			(IN) Pointer to the session.
+ *聛0聞2@param ses			(IN) Pointer to the session.
  * @param encoding_symbols_tab	(IN/OUT) table of source and repair symbols.
  *				The entry for the repair symbol to build can
  *either point to a buffer allocated by the application, or let to NULL meaning
@@ -375,7 +375,7 @@ of_status_t of_build_repair_symbol(of_session_t* ses,
  * @fn	  of_status_t	of_decode_with_new_symbol (of_session_t*	ses,
  *void* const	new_symbol_buf, UINT32		new_symbol_esi)
  * @brief (try to) decode with a newly received symbol
- * @param ses			(IN) Pointer to the session.
+ *聛0聞2@param ses			(IN) Pointer to the session.
  * @param new_symbol_buf	(IN) Pointer to the encoding symbol now
  *available (i.e. a new symbol received by the application, or a decoded symbol
  *in case of a recursive call).
@@ -407,7 +407,7 @@ of_status_t of_decode_with_new_symbol(of_session_t* ses,
  * @fn				of_status_t	of_set_available_symbols
  *(of_session_t*	ses, void* const	encoding_symbols_tab[]);
  * @brief			inform the decoder of all the available
- *(received) symbols  @param ses			(IN) Pointer to the
+ *(received) symbols 聛0聞2@param ses			(IN) Pointer to the
  *session.
  * @param encoding_symbols_tab	(IN) Pointer to the available encoding symbols
  *table. To each available symbol the corresponding entry in the table must
@@ -439,7 +439,7 @@ of_status_t	of_set_available_symbol_list (of_session_t*	ses,
  * @fn			of_status_t	of_finish_decoding (of_session_t*
  *ses)
  * @brief		finish decoding with available symbols
- * @param ses		(IN) Pointer to the session.
+ *聛0聞2@param ses		(IN) Pointer to the session.
  * @return		Error status. Returns OF_STATUS_FAILURE if decoding
  *failed, or OF_STATUS_OK if decoding succeeded, or OF_STATUS_*_ERROR in case of
  *(fatal) error.
@@ -453,7 +453,7 @@ of_status_t of_finish_decoding(of_session_t* ses);
  * @fn			bool		of_is_decoding_complete (of_session_t*
  *ses)
  * @brief 		check if decoding is finished
- * @param ses		(IN) Pointer to the session.
+ *聛0聞2@param ses		(IN) Pointer to the session.
  * @return		Boolean. Warning, this is one of the very functions of
  *the library that does not return an error status.
  */
@@ -468,7 +468,7 @@ bool of_is_decoding_complete(of_session_t* ses);
  * @fn			of_status_t	of_get_source_symbols_tab (of_session_t*
  *ses, void* source_symbols_tab[])
  * @brief		get the table of available source symbols (after
- *decoding)  @param ses		(IN) Pointer to the session.
+ *decoding) 聛0聞2@param ses		(IN) Pointer to the session.
  * @param source_symbols_tab	(IN/OUT) table, that will be filled by the
  *library and returned to the application.
  * @return		Error status.
@@ -490,10 +490,10 @@ of_status_t of_get_source_symbols_tab(of_session_t* ses,
  *string is totally managed by the library and must not be released by the
  *application.
  *
- * @param ses		(IN) Pointer to the session or NULL.
- * @param version_str	(IN/OUT) address of a pointer to a string. This pointer
+ *聛0聞2@param ses		(IN) Pointer to the session or NULL.
+ *聛0聞2@param version_str	(IN/OUT) address of a pointer to a string. This pointer
  *is updated by this function to point ot a static string (that must not be
- *released by the caller).  @param copyrights_str (IN/OUT) address of a pointer
+ *released by the caller). 聛0聞2@param copyrights_str (IN/OUT) address of a pointer
  *to a string. This pointer is updated by this function to point ot a static
  *string (that must not be released by the caller).
  * @return		Error status.
@@ -505,7 +505,7 @@ of_status_t of_more_about(of_session_t* ses, char** version_str,
  * This function sets a FEC scheme/FEC codec specific control parameter, in
  *addition to the FEC OTI, using a type/value method.
  *
- * @param ses		(IN) Pointer to the session.
+ *聛0聞2@param ses		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID
  *specific.
  * @param value		(IN) Pointer to the value of the parameter. The type of
@@ -520,7 +520,7 @@ of_status_t of_set_control_parameter(of_session_t* ses, UINT32 type,
  * This function gets a FEC scheme/FEC codec specific control parameter, in
  *addition to the FEC OTI, using a type/value method.
  *
- * @param ses		(IN) Pointer to the session.
+ *聛0聞2@param ses		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID
  *specific.
  * @param value		(IN/OUT) Pointer to the value of the parameter. The type
@@ -577,7 +577,7 @@ of_status_t of_get_control_parameter(of_session_t* ses, UINT32 type,
  * of available source and repair symbols. The way this probability is calculated depends
  * on many parameters, and above all the code nature.
  *
- * @param ses		(IN) Pointer to the session.
+ *聛0聞2@param ses		(IN) Pointer to the session.
  * @return		Error status.
  */
 bool		of_get_decoding_success_proba (of_session_t*	ses,

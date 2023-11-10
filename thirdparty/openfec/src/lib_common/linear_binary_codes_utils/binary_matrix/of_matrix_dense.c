@@ -1724,11 +1724,11 @@ void of_mod2dense_print_memory_info (of_mod2dense *m)
 
 #else
 	printf ("m->row=%p\n", m->row);
-	printf (" m->row size = %lu\n", m->n_rows*sizeof *m->row);
+	printf (" m->row size = %zu\n", m->n_rows*sizeof *m->row);
 #endif
 	printf ("m->bits=%p\n", m->bits);
-	printf (" m->bits size = %lu\n", m->n_words*m->n_rows*sizeof *m->bits);
-	printf ("sizeof(mod2word)=%lu\n", sizeof (of_mod2word));
+	printf (" m->bits size = %zu\n", m->n_words*m->n_rows*sizeof *m->bits);
+	printf ("sizeof(mod2word)=%zu\n", sizeof (of_mod2word));
 	OF_EXIT_FUNCTION
 }
 
