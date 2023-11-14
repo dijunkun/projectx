@@ -26,14 +26,13 @@ elseif is_os("macosx") then
     add_ldflags("-ld_classic", {force = true})
 end
 
-add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0")
-add_packages("spdlog")
+add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0", "openfec")
+add_packages("spdlog", "openfec")
 includes("thirdparty")
 
 if has_config("server_only") then
     includes("application/signal_server")
 else
-    add_requires("openfec")
     if is_os("windows") then
         add_requires("vcpkg::ffmpeg 5.1.2", {configs = {shared = false}})
         add_requires("vcpkg::libnice 0.1.21")
@@ -84,6 +83,12 @@ else
         add_files("src/frame/*.cpp")
         add_includedirs("src/frame", {public = true})
 
+    target("fec")
+        set_kind("static")
+        add_deps("log")
+        add_files("src/fec/*.cpp")
+        add_includedirs("src/fec", {public = true})
+
     target("rtcp")
         set_kind("static")
         add_deps("log")
@@ -92,7 +97,7 @@ else
 
     target("rtp")
         set_kind("static")
-        add_deps("log", "frame", "ringbuffer", "thread", "rtcp")
+        add_deps("log", "frame", "ringbuffer", "thread", "rtcp", "fec")
         add_files("src/rtp/*.cpp")
         add_includedirs("src/rtp", {public = true})
 

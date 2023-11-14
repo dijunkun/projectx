@@ -5,6 +5,7 @@
 
 #include <vector>
 
+#include "fec_encoder.h"
 #include "rtp_packet.h"
 
 class RtpCodec {
@@ -18,6 +19,8 @@ class RtpCodec {
 
   //  protected:
   //   void OnReceiveFrame(uint8_t* payload) = 0;
+ private:
+  bool IsKeyFrame(const uint8_t* buffer, size_t size);
 
  private:
   uint32_t version_ = 0;
@@ -38,6 +41,8 @@ class RtpCodec {
  private:
   // RtpPacket* rtp_packet_ = nullptr;
   RtpPacket::FU_INDICATOR fu_indicator_;
+  bool fec_enable_ = true;
+  FecEncoder fec_encoder_;
 };
 
 #endif

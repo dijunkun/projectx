@@ -14,7 +14,9 @@ RtpCodec ::RtpCodec(RtpPacket::PAYLOAD_TYPE payload_type)
       has_padding_(false),
       has_extension_(false),
       payload_type_(payload_type),
-      sequence_number_(0) {}
+      sequence_number_(0) {
+  fec_encoder_.Init();
+}
 
 RtpCodec ::~RtpCodec() {
   if (extension_data_) {
@@ -34,10 +36,71 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
   //   rtp_packet_ = new RtpPacket();
   // }
 
-  RtpPacket rtp_packet;
-
   if (RtpPacket::PAYLOAD_TYPE::H264 == payload_type_) {
+    if (fec_enable_ && IsKeyFrame((const uint8_t*)buffer, size)) {
+      uint8_t** fec_packets = fec_encoder_.Encode((const char*)buffer, size);
+      if (nullptr == fec_packets) {
+        LOG_ERROR("Invalid fec_packets");
+        return;
+      }
+      unsigned int num_of_total_packets = 0;
+      unsigned int num_of_source_packets = 0;
+      unsigned int last_packet_size = 0;
+      fec_encoder_.GetFecPacketsParams(size, num_of_total_packets,
+                                       num_of_source_packets, last_packet_size);
+
+      for (size_t index = 0; index < num_of_total_packets; index++) {
+        RtpPacket rtp_packet;
+        rtp_packet.SetVerion(version_);
+        rtp_packet.SetHasPadding(has_padding_);
+        rtp_packet.SetHasExtension(has_extension_);
+        rtp_packet.SetMarker(index == num_of_total_packets ? 1 : 0);
+        rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE(payload_type_));
+        rtp_packet.SetSequenceNumber(sequence_number_++);
+
+        timestamp_ = std::chrono::high_resolution_clock::now()
+                         .time_since_epoch()
+                         .count();
+        rtp_packet.SetTimestamp(timestamp_);
+        rtp_packet.SetSsrc(ssrc_);
+
+        if (!csrcs_.empty()) {
+          rtp_packet.SetCsrcs(csrcs_);
+        }
+
+        if (has_extension_) {
+          rtp_packet.SetExtensionProfile(extension_profile_);
+          rtp_packet.SetExtensionData(extension_data_, extension_len_);
+        }
+
+        RtpPacket::FU_INDICATOR fu_indicator;
+        fu_indicator.forbidden_bit = 0;
+        fu_indicator.nal_reference_idc = 0;
+        fu_indicator.nal_unit_type = FU_A;
+
+        RtpPacket::FU_HEADER fu_header;
+        fu_header.start = index == 0 ? 1 : 0;
+        fu_header.end = index == num_of_total_packets - 1 ? 1 : 0;
+        fu_header.remain_bit = 0;
+        fu_header.nal_unit_type = FU_A;
+
+        rtp_packet.SetFuIndicator(fu_indicator);
+        rtp_packet.SetFuHeader(fu_header);
+
+        if (index == num_of_source_packets - 1 && last_packet_size > 0) {
+          rtp_packet.EncodeH264Fua(fec_packets[index], last_packet_size);
+        } else {
+          rtp_packet.EncodeH264Fua(fec_packets[index], MAX_NALU_LEN);
+        }
+        packets.emplace_back(rtp_packet);
+      }
+
+      fec_encoder_.ReleaseFecPackets(fec_packets, size);
+      return;
+    }
+
     if (size <= MAX_NALU_LEN) {
+      RtpPacket rtp_packet;
       rtp_packet.SetVerion(version_);
       rtp_packet.SetHasPadding(has_padding_);
       rtp_packet.SetHasExtension(has_extension_);
@@ -73,6 +136,7 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
       size_t packet_num = size / MAX_NALU_LEN + (last_packet_size ? 1 : 0);
 
       for (size_t index = 0; index < packet_num; index++) {
+        RtpPacket rtp_packet;
         rtp_packet.SetVerion(version_);
         rtp_packet.SetHasPadding(has_padding_);
         rtp_packet.SetHasExtension(has_extension_);
@@ -119,6 +183,7 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
       }
     }
   } else if (RtpPacket::PAYLOAD_TYPE::DATA == payload_type_) {
+    RtpPacket rtp_packet;
     rtp_packet.SetVerion(version_);
     rtp_packet.SetHasPadding(has_padding_);
     rtp_packet.SetHasExtension(has_extension_);
@@ -156,4 +221,11 @@ size_t RtpCodec::Decode(RtpPacket& packet, uint8_t* payload) {
     LOG_ERROR("Default");
     return packet.DecodeData(payload);
   }
+}
+
+bool RtpCodec::IsKeyFrame(const uint8_t* buffer, size_t size) {
+  if (buffer != nullptr && size != 0 && (*(buffer + 4) & 0x1f) == 0x07) {
+    return true;
+  }
+  return false;
 }
