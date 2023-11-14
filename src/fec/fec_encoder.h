@@ -7,6 +7,7 @@
 #ifndef _FEC_ENCODER_H_
 #define _FEC_ENCODER_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
