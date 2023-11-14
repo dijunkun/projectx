@@ -124,7 +124,7 @@ typedef enum {
  * Specifies if this codec instance is a pure encoder, a pure decoder, or a
  * codec capable of both encoding and decoding.
  */
-typedef UINT8 of_codec_type_t;
+typedef _UINT8 of_codec_type_t;
 
 #define OF_ENCODER 0x1
 #define OF_DECODER 0x2
@@ -178,13 +178,13 @@ typedef struct of_session {
  * happen.
  */
 typedef struct of_parameters {
-  UINT32 nb_source_symbols;
-  UINT32 nb_repair_symbols;
-  UINT32 encoding_symbol_length;
+  _UINT32 nb_source_symbols;
+  _UINT32 nb_repair_symbols;
+  _UINT32 encoding_symbol_length;
 } of_parameters_t;
 
 /** Verbosity level for the whole library. */
-extern UINT32 of_verbosity;
+extern _UINT32 of_verbosity;
 
 /****** OpenFEC.org general methods/functions
  * *****************************************************/
@@ -200,7 +200,7 @@ extern UINT32 of_verbosity;
  *current codec instance.
  *
  * @fn of_status_t	of_create_codec_instance (of_session_t** ses,
- *of_codec_id_t codec_id, of_codec_type_t codec_type, UINT32 verbosity)
+ *of_codec_id_t codec_id, of_codec_type_t codec_type, _UINT32 verbosity)
  * @brief		create a codec instance
  *02@param ses		(IN/OUT) address of the pointer to a session. This
  *pointer is updated by this function. In case of success, it points to a
@@ -215,7 +215,7 @@ extern UINT32 of_verbosity;
  */
 of_status_t of_create_codec_instance(of_session_t** ses, of_codec_id_t codec_id,
                                      of_codec_type_t codec_type,
-                                     UINT32 verbosity);
+                                     _UINT32 verbosity);
 
 /**
  * This function releases all the internal resources used by this FEC codec
@@ -280,9 +280,9 @@ of_status_t of_set_fec_parameters(of_session_t* ses, of_parameters_t* params);
  * initialized accordingly by the application, since it is application specific.
  *
  * @fn of_status_t	of_set_callback_functions (of_session_t	*ses,void*
- *(*decoded_source_symbol_callback) (void	*context,UINT32	size,UINT32
- *esi),	void* (*decoded_repair_symbol_callback) (void	*context,UINT32
- *size,UINT32	esi),void*	context_4_callback)
+ *(*decoded_source_symbol_callback) (void	*context,_UINT32	size,_UINT32
+ *esi),	void* (*decoded_repair_symbol_callback) (void	*context,_UINT32
+ *size,_UINT32	esi),void*	context_4_callback)
  * @brief		set various callbock functions (see header
  *of_open_fec_api.h) 02@param ses		(IN) Pointer to the session.
  *
@@ -305,11 +305,11 @@ of_status_t of_set_fec_parameters(of_session_t* ses, of_parameters_t* params);
 of_status_t of_set_callback_functions(
     of_session_t* ses,
     void* (*decoded_source_symbol_callback)(
-        void* context, UINT32 size, /* size of decoded source symbol */
-        UINT32 esi),                /* encoding symbol ID in {0..k-1} */
+        void* context, _UINT32 size, /* size of decoded source symbol */
+        _UINT32 esi),                /* encoding symbol ID in {0..k-1} */
     void* (*decoded_repair_symbol_callback)(
-        void* context, UINT32 size, /* size of decoded repair symbol */
-        UINT32 esi),                /* encoding symbol ID in {k..n-1} */
+        void* context, _UINT32 size, /* size of decoded repair symbol */
+        _UINT32 esi),                /* encoding symbol ID in {k..n-1} */
     void* context_4_callback);
 
 #ifdef OF_USE_ENCODER
@@ -332,7 +332,7 @@ of_status_t of_set_callback_functions(
  *in which case the library only copies the newly built symbol to it.
  *
  * @fn		of_status_t	of_build_repair_symbol (of_session_t* ses, void*
- *encoding_symbols_tab[], UINT32	esi_of_symbol_to_build)
+ *encoding_symbols_tab[], _UINT32	esi_of_symbol_to_build)
  * @brief			build a repair symbol (encoder only)
  *02@param ses			(IN) Pointer to the session.
  * @param encoding_symbols_tab	(IN/OUT) table of source and repair symbols.
@@ -346,7 +346,7 @@ of_status_t of_set_callback_functions(
  */
 of_status_t of_build_repair_symbol(of_session_t* ses,
                                    void* encoding_symbols_tab[],
-                                   UINT32 esi_of_symbol_to_build);
+                                   _UINT32 esi_of_symbol_to_build);
 
 #endif /* OF_USE_ENCODER */
 
@@ -373,7 +373,7 @@ of_status_t of_build_repair_symbol(of_session_t* ses,
  *received symbols.
  *
  * @fn	  of_status_t	of_decode_with_new_symbol (of_session_t*	ses,
- *void* const	new_symbol_buf, UINT32		new_symbol_esi)
+ *void* const	new_symbol_buf, _UINT32		new_symbol_esi)
  * @brief (try to) decode with a newly received symbol
  *02@param ses			(IN) Pointer to the session.
  * @param new_symbol_buf	(IN) Pointer to the encoding symbol now
@@ -386,7 +386,7 @@ of_status_t of_build_repair_symbol(of_session_t* ses,
  */
 of_status_t of_decode_with_new_symbol(of_session_t* ses,
                                       void* const new_symbol_buf,
-                                      UINT32 new_symbol_esi);
+                                      _UINT32 new_symbol_esi);
 
 /**
  * Inform the decoder of all the available (e.g. received from the network)
@@ -513,8 +513,8 @@ of_status_t of_more_about(of_session_t* ses, char** version_str,
  * @param length	(IN) length of pointer value
  * @return		Error status.
  */
-of_status_t of_set_control_parameter(of_session_t* ses, UINT32 type,
-                                     void* value, UINT32 length);
+of_status_t of_set_control_parameter(of_session_t* ses, _UINT32 type,
+                                     void* value, _UINT32 length);
 
 /**
  * This function gets a FEC scheme/FEC codec specific control parameter, in
@@ -530,8 +530,8 @@ of_status_t of_set_control_parameter(of_session_t* ses, UINT32 type,
  * @param length	(IN) length of pointer value
  * @return		Error status.
  */
-of_status_t of_get_control_parameter(of_session_t* ses, UINT32 type,
-                                     void* value, UINT32 length);
+of_status_t of_get_control_parameter(of_session_t* ses, _UINT32 type,
+                                     void* value, _UINT32 length);
 
 /**
  * Control parameters for of_set_control_parameter()/of_get_control_parameter()
@@ -549,7 +549,7 @@ of_status_t of_get_control_parameter(of_session_t* ses, UINT32 type,
  * may add some practical additional limits, e.g. caused by memory management
  * aspects (maximum working memory), or by internal codec implementation
  * details, e.g. the fact an index is stored in 16-bit integers. This is true
- * both for k and n. Argument: UINT32
+ * both for k and n. Argument: _UINT32
  */
 #define OF_CTRL_GET_MAX_K 1
 
@@ -559,7 +559,7 @@ of_status_t of_get_control_parameter(of_session_t* ses, UINT32 type,
  * may add some practical additional limits, e.g. caused by memory management
  * aspects (maximum working memory), or by internal codec implementation
  * details, e.g. the fact an index is stored in 16-bit integers. This is true
- * both for k and n. Argument: UINT32
+ * both for k and n. Argument: _UINT32
  */
 #define OF_CTRL_GET_MAX_N 2
 
@@ -581,8 +581,8 @@ of_status_t of_get_control_parameter(of_session_t* ses, UINT32 type,
  * @return		Error status.
  */
 bool		of_get_decoding_success_proba (of_session_t*	ses,
-				     UINT32		nb_available_source_symbols,
-				     UINT32		nb_available_repair_symbols);
+				     _UINT32		nb_available_source_symbols,
+				     _UINT32		nb_available_repair_symbols);
 #endif
 
 #endif /* OPENFEC_API_H */

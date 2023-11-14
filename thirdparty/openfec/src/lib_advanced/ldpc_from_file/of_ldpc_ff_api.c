@@ -63,12 +63,12 @@ of_status_t	of_ldpc_ff_set_fec_parameters (of_ldpc_ff_cb_t*	cb,
 					       of_ldpc_ff_parameters_t*	params)
 {
 	of_mod2entry	*e;
-	UINT32		row;
-	UINT32		seq;
-	UINT32		matrix_nb_par;
-	UINT32		matrix_nb_src;
-	UINT32		*p_matrix_nb_par;
-	UINT32		*p_matrix_nb_src;
+	_UINT32		row;
+	_UINT32		seq;
+	_UINT32		matrix_nb_par;
+	_UINT32		matrix_nb_src;
+	_UINT32		*p_matrix_nb_par;
+	_UINT32		*p_matrix_nb_src;
 	char		* m_matrix_file;
 	FILE		*pFile;
 
@@ -133,10 +133,10 @@ of_status_t	of_ldpc_ff_set_fec_parameters (of_ldpc_ff_cb_t*	cb,
 #ifdef OF_USE_DECODER
 	if (ofcb->codec_type & OF_DECODER)
 	{
-		ofcb->tab_nb_unknown_symbols = (UINT16*) of_calloc(ofcb->nb_repair_symbols, sizeof(UINT16));
+		ofcb->tab_nb_unknown_symbols = (_UINT16*) of_calloc(ofcb->nb_repair_symbols, sizeof(_UINT16));
 		ofcb->tab_const_term_of_equ = (void**) of_calloc(ofcb->nb_repair_symbols, sizeof(void*));
-		ofcb->tab_nb_equ_for_repair = (UINT16*) of_calloc(ofcb->nb_repair_symbols, sizeof(UINT16));
-		ofcb->tab_nb_enc_symbols_per_equ = (UINT16*) of_calloc(ofcb->nb_repair_symbols, sizeof(UINT16));
+		ofcb->tab_nb_equ_for_repair = (_UINT16*) of_calloc(ofcb->nb_repair_symbols, sizeof(_UINT16));
+		ofcb->tab_nb_enc_symbols_per_equ = (_UINT16*) of_calloc(ofcb->nb_repair_symbols, sizeof(_UINT16));
 		if (ofcb->tab_nb_unknown_symbols == NULL || ofcb->tab_const_term_of_equ == NULL ||
 			ofcb->tab_nb_equ_for_repair == NULL || ofcb->tab_nb_enc_symbols_per_equ == NULL) {
 			goto no_mem;
@@ -191,7 +191,7 @@ error:
 
 of_status_t	of_ldpc_ff_build_repair_symbol (of_ldpc_ff_cb_t*	ofcb,
 						void*			encoding_symbols_tab[],
-						UINT32			esi_of_symbol_to_build)
+						_UINT32			esi_of_symbol_to_build)
 {
 	if (ofcb->H2_is_identity_with_lower_triangle)
 	{
@@ -208,9 +208,9 @@ of_status_t	of_ldpc_ff_build_repair_symbol (of_ldpc_ff_cb_t*	ofcb,
 
 
 of_status_t	of_ldpc_ff_set_control_parameter  (of_ldpc_ff_cb_t*	ofcb,
-						UINT32			type,
+						_UINT32			type,
 						void*			value,
-						UINT32			length)
+						_UINT32			length)
 {
 	OF_PRINT_ERROR(("of_ldpc_ff_set_control_parameter: ERROR, not implemented...\n"))
 	return OF_STATUS_ERROR;
@@ -218,9 +218,9 @@ of_status_t	of_ldpc_ff_set_control_parameter  (of_ldpc_ff_cb_t*	ofcb,
 
 
 of_status_t	of_ldpc_ff_get_control_parameter  (of_ldpc_ff_cb_t*	ofcb,
-						UINT32			type,
+						_UINT32			type,
 						void*			value,
-						UINT32			length)
+						_UINT32			length)
 {
 	of_ldpc_staircase_cb_t	*ofcb_staircase;
 
@@ -228,23 +228,23 @@ of_status_t	of_ldpc_ff_get_control_parameter  (of_ldpc_ff_cb_t*	ofcb,
 	ofcb_staircase = (of_ldpc_staircase_cb_t*)ofcb;
 	switch (type) {
 	case OF_CTRL_GET_MAX_K:
-		if (value == NULL || length != sizeof(UINT32)) {
+		if (value == NULL || length != sizeof(_UINT32)) {
 			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_K ERROR: null value or bad length (got %d, expected %ld)\n",
-				__FUNCTION__, length, sizeof(UINT32)))
+				__FUNCTION__, length, sizeof(_UINT32)))
 			goto error;
 		}
-		*(UINT32*)value = ofcb_staircase->max_nb_source_symbols;
-		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_K (%d)\n", __FUNCTION__, *(UINT32*)value))
+		*(_UINT32*)value = ofcb_staircase->max_nb_source_symbols;
+		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_K (%d)\n", __FUNCTION__, *(_UINT32*)value))
 		break;
 
 	case OF_CTRL_GET_MAX_N:
-		if (value == NULL || length != sizeof(UINT32)) {
+		if (value == NULL || length != sizeof(_UINT32)) {
 			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_N ERROR: null value or bad length (got %d, expected %ld)\n",
-				__FUNCTION__, length, sizeof(UINT32)))
+				__FUNCTION__, length, sizeof(_UINT32)))
 			goto error;
 		}
-		*(UINT32*)value = ofcb_staircase->max_nb_encoding_symbols;
-		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_N (%d)\n", __FUNCTION__, *(UINT32*)value))
+		*(_UINT32*)value = ofcb_staircase->max_nb_encoding_symbols;
+		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_N (%d)\n", __FUNCTION__, *(_UINT32*)value))
 		break;
 
 	default:
@@ -260,7 +260,7 @@ error:
 }
 
 
-of_status_t  of_get_pck_matrix_dimensions_from_file(char * matrix_file,UINT32 * n_rows, UINT32 *n_cols){
+of_status_t  of_get_pck_matrix_dimensions_from_file(char * matrix_file,_UINT32 * n_rows, _UINT32 *n_cols){
 
 	FILE * f;
 	char * pch;

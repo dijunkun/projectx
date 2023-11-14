@@ -83,7 +83,7 @@ of_status_t	of_ldpc_ff_set_fec_parameters (of_ldpc_ff_cb_t*		cb,
 
 #ifdef OF_USE_ENCODER
 /**
- * @fn		of_status_t	of_ldpc_ff_build_repair_symbol (of_ldpc_ff_cb_t* ofcb, void* encoding_symbols_tab[], UINT32	esi_of_symbol_to_build)
+ * @fn		of_status_t	of_ldpc_ff_build_repair_symbol (of_ldpc_ff_cb_t* ofcb, void* encoding_symbols_tab[], _UINT32	esi_of_symbol_to_build)
  * @brief			build a repair symbol (encoder only)
  * @param ofcb			(IN) Pointer to the session.
  * @param encoding_symbols_tab	(IN/OUT) table of source and repair symbols.
@@ -97,12 +97,12 @@ of_status_t	of_ldpc_ff_set_fec_parameters (of_ldpc_ff_cb_t*		cb,
  */
 of_status_t	of_ldpc_ff_build_repair_symbol (of_ldpc_ff_cb_t*	ofcb,
 						void*			encoding_symbols_tab[],
-						UINT32			esi_of_symbol_to_build);
+						_UINT32			esi_of_symbol_to_build);
 #endif //OF_USE_ENCODER
 
 #ifdef OF_USE_DECODER
 /**
- * @fn			of_status_t	of_ldpc_ff_set_control_parameter (of_ldpc_ff_cb_t* ofcb,UINT32	type,void* value,UINT32	length)
+ * @fn			of_status_t	of_ldpc_ff_set_control_parameter (of_ldpc_ff_cb_t* ofcb,_UINT32	type,void* value,_UINT32	length)
  * @brief		set a specific FEC parameter
  * @param ofcb		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID specific.
@@ -111,12 +111,12 @@ of_status_t	of_ldpc_ff_build_repair_symbol (of_ldpc_ff_cb_t*	ofcb,
  * @return		Error status.
  */
 of_status_t	of_ldpc_ff_set_control_parameter (of_ldpc_ff_cb_t*	ofcb,
-						  UINT32		type,
+						  _UINT32		type,
 						  void*			value,
-						  UINT32		length);
+						  _UINT32		length);
 
 /**
- * @fn			of_status_t	of_ldpc_ff_get_control_parameter (of_ldpc_ff_cb_t* ofcb,UINT32	type,void* value,UINT32	length)
+ * @fn			of_status_t	of_ldpc_ff_get_control_parameter (of_ldpc_ff_cb_t* ofcb,_UINT32	type,void* value,_UINT32	length)
  * @brief		get a specific FEC parameter
  * @param ses		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID specific.
@@ -127,16 +127,16 @@ of_status_t	of_ldpc_ff_set_control_parameter (of_ldpc_ff_cb_t*	ofcb,
  * @return		Error status.
  */
 of_status_t	of_ldpc_ff_get_control_parameter (of_ldpc_ff_cb_t*	ofcb,
-						  UINT32		type,
+						  _UINT32		type,
 						  void*			value,
-						  UINT32		length);
+						  _UINT32		length);
 
 #endif  //OF_USE_DECODER
 
 /**
  * This function return the number of rows and cols of a matrix read into matrix_file.
  *
- * @fn of_status_t	of_get_pck_matrix_dimensions_from_file(char * matrix_file,UINT32 * n_rows, UINT32 *n_cols)
+ * @fn of_status_t	of_get_pck_matrix_dimensions_from_file(char * matrix_file,_UINT32 * n_rows, _UINT32 *n_cols)
  * @brief		return the number of rows and cols of a matrix
  * @param matrix_file	(IN) name of the file containing the matrix
  * @param n_rows	(OUT) number of rows in matrix
@@ -144,8 +144,8 @@ of_status_t	of_ldpc_ff_get_control_parameter (of_ldpc_ff_cb_t*	ofcb,
  * @return		Error status. If it's OK, nb_row and nb_col contain the number of rows and cols of matrix.
  */
 of_status_t  of_get_pck_matrix_dimensions_from_file (char*	matrix_file,
-						     UINT32 *	n_rows,
-						     UINT32 *	n_cols);
+						     _UINT32 *	n_rows,
+						     _UINT32 *	n_cols);
 
 
 #endif //OF_LDPC_FF_H

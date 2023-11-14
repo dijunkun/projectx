@@ -52,11 +52,11 @@ void 	of_galois_field_2_8_addmul1(gf *dst1, gf *src1, gf c, int sz) {
 	register gf *dst = dst1, *src = src1 ;
 	gf *lim = &dst[sz - UNROLL + 1] ;
 #if ((defined (__LP64__) || (__WORDSIZE == 64)) && !defined (OF_RS_2M_USE_32BITS))	
-	UINT64 tmp;
-	UINT64 *dst_64 = (UINT64*)dst1;
+	_UINT64 tmp;
+	_UINT64 *dst_64 = (_UINT64*)dst1;
 #else
-	UINT32 tmp;
-	UINT32 *dst_32 = (UINT32*)dst1;
+	_UINT32 tmp;
+	_UINT32 *dst_32 = (_UINT32*)dst1;
 #endif
 	GF_MULC0 (c) ;
 	
@@ -66,31 +66,31 @@ void 	of_galois_field_2_8_addmul1(gf *dst1, gf *src1, gf c, int sz) {
 	for (; dst < lim ;dst += UNROLL, src += UNROLL)
 	{
 #if ((defined (__LP64__) || (__WORDSIZE == 64)) && !defined (OF_RS_2M_USE_32BITS))		
-		tmp = ((UINT64)__gf_mulc_[src[0]]) | ((UINT64)__gf_mulc_[src[1]]<<8) | ((UINT64)__gf_mulc_[src[2]]<<16) |
-		((UINT64)__gf_mulc_[src[3]]<<24) | ((UINT64)__gf_mulc_[src[4]]<<32) | ((UINT64)__gf_mulc_[src[5]]<<40) |
-		((UINT64)__gf_mulc_[src[6]]<<48) | ((UINT64)__gf_mulc_[src[7]]<<56) ;
+		tmp = ((_UINT64)__gf_mulc_[src[0]]) | ((_UINT64)__gf_mulc_[src[1]]<<8) | ((_UINT64)__gf_mulc_[src[2]]<<16) |
+		((_UINT64)__gf_mulc_[src[3]]<<24) | ((_UINT64)__gf_mulc_[src[4]]<<32) | ((_UINT64)__gf_mulc_[src[5]]<<40) |
+		((_UINT64)__gf_mulc_[src[6]]<<48) | ((_UINT64)__gf_mulc_[src[7]]<<56) ;
 		*dst_64 ^= tmp;
 		dst_64++;
-		tmp = ((UINT64)__gf_mulc_[src[8]]) | ((UINT64)__gf_mulc_[src[9]]<<8) | ((UINT64)__gf_mulc_[src[10]]<<16) |
-		((UINT64)__gf_mulc_[src[11]]<<24) | ((UINT64)__gf_mulc_[src[12]]<<32) | ((UINT64)__gf_mulc_[src[13]]<<40) |
-		((UINT64)__gf_mulc_[src[14]]<<48) | ((UINT64)__gf_mulc_[src[15]]<<56) ;
+		tmp = ((_UINT64)__gf_mulc_[src[8]]) | ((_UINT64)__gf_mulc_[src[9]]<<8) | ((_UINT64)__gf_mulc_[src[10]]<<16) |
+		((_UINT64)__gf_mulc_[src[11]]<<24) | ((_UINT64)__gf_mulc_[src[12]]<<32) | ((_UINT64)__gf_mulc_[src[13]]<<40) |
+		((_UINT64)__gf_mulc_[src[14]]<<48) | ((_UINT64)__gf_mulc_[src[15]]<<56) ;
 		*dst_64 ^= tmp;
 		dst_64++;
 #else
-		tmp = ((UINT32)__gf_mulc_[src[0]]) | ((UINT32)__gf_mulc_[src[1]]<<8) | ((UINT32)__gf_mulc_[src[2]]<<16) |
-		((UINT32)__gf_mulc_[src[3]]<<24);
+		tmp = ((_UINT32)__gf_mulc_[src[0]]) | ((_UINT32)__gf_mulc_[src[1]]<<8) | ((_UINT32)__gf_mulc_[src[2]]<<16) |
+		((_UINT32)__gf_mulc_[src[3]]<<24);
 		*dst_32 ^= tmp;
 		dst_32++;
-		tmp = ((UINT32)__gf_mulc_[src[4]]) | ((UINT32)__gf_mulc_[src[5]]<<8) | ((UINT32)__gf_mulc_[src[6]]<<16) |
-		((UINT32)__gf_mulc_[src[7]]<<24);
+		tmp = ((_UINT32)__gf_mulc_[src[4]]) | ((_UINT32)__gf_mulc_[src[5]]<<8) | ((_UINT32)__gf_mulc_[src[6]]<<16) |
+		((_UINT32)__gf_mulc_[src[7]]<<24);
 		*dst_32 ^= tmp;
 		dst_32++;
-		tmp = ((UINT32)__gf_mulc_[src[8]]) | ((UINT32)__gf_mulc_[src[9]]<<8) | ((UINT32)__gf_mulc_[src[10]]<<16) |
-		((UINT32)__gf_mulc_[src[11]]<<24);
+		tmp = ((_UINT32)__gf_mulc_[src[8]]) | ((_UINT32)__gf_mulc_[src[9]]<<8) | ((_UINT32)__gf_mulc_[src[10]]<<16) |
+		((_UINT32)__gf_mulc_[src[11]]<<24);
 		*dst_32 ^= tmp;
 		dst_32++;		
-		tmp = ((UINT32)__gf_mulc_[src[12]]) | ((UINT32)__gf_mulc_[src[13]]<<8) | ((UINT32)__gf_mulc_[src[14]]<<16) |
-		((UINT32)__gf_mulc_[src[15]]<<24);
+		tmp = ((_UINT32)__gf_mulc_[src[12]]) | ((_UINT32)__gf_mulc_[src[13]]<<8) | ((_UINT32)__gf_mulc_[src[14]]<<16) |
+		((_UINT32)__gf_mulc_[src[15]]<<24);
 		*dst_32 ^= tmp;
 		dst_32++;			
 #endif		

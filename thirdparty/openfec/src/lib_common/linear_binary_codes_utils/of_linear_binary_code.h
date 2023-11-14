@@ -77,12 +77,12 @@ typedef struct of_linear_binary_code_cb
 ******************************************************************************/
 	of_codec_id_t	codec_id;		/* must begin with fec_codec_id          */
 	of_codec_type_t	codec_type;		/* must be 2nd item                      */
-	UINT32		nb_source_symbols;	/** k parameter (AKA code dimension).    */
-	UINT32		nb_repair_symbols;	/** r = n - k parameter.                 */
-	UINT32		encoding_symbol_length;	/** symbol length.                   */
+	_UINT32		nb_source_symbols;	/** k parameter (AKA code dimension).    */
+	_UINT32		nb_repair_symbols;	/** r = n - k parameter.                 */
+	_UINT32		encoding_symbol_length;	/** symbol length.                   */
 /*****************************************************************************/
 
-	UINT32		nb_total_symbols;	/** n parameter (AKA code length). */
+	_UINT32		nb_total_symbols;	/** n parameter (AKA code length). */
 	/* parity check matrix */
 	of_mod2sparse*	pchk_matrix;
 
@@ -92,21 +92,21 @@ typedef struct of_linear_binary_code_cb
 	of_symbols_stats_t	*stats_symbols;
 #endif
 
-	UINT32		nb_source_symbol_ready; // Number of source symbols ready
-	UINT32		nb_repair_symbol_ready; // Number of parity symbols ready
+	_UINT32		nb_source_symbol_ready; // Number of source symbols ready
+	_UINT32		nb_repair_symbol_ready; // Number of parity symbols ready
 
 #ifdef ML_DECODING
-	UINT32		*index_rows;	// Indirection index to access initial m_chekValues array
-	UINT32		*index_cols;	// Indirection index to access initial symbol array
-	UINT32		remain_cols;	// Nb of non empty remaining cols in the future simplified matrix
-	UINT32		remain_rows;	// Nb of non empty remaining rows in the future simplified matrix
+	_UINT32		*index_rows;	// Indirection index to access initial m_chekValues array
+	_UINT32		*index_cols;	// Indirection index to access initial symbol array
+	_UINT32		remain_cols;	// Nb of non empty remaining cols in the future simplified matrix
+	_UINT32		remain_rows;	// Nb of non empty remaining rows in the future simplified matrix
 
 	of_mod2sparse	*pchk_matrix_simplified; // Simplified Parity Check Matrix in sparse mode format
 	of_mod2sparse	*original_pchkMatrix;
 	of_mod2sparse	*pchk_matrix_gauss;	// Parity Check matrix in sparse mode format.
 	
-	UINT32		dec_step;		// Current step in the Gauss decoding algorithm
-	UINT32		threshold_simplification;// threshold (number of symbols) above which we
+	_UINT32		dec_step;		// Current step in the Gauss decoding algorithm
+	_UINT32		threshold_simplification;// threshold (number of symbols) above which we
 						// run the Gaussian Elimination algorithm
 #endif
 
@@ -114,27 +114,27 @@ typedef struct of_linear_binary_code_cb
 	/** table of all check values, i.e. that contain the constant term of each equation. */
 	void**		tab_const_term_of_equ;
 	/** table containing the number of encoding symbols of each equation. */
-	UINT16*		tab_nb_enc_symbols_per_equ;
+	_UINT16*		tab_nb_enc_symbols_per_equ;
 	/** table containing the number of unknow symbols (i.e. neither received nor decoded
 	 *  at that time) of each equation. */
-	UINT16*		tab_nb_unknown_symbols;
+	_UINT16*		tab_nb_unknown_symbols;
 	/** table containing the number of equations in which a repair symbol is included. */
-	UINT16*		tab_nb_equ_for_repair;
+	_UINT16*		tab_nb_equ_for_repair;
 	
 	void		** repair_symbols_values;
 	void		** tmp_tab_symbols;
-	UINT16		nb_tmp_symbols;
+	_UINT16		nb_tmp_symbols;
 #endif /* } OF_USE_DECODER */
 
 	void 		**encoding_symbols_tab;
 
 	/** callbacks registered by the application. */
 	void*	(*decoded_source_symbol_callback) (void	*context,
-						   UINT32	size,	/* size of decoded source symbol */
-						   UINT32	esi);	/* encoding symbol ID in {0..k-1} */
+						   _UINT32	size,	/* size of decoded source symbol */
+						   _UINT32	esi);	/* encoding symbol ID in {0..k-1} */
 	void*	(*decoded_repair_symbol_callback) (void	*context,
-						   UINT32	size,	/* size of decoded repair symbol */
-						   UINT32	esi);	/* encoding symbol ID in {0..k-1} */
+						   _UINT32	size,	/* size of decoded repair symbol */
+						   _UINT32	esi);	/* encoding symbol ID in {0..k-1} */
 	void*	context_4_callback;
 } of_linear_binary_code_cb_t;
 

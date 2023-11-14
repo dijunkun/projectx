@@ -43,7 +43,7 @@ void	of_mod2sparse_to_dense (of_mod2sparse *m, 	/* Sparse matrix to convert */
 {
 	OF_ENTER_FUNCTION
 	of_mod2entry *e;
-	UINT32 i;
+	_UINT32 i;
 
 	if (of_mod2sparse_rows (m) > of_mod2dense_rows (r)
 			|| of_mod2sparse_cols (m) > of_mod2dense_cols (r))
@@ -72,7 +72,7 @@ void	of_mod2sparse_to_dense (of_mod2sparse *m, 	/* Sparse matrix to convert */
 void	of_mod2dense_to_sparse (of_mod2dense *m, 	/* Dense matrix to convert */
 				of_mod2sparse *r)	/* Place to store result */
 {
-	UINT32 i, j;
+	_UINT32 i, j;
 
 	if (of_mod2dense_rows (m) > of_mod2sparse_rows (r)
 			|| of_mod2dense_cols (m) > of_mod2sparse_cols (r))

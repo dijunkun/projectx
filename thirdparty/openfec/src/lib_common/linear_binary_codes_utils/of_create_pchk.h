@@ -61,14 +61,14 @@ typedef enum SessionType_enum
  * @param stats		(IN/OUT) memory statistics (can be NULL)
  * @return		pointer to the matrix
  */
-of_mod2sparse*	of_create_pchk_matrix (UINT32		nb_rows,
-					UINT32		nb_cols,
+of_mod2sparse*	of_create_pchk_matrix (_UINT32		nb_rows,
+					_UINT32		nb_cols,
 					make_method	make_method,
-					UINT32		left_degree,
-					UINT32		seed,
+					_UINT32		left_degree,
+					_UINT32		seed,
 					bool		no4cycle,
 					of_session_type	type,
-					UINT8		verbosity);
+					_UINT8		verbosity);
 
 /**
  * This function creates a generic parity check matrix.
@@ -85,14 +85,14 @@ of_mod2sparse*	of_create_pchk_matrix (UINT32		nb_rows,
  * @param stats		(IN/OUT) memory statistics (can be NULL)
  * @return		pointer to the matrix
  */
-of_mod2sparse*	of_create_pchk_matrix_general  (UINT32		nb_rows,
-						UINT32		nb_cols,
+of_mod2sparse*	of_create_pchk_matrix_general  (_UINT32		nb_rows,
+						_UINT32		nb_cols,
 						make_method	make_method,
-						UINT32		left_degree,
-						UINT32		seed,
+						_UINT32		left_degree,
+						_UINT32		seed,
 						bool		no4cycle,
 						of_session_type	type,
-						UINT8		verbosity);
+						_UINT8		verbosity);
 
 /**
  * This function fills a parity check matrix.
@@ -111,14 +111,14 @@ of_mod2sparse*	of_create_pchk_matrix_general  (UINT32		nb_rows,
  * @return		pointer to the matrix
  */
 of_mod2sparse*	of_fill_regular_pchk_matrix    (of_mod2sparse*	m,
-						UINT32		row_start,
-						UINT32		row_end,
-						UINT32		col_start,
-						UINT32		col_end,
+						_UINT32		row_start,
+						_UINT32		row_end,
+						_UINT32		col_start,
+						_UINT32		col_end,
 						make_method	make_method,
-						UINT32		left_degree,
+						_UINT32		left_degree,
 						bool		no4cycle,
-						UINT8		verbosity);
+						_UINT8		verbosity);
 
 /**
  * This function creates a parity check matrix for 2D codec.
@@ -131,10 +131,10 @@ of_mod2sparse*	of_fill_regular_pchk_matrix    (of_mod2sparse*	m,
  * @param stats		(IN/OUT) memory statistics (can be NULL)
  * @return		pointer to the matrix
  */
-of_mod2sparse* of_create_2D_pchk_matrix	       (UINT32		nb_rows,
-						UINT32		nb_cols,
+of_mod2sparse* of_create_2D_pchk_matrix	       (_UINT32		nb_rows,
+						_UINT32		nb_cols,
 						of_session_type	type,
-						UINT8		verbosity);
+						_UINT8		verbosity);
 
 /**
  * This function fills a 2D parity check matrix.
@@ -148,8 +148,8 @@ of_mod2sparse* of_create_2D_pchk_matrix	       (UINT32		nb_rows,
  * @return		pointer to the matrix
  */
 of_mod2sparse* 	of_fill_2D_pchk_matrix 		(of_mod2sparse* m,
-					         UINT32	d,
-						 UINT32	l,
-					         UINT8 verbosity);
+					         _UINT32	d,
+						 _UINT32	l,
+					         _UINT8 verbosity);
 
 #endif

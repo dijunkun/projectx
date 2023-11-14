@@ -36,23 +36,23 @@
 
 #ifdef OF_USE_LINEAR_BINARY_CODES_UTILS
 
-static const UINT64 of_m1  = 0x5555555555555555LL; //binary: 0101...
-static const UINT64 of_m2  = 0x3333333333333333LL; //binary: 00110011..
-static const UINT64 of_m4  = 0x0f0f0f0f0f0f0f0fLL; //binary:  4 zeros,  4 ones ...
-static const UINT64 of_m8  = 0x00ff00ff00ff00ffLL; //binary:  8 zeros,  8 ones ...
-static const UINT64 of_m16 = 0x0000ffff0000ffffLL; //binary: 16 zeros, 16 ones ...
-static const UINT64 of_m32 = 0x00000000ffffffffLL; //binary: 32 zeros, 32 ones
-static const UINT64 of_hff = 0xffffffffffffffffLL; //binary: all ones
-static const UINT64 of_h01 = 0x0101010101010101LL; //the sum of 256 to the power of 0,1,2,3...
+static const _UINT64 of_m1  = 0x5555555555555555LL; //binary: 0101...
+static const _UINT64 of_m2  = 0x3333333333333333LL; //binary: 00110011..
+static const _UINT64 of_m4  = 0x0f0f0f0f0f0f0f0fLL; //binary:  4 zeros,  4 ones ...
+static const _UINT64 of_m8  = 0x00ff00ff00ff00ffLL; //binary:  8 zeros,  8 ones ...
+static const _UINT64 of_m16 = 0x0000ffff0000ffffLL; //binary: 16 zeros, 16 ones ...
+static const _UINT64 of_m32 = 0x00000000ffffffffLL; //binary: 32 zeros, 32 ones
+static const _UINT64 of_hff = 0xffffffffffffffffLL; //binary: all ones
+static const _UINT64 of_h01 = 0x0101010101010101LL; //the sum of 256 to the power of 0,1,2,3...
 
 
-UINT8 of_hw8table[256] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8};
+_UINT8 of_hw8table[256] = {0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 2, 3, 3, 4, 3, 4, 4, 5, 3, 4, 4, 5, 4, 5, 5, 6, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8};
 
 
 //This uses fewer arithmetic operations than any other known
 //implementation on machines with fast multiplication.
 //It uses 12 arithmetic operations, one of which is a multiply.
-INT32 of_popcount_3 (UINT64 x)
+_INT32 of_popcount_3 (_UINT64 x)
 {
 	x -= (x >> 1) & of_m1;             //put count of each 2 bits into those 2 bits
 	x = (x & of_m2) + ( (x >> 2) & of_m2);      //put count of each 4 bits into those 4 bits
@@ -61,9 +61,9 @@ INT32 of_popcount_3 (UINT64 x)
 }
 
 
-UINT32 of_hweight32 (UINT32 w)
+_UINT32 of_hweight32 (_UINT32 w)
 {
-	UINT32 res = w - ( (w >> 1) & 0x55555555);
+	_UINT32 res = w - ( (w >> 1) & 0x55555555);
 	res = (res & 0x33333333) + ( (res >> 2) & 0x33333333);
 	res = (res + (res >> 4)) & 0x0F0F0F0F;
 	res = res + (res >> 8);
@@ -71,7 +71,7 @@ UINT32 of_hweight32 (UINT32 w)
 }
 
 
-UINT8 of_hweight8_table (UINT8 w)
+_UINT8 of_hweight8_table (_UINT8 w)
 {
 	//unsigned char res;
 	//res=of_hw8table[w];
@@ -83,10 +83,10 @@ UINT8 of_hweight8_table (UINT8 w)
 }
 
 
-UINT32 of_hweight32_table (UINT32 w)
+_UINT32 of_hweight32_table (_UINT32 w)
 {
-	UINT32 res = 0;
-	UINT8 *w8 = (UINT8*) (&w);
+	_UINT32 res = 0;
+	_UINT8 *w8 = (_UINT8*) (&w);
 // 	for (int j = 0; j<4; j++){
 // 		res+=hweight8_table(w8[j]);
 // 	}
@@ -96,12 +96,12 @@ UINT32 of_hweight32_table (UINT32 w)
 }
 
 
-UINT32 of_hweight32_naive (UINT32 w)
+_UINT32 of_hweight32_naive (_UINT32 w)
 {
-	INT32 j;
-	UINT32 res = 0;
-	UINT32 x = w;
-	for (j = 0; j < sizeof (UINT32); j++)
+	_INT32 j;
+	_UINT32 res = 0;
+	_UINT32 x = w;
+	for (j = 0; j < sizeof (_UINT32); j++)
 	{
 		res += x & 1;
 		x = x >> 1;
@@ -111,12 +111,12 @@ UINT32 of_hweight32_naive (UINT32 w)
 
 
 /* compute the hamming weight of an array containg 32bits words*/
-UINT32 of_hweight_array (UINT32 *array, INT32 size)
+_UINT32 of_hweight_array (_UINT32 *array, _INT32 size)
 {
-	UINT32 weight = 0;
-	UINT32 i;
-	UINT32 array_size_32, array_size_32_rem;
-	UINT32 *v32;
+	_UINT32 weight = 0;
+	_UINT32 i;
+	_UINT32 array_size_32, array_size_32_rem;
+	_UINT32 *v32;
 
 	array_size_32	= size >> 5;
 	array_size_32_rem = size % 32;	// Remaining bytes
@@ -126,14 +126,14 @@ UINT32 of_hweight_array (UINT32 *array, INT32 size)
 	}
 
 #if defined (__LP64__) || (__WORDSIZE == 64)
-	UINT32	array_size64;	// Size of array in 64bits unit
-	UINT32	array_size64rem;
+	_UINT32	array_size64;	// Size of array in 64bits unit
+	_UINT32	array_size64rem;
 	array_size64	= array_size_32 >> 1;
 	array_size64rem  = array_size_32 % 2;
 
 	// 64-bit machines
 	/* First perform as many 64-bit XORs as needed... */
-	UINT64		*v64 = (UINT64*) array;	// to pointer to 64-bit integers
+	_UINT64		*v64 = (_UINT64*) array;	// to pointer to 64-bit integers
 	for (i = array_size64; i > 0; i--)
 	{
 		weight += of_popcount_3 (*v64);
@@ -142,12 +142,12 @@ UINT32 of_hweight_array (UINT32 *array, INT32 size)
 	/* then perform a 32-bit XOR if needed... */
 	if (array_size64rem > 0)
 	{
-		v32 = (UINT32*) v64;	// to pointer to 32-bit integers
+		v32 = (_UINT32*) v64;	// to pointer to 32-bit integers
 		weight += of_hweight32_table (*v32);
 		v32++;
 	}
 #else // 32-bit machines
-	v32 = (UINT32*) array;
+	v32 = (_UINT32*) array;
 	for (i = array_size_32;i > 0;i--)
 	{
 		weight += of_hweight32_table (*v32);

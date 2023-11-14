@@ -59,7 +59,7 @@ of_status_t	of_ldpc_staircase_create_codec_instance (of_ldpc_staircase_cb_t**	of
 of_status_t	of_ldpc_staircase_release_codec_instance (of_ldpc_staircase_cb_t*	ofcb)
 {
 	OF_ENTER_FUNCTION
-	UINT32 i;
+	_UINT32 i;
 	if (ofcb->pchk_matrix  != NULL)
 	{
 		of_mod2sparse_free(ofcb->pchk_matrix);
@@ -167,8 +167,8 @@ of_status_t	of_ldpc_staircase_set_fec_parameters (of_ldpc_staircase_cb_t*	ofcb,
 						      of_ldpc_parameters_t*	params)
 {
 	of_mod2entry	*e;
-	UINT32		row;
-	UINT32		seq;
+	_UINT32		row;
+	_UINT32		seq;
 
 	OF_ENTER_FUNCTION
 
@@ -191,7 +191,7 @@ of_status_t	of_ldpc_staircase_set_fec_parameters (of_ldpc_staircase_cb_t*	ofcb,
 	if ((ofcb->nb_repair_symbols = params->nb_repair_symbols) > ofcb->max_nb_encoding_symbols)
 	{
 		/* this test is needed because if the number of repair symbols is
-		 * erroneously < 0, because we are using UINT32, this is transformed
+		 * erroneously < 0, because we are using _UINT32, this is transformed
 		 * into a very large integer, which, when added to k, wraps once again
 		 * and the test on nb_total_symbols returns true... */
 		OF_PRINT_ERROR(("of_ldpc_staircase_set_fec_parameters: ERROR, invalid number of repair symbols (got %d, maximum number of encoding symbols is %d)\n",
@@ -256,14 +256,14 @@ of_status_t	of_ldpc_staircase_set_fec_parameters (of_ldpc_staircase_cb_t*	ofcb,
 #ifdef OF_USE_DECODER
 	if (ofcb->codec_type & OF_DECODER)
 	{
-		ofcb->tab_nb_unknown_symbols = (UINT16*)
-				of_calloc (ofcb->nb_repair_symbols, sizeof (UINT16));
+		ofcb->tab_nb_unknown_symbols = (_UINT16*)
+				of_calloc (ofcb->nb_repair_symbols, sizeof (_UINT16));
 		ofcb->tab_const_term_of_equ = (void**)
 				of_calloc (ofcb->nb_repair_symbols, sizeof (void*));
-		ofcb->tab_nb_equ_for_repair = (UINT16*)
-				of_calloc (ofcb->nb_repair_symbols, sizeof (UINT16));
-		ofcb->tab_nb_enc_symbols_per_equ = (UINT16*)
-				of_calloc (ofcb->nb_repair_symbols, sizeof (UINT16));
+		ofcb->tab_nb_equ_for_repair = (_UINT16*)
+				of_calloc (ofcb->nb_repair_symbols, sizeof (_UINT16));
+		ofcb->tab_nb_enc_symbols_per_equ = (_UINT16*)
+				of_calloc (ofcb->nb_repair_symbols, sizeof (_UINT16));
 		if (ofcb->tab_nb_unknown_symbols == NULL || ofcb->tab_const_term_of_equ == NULL ||
 		    ofcb->tab_nb_equ_for_repair == NULL || ofcb->tab_nb_enc_symbols_per_equ == NULL) {
 			goto no_mem;
@@ -355,11 +355,11 @@ error:
 
 of_status_t	of_ldpc_staircase_set_callback_functions (of_ldpc_staircase_cb_t*		ofcb,
 							  void* (*decoded_source_symbol_callback) (void		*context,
-												   UINT32	size,	/* size of decoded source symbol */
-												   UINT32	esi),	/* encoding symbol ID in {0..k-1} */
+												   _UINT32	size,	/* size of decoded source symbol */
+												   _UINT32	esi),	/* encoding symbol ID in {0..k-1} */
 							  void* (*decoded_repair_symbol_callback) (void		*context,
-												   UINT32	size,	/* size of decoded repair symbol */
-												   UINT32	esi),	/* encoding symbol ID in {k..n-1} */
+												   _UINT32	size,	/* size of decoded repair symbol */
+												   _UINT32	esi),	/* encoding symbol ID in {k..n-1} */
 							  void*	context_4_callback)
 {
 	OF_ENTER_FUNCTION
@@ -375,11 +375,11 @@ of_status_t	of_ldpc_staircase_set_callback_functions (of_ldpc_staircase_cb_t*		o
 
 of_status_t	of_ldpc_staircase_build_repair_symbol (of_ldpc_staircase_cb_t*	ofcb,
 							void*			encoding_symbols_tab[],
-							UINT32			esi_of_symbol_to_build)
+							_UINT32			esi_of_symbol_to_build)
 {
 	of_mod2entry	*e;
-	UINT32		col_to_build;
-	UINT32		esi;
+	_UINT32		col_to_build;
+	_UINT32		esi;
 	void		*to_add_buf;
 	void		*parity_symbol;
 	OF_ENTER_FUNCTION
@@ -429,7 +429,7 @@ error:
 
 of_status_t	of_ldpc_staircase_decode_with_new_symbol (of_ldpc_staircase_cb_t*	ofcb,
 							  void*				new_symbol,
-							  UINT32			new_symbol_esi)
+							  _UINT32			new_symbol_esi)
 {
 	OF_ENTER_FUNCTION
 	return of_linear_binary_code_decode_with_new_symbol((of_linear_binary_code_cb_t*)ofcb, new_symbol, new_symbol_esi);
@@ -439,7 +439,7 @@ of_status_t	of_ldpc_staircase_decode_with_new_symbol (of_ldpc_staircase_cb_t*	of
 of_status_t	of_ldpc_staircase_set_available_symbols (of_ldpc_staircase_cb_t*	ofcb,
 							 void* const			encoding_symbols_tab[])
 {
-	UINT32 i;
+	_UINT32 i;
 
 	OF_ENTER_FUNCTION
 	for (i = 0; i < ofcb->nb_total_symbols; i++)
@@ -501,9 +501,9 @@ of_status_t	of_ldpc_staircase_get_source_symbols_tab (of_ldpc_staircase_cb_t*	of
 #endif //OF_USE_DECODER
 
 of_status_t	of_ldpc_staircase_set_control_parameter  (of_ldpc_staircase_cb_t*	ofcb,
-							  UINT32			type,
+							  _UINT32			type,
 							  void*				value,
-							  UINT32			length)
+							  _UINT32			length)
 {
 	OF_PRINT_ERROR(("of_ldpc_staircase_set_control_parameter: ERROR, not implemented...\n"))
 	return OF_STATUS_ERROR;
@@ -511,30 +511,30 @@ of_status_t	of_ldpc_staircase_set_control_parameter  (of_ldpc_staircase_cb_t*	of
 
 
 of_status_t	of_ldpc_staircase_get_control_parameter (of_ldpc_staircase_cb_t*	ofcb,
-							 UINT32				type,
+							 _UINT32				type,
 							 void*				value,
-							 UINT32				length)
+							 _UINT32				length)
 {
 	OF_ENTER_FUNCTION
 	switch (type) {
 	case OF_CTRL_GET_MAX_K:
-		if (value == NULL || length != sizeof(UINT32)) {
+		if (value == NULL || length != sizeof(_UINT32)) {
 			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_K ERROR: null value or bad length (got %d, expected %zu)\n",
-				__FUNCTION__, length, sizeof(UINT32)))
+				__FUNCTION__, length, sizeof(_UINT32)))
 			goto error;
 		}
-		*(UINT32*)value = ofcb->max_nb_source_symbols;
-		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_K (%d)\n", __FUNCTION__, *(UINT32*)value))
+		*(_UINT32*)value = ofcb->max_nb_source_symbols;
+		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_K (%d)\n", __FUNCTION__, *(_UINT32*)value))
 		break;
 
 	case OF_CTRL_GET_MAX_N:
-		if (value == NULL || length != sizeof(UINT32)) {
+		if (value == NULL || length != sizeof(_UINT32)) {
 			OF_PRINT_ERROR(("%s: OF_CTRL_GET_MAX_N ERROR: null value or bad length (got %d, expected %zu)\n",
-				__FUNCTION__, length, sizeof(UINT32)))
+				__FUNCTION__, length, sizeof(_UINT32)))
 			goto error;
 		}
-		*(UINT32*)value = ofcb->max_nb_encoding_symbols;
-		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_N (%d)\n", __FUNCTION__, *(UINT32*)value))
+		*(_UINT32*)value = ofcb->max_nb_encoding_symbols;
+		OF_TRACE_LVL(1, ("%s: OF_CTRL_GET_MAX_N (%d)\n", __FUNCTION__, *(_UINT32*)value))
 		break;
 
 	case OF_CRTL_LDPC_STAIRCASE_IS_LAST_SYMBOL_NULL:

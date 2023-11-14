@@ -65,16 +65,16 @@ void  of_free (void* ptr)
 
 
 #if 0
-void of_dump_buffer (char* buf, UINT32 size)
+void of_dump_buffer (char* buf, _UINT32 size)
 {
-	UINT32	i;
-	UINT32	*s32;
+	_UINT32	i;
+	_UINT32	*s32;
 
 	if (size % 4 != 0)
 	{
 		size = (size % 4) * 4;
 	}
-	for (i = 0, s32 = (UINT32*)buf; i < size; i += 4, s32++)
+	for (i = 0, s32 = (_UINT32*)buf; i < size; i += 4, s32++)
 	{
 		printf ("%08x ", *s32);
 	}

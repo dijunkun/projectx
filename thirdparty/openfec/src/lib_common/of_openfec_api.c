@@ -48,11 +48,11 @@
 #include "../lib_advanced/ldpc_from_file/of_ldpc_ff_includes.h"
 #endif
 
-UINT32 of_verbosity;
+_UINT32 of_verbosity;
 
 of_status_t of_create_codec_instance(of_session_t** ses, of_codec_id_t codec_id,
                                      of_codec_type_t codec_type,
-                                     UINT32 verbosity) {
+                                     _UINT32 verbosity) {
   of_status_t status;
 
   OF_ENTER_FUNCTION
@@ -232,10 +232,10 @@ error:
 
 of_status_t of_set_callback_functions(
     of_session_t* ses,
-    void* (*decoded_source_symbol_callback)(void* context, UINT32 size,
-                                            UINT32 esi),
-    void* (*decoded_repair_symbol_callback)(void* context, UINT32 size,
-                                            UINT32 esi),
+    void* (*decoded_source_symbol_callback)(void* context, _UINT32 size,
+                                            _UINT32 esi),
+    void* (*decoded_repair_symbol_callback)(void* context, _UINT32 size,
+                                            _UINT32 esi),
     void* context_4_callback) {
   of_status_t status;
 
@@ -338,7 +338,7 @@ of_status_t of_more_about(of_session_t* ses, char** version_str,
 
 of_status_t of_build_repair_symbol(of_session_t* ses,
                                    void* encoding_symbols_tab[],
-                                   UINT32 esi_of_symbol_to_build) {
+                                   _UINT32 esi_of_symbol_to_build) {
   of_status_t status;
 
   OF_ENTER_FUNCTION
@@ -402,7 +402,7 @@ error:
 
 of_status_t of_decode_with_new_symbol(of_session_t* ses,
                                       void* const new_symbol_buf,
-                                      UINT32 new_symbol_esi) {
+                                      _UINT32 new_symbol_esi) {
   of_status_t status;
 
   OF_ENTER_FUNCTION
@@ -691,8 +691,8 @@ error:
   return OF_STATUS_FATAL_ERROR;
 }
 
-of_status_t of_set_control_parameter(of_session_t* ses, UINT32 type,
-                                     void* value, UINT32 length) {
+of_status_t of_set_control_parameter(of_session_t* ses, _UINT32 type,
+                                     void* value, _UINT32 length) {
   of_status_t status;
 
   OF_ENTER_FUNCTION
@@ -744,8 +744,8 @@ error:
   return OF_STATUS_FATAL_ERROR;
 }
 
-of_status_t of_get_control_parameter(of_session_t* ses, UINT32 type,
-                                     void* value, UINT32 length) {
+of_status_t of_get_control_parameter(of_session_t* ses, _UINT32 type,
+                                     void* value, _UINT32 length) {
   of_status_t status;
 
   OF_ENTER_FUNCTION

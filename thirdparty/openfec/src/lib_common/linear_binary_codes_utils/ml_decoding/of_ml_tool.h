@@ -40,7 +40,7 @@
 #ifdef ML_DECODING
 
 #ifdef OF_DEBUG
-#define OP_ARGS ,UINT32* op
+#define OP_ARGS ,_UINT32* op
 #define OP_ARG_VAL ,&(ofcb->stats_xor->nb_xor_for_ML)
 #else
 #define OP_ARGS
@@ -52,7 +52,7 @@
  * This function solves the system: first triangularize the system, then for each column,
  * do a forward elimination, then do the backward elimination.
  *
- * @fn INT32			of_linear_binary_code_solve_dense_system (of_mod2dense *m,void ** constant_member,void **variables,of_linear_binary_code_cb_t *ofcb)
+ * @fn _INT32			of_linear_binary_code_solve_dense_system (of_mod2dense *m,void ** constant_member,void **variables,of_linear_binary_code_cb_t *ofcb)
  * @brief			solves the system
  * @param m 			(IN/OUT) address of the dense matrix.
  * @param variables

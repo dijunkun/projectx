@@ -41,7 +41,7 @@
  * Default maximum number of source and encoding symbols for this codec.
  * This value depends in particular on the Finite Field size used (here GF(2^8)).
  * To this  limit, codec implementation details might add other limits (e.g. if
- * the ESI values are stored in UINT16 instead of UINT32...).
+ * the ESI values are stored in _UINT16 instead of _UINT32...).
  */
 #define OF_REED_SOLOMON_MAX_NB_SOURCE_SYMBOLS_DEFAULT		255
 #define OF_REED_SOLOMON_MAX_NB_ENCODING_SYMBOLS_DEFAULT		255

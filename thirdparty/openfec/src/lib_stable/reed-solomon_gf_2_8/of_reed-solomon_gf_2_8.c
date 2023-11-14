@@ -36,104 +36,104 @@
 
 #ifdef OF_USE_REED_SOLOMON_CODEC
 
-/* VR: added for WIN CE support */
-#ifdef _WIN32_WCE
-#define bzero(to,sz)	memset((to), 0, (sz))
+// /* VR: added for WIN CE support */
+// #ifdef _WIN32_WCE
+// #define bzero(to,sz)	memset((to), 0, (sz))
 
-#define bcmp(a,b,sz)	memcmp((a), (b), (sz))
-#endif /* WIN32_WCE */
+// #define bcmp(a,b,sz)	memcmp((a), (b), (sz))
+// #endif /* WIN32_WCE */
 
-/*
- * compatibility stuff
- */
-#if defined(WIN32)	/* but also for others, e.g. sun... */
-#define NEED_BCOPY
-#define bcmp(a,b,n) memcmp(a,b,n)
-#endif
+// /*
+//  * compatibility stuff
+//  */
+// #if defined(_WIN32)	/* but also for others, e.g. sun... */
+// #define NEED_BCOPY
+// #define bcmp(a,b,n) memcmp(a,b,n)
+// #endif
 
-#ifdef NEED_BCOPY
-#define bcopy(s, d, siz)        memcpy((d), (s), (siz))
-#define bzero(d, siz)   memset((d), '\0', (siz))
-#endif
+// #ifdef NEED_BCOPY
+// #define bcopy(s, d, siz)        memcpy((d), (s), (siz))
+// #define bzero(d, siz)   memset((d), '\0', (siz))
+// #endif
 
-#ifndef UINT32
-#define UINT32 unsigned long
-#endif
+// #ifndef _UINT32
+// #define _UINT32 unsigned long
+// #endif
 
-/*
- * stuff used for testing purposes only
- */
+// /*
+//  * stuff used for testing purposes only
+//  */
 
-#ifdef TICK		/* VR: avoid a warning under Solaris */
-#undef TICK
-#endif
+// #ifdef TICK		/* VR: avoid a warning under Solaris */
+// #undef TICK
+// #endif
 
-//#define TEST
-#ifdef	TEST /* { */
+// //#define TEST
+// #ifdef	TEST /* { */
 
-#define DEB(x) x
-#define DDB(x) x
-#define	OF_RS_DEBUG	4	/* minimal debugging */
-#if defined(WIN32)
-#include <time.h>
-struct timeval
-{
-	unsigned long ticks;
-};
-#define gettimeofday(x, dummy) { (x)->ticks = clock() ; }
-#define DIFF_T(a,b) (1+ 1000000*(a.ticks - b.ticks) / CLOCKS_PER_SEC )
-typedef unsigned long UINT32 ;
-typedef unsigned short u_short ;
-#else /* typically, unix systems */
-#include <sys/time.h>
-#define DIFF_T(a,b) \
-	(1+ 1000000*(a.tv_sec - b.tv_sec) + (a.tv_usec - b.tv_usec) )
-#endif
+// #define DEB(x) x
+// #define DDB(x) x
+// #define	OF_RS_DEBUG	4	/* minimal debugging */
+// #if defined(_WIN32)
+// #include <time.h>
+// struct timeval
+// {
+// 	unsigned long ticks;
+// };
+// #define gettimeofday(x, dummy) { (x)->ticks = clock() ; }
+// #define DIFF_T(a,b) (1+ 1000000*(a.ticks - b.ticks) / CLOCKS_PER_SEC )
+// typedef unsigned long _UINT32 ;
+// typedef unsigned short u_short ;
+// #else /* typically, unix systems */
+// #include <sys/time.h>
+// #define DIFF_T(a,b) \
+// 	(1+ 1000000*(a.tv_sec - b.tv_sec) + (a.tv_usec - b.tv_usec) )
+// #endif
 
-#define TICK(t) \
-	{struct timeval x ; \
-	gettimeofday(&x, NULL) ; \
-	t = x.tv_usec + 1000000* (x.tv_sec & 0xff ) ; \
-	}
-#define TOCK(t) \
-	{ UINT32 t1 ; TICK(t1) ; \
-	  if (t1 < t) t = 256000000 + t1 - t ; \
-	  else t = t1 - t ; \
-	  if (t == 0) t = 1 ;}
+// #define TICK(t) \
+// 	{struct timeval x ; \
+// 	gettimeofday(&x, NULL) ; \
+// 	t = x.tv_usec + 1000000* (x.tv_sec & 0xff ) ; \
+// 	}
+// #define TOCK(t) \
+// 	{ _UINT32 t1 ; TICK(t1) ; \
+// 	  if (t1 < t) t = 256000000 + t1 - t ; \
+// 	  else t = t1 - t ; \
+// 	  if (t == 0) t = 1 ;}
 
-UINT32 ticks[10];	/* vars for timekeeping */
+// _UINT32 ticks[10];	/* vars for timekeeping */
 
-#else  /* } { */
+// #else  /* } { */
 
-#define DEB(x)
-#define DDB(x)
-#define TICK(x)
-#define TOCK(x)
+// #define DEB(x)
+// #define DDB(x)
+// #define TICK(x)
+// #define TOCK(x)
 
-#endif /* } TEST */
+// #endif /* } TEST */
 
 
-/*
- * You should not need to change anything beyond this point.
- * The first part of the file implements linear algebra in GF.
- *
- * gf is the type used to store an element of the Galois Field.
- * Must constain at least GF_BITS bits.
- *
- * Note: unsigned char will work up to GF(256) but int seems to run
- * faster on the Pentium. We use int whenever have to deal with an
- * index, since they are generally faster.
- */
-#if (GF_BITS < 2  && GF_BITS >16)
-#error "GF_BITS must be 2 .. 16"
-#endif
-/*#if (GF_BITS <= 8)
-typedef unsigned char gf;
-#else
-typedef unsigned short gf;
-#endif*/
+// /*
+//  * You should not need to change anything beyond this point.
+//  * The first part of the file implements linear algebra in GF.
+//  *
+//  * gf is the type used to store an element of the Galois Field.
+//  * Must constain at least GF_BITS bits.
+//  *
+//  * Note: unsigned char will work up to GF(256) but int seems to run
+//  * faster on the Pentium. We use int whenever have to deal with an
+//  * index, since they are generally faster.
+//  */
+// #if (GF_BITS < 2  && GF_BITS >16)
+// #error "GF_BITS must be 2 .. 16"
+// #endif
+// /*#if (GF_BITS <= 8)
+// typedef unsigned char gf;
+// #else
+// typedef unsigned short gf;
+// #endif*/
 
-#define	GF_SIZE ((1 << GF_BITS) - 1)	/* powers of \alpha */
+// #define	GF_SIZE ((1 << GF_BITS) - 1)	/* powers of \alpha */
 
 /*
  * Primitive polynomials - see Lin & Costello, Appendix A,
@@ -180,7 +180,7 @@ static gf	of_rs_inverse[GF_SIZE+1];	/* inverse of field elem.		*/
  * without a slow divide.
  */
 static gf
-of_modnn (INT32 x)
+of_modnn (_INT32 x)
 {
 	while (x >= GF_SIZE)
 	{
@@ -261,7 +261,7 @@ of_gf_mul (x, y)
  * one place.
  */
 static void *
-of_my_malloc (INT32 sz, const char *err_string)
+of_my_malloc (_INT32 sz, const char *err_string)
 {
 	OF_ENTER_FUNCTION
 	void *p = malloc (sz);
@@ -285,7 +285,7 @@ static void
 of_generate_gf (void)
 {
 	OF_ENTER_FUNCTION
-	INT32 i;
+	_INT32 i;
 	gf mask;
 	const char *Pp =  of_rs_allPp[GF_BITS] ;
 
@@ -373,22 +373,22 @@ of_addmul1 (gf *dst1, gf *src1, gf c, int sz)
 	register gf *dst = dst1, *src = src1 ;
 
 	gf *lim = &dst[sz - UNROLL + 1] ;
-	UINT64 tmp;
-	UINT64 *dst_64 = (UINT64*)dst1;
+	_UINT64 tmp;
+	_UINT64 *dst_64 = (_UINT64*)dst1;
 	GF_MULC0 (c) ;
 	/* with 64-bit CPUs, unroll the loop and work on two 64-bit words at a time. */
 	for (; dst < lim ; dst += UNROLL, src += UNROLL)
 	{
 
-		tmp = ((UINT64)__gf_mulc_[src[0]]) | ((UINT64)__gf_mulc_[src[1]]<<8) | ((UINT64)__gf_mulc_[src[2]]<<16) |
-				((UINT64)__gf_mulc_[src[3]]<<24) | ((UINT64)__gf_mulc_[src[4]]<<32) | ((UINT64)__gf_mulc_[src[5]]<<40) |
-				((UINT64)__gf_mulc_[src[6]]<<48) | ((UINT64)__gf_mulc_[src[7]]<<56) ;
+		tmp = ((_UINT64)__gf_mulc_[src[0]]) | ((_UINT64)__gf_mulc_[src[1]]<<8) | ((_UINT64)__gf_mulc_[src[2]]<<16) |
+				((_UINT64)__gf_mulc_[src[3]]<<24) | ((_UINT64)__gf_mulc_[src[4]]<<32) | ((_UINT64)__gf_mulc_[src[5]]<<40) |
+				((_UINT64)__gf_mulc_[src[6]]<<48) | ((_UINT64)__gf_mulc_[src[7]]<<56) ;
 		*dst_64 ^= tmp;
 		dst_64++;
 
-		tmp = ((UINT64)__gf_mulc_[src[8]]) | ((UINT64)__gf_mulc_[src[9]]<<8) | ((UINT64)__gf_mulc_[src[10]]<<16) |
-				((UINT64)__gf_mulc_[src[11]]<<24) | ((UINT64)__gf_mulc_[src[12]]<<32) | ((UINT64)__gf_mulc_[src[13]]<<40) |
-				((UINT64)__gf_mulc_[src[14]]<<48) | ((UINT64)__gf_mulc_[src[15]]<<56) ;
+		tmp = ((_UINT64)__gf_mulc_[src[8]]) | ((_UINT64)__gf_mulc_[src[9]]<<8) | ((_UINT64)__gf_mulc_[src[10]]<<16) |
+				((_UINT64)__gf_mulc_[src[11]]<<24) | ((_UINT64)__gf_mulc_[src[12]]<<32) | ((_UINT64)__gf_mulc_[src[13]]<<40) |
+				((_UINT64)__gf_mulc_[src[14]]<<48) | ((_UINT64)__gf_mulc_[src[15]]<<56) ;
 		*dst_64 ^= tmp;
 		dst_64++;
 	}
@@ -747,8 +747,8 @@ of_rs_init()
 
 struct fec_parms
 {
-	UINT32 magic ;
-	INT32 k, n ;		/* parameters of the code */
+	_UINT32 magic ;
+	_INT32 k, n ;		/* parameters of the code */
 	gf *enc_matrix ;
 } ;
 
@@ -766,7 +766,7 @@ void of_rs_free (struct fec_parms *p)
 #endif /* CPLUSPLUS_COMPATIBLE */
 	if (p == NULL) //||
 			//p->magic != ( ( (FEC_MAGIC ^ p->k) ^ p->n) ^ (int)(p->enc_matrix)) ) {
-			//p->magic != (( (FEC_MAGIC ^ p->k) ^ p->n) ^ (UINT32) (p->enc_matrix)))
+			//p->magic != (( (FEC_MAGIC ^ p->k) ^ p->n) ^ (_UINT32) (p->enc_matrix)))
 	{
 		OF_PRINT_ERROR (("bad parameters to fec_free\n"))
 		return ;
@@ -785,10 +785,10 @@ struct fec_parms *
 #else
 void *
 #endif
-of_rs_new (UINT32 k, UINT32 n)
+of_rs_new (_UINT32 k, _UINT32 n)
 {
 	OF_ENTER_FUNCTION
-	INT32 row, col ;
+	_INT32 row, col ;
 	gf *p, *tmp_m ;
 
 	struct fec_parms *retval ;

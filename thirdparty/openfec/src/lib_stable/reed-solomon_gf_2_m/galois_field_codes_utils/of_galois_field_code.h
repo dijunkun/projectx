@@ -36,12 +36,9 @@
 
 #include "../of_reed-solomon_gf_2_m_includes.h"
 
-#define bcmp(s1 ,s2, n) memcmp((s1), (s2), (size_t)(n))
-
 #ifdef OF_USE_REED_SOLOMON_2_M_CODEC
 
-#define FEC_MAGIC	0xFECC0DEC
-
+#define FEC_MAGIC 0xFECC0DEC
 
 /*
  * Primitive polynomials - see Lin & Costello, Appendix A,
@@ -73,32 +70,36 @@ static const char *of_rs_allPp[] =      /* GF_BITS	polynomial		*/
 /**
  * Galois-Field-Code stable codec specific control block structure.
  */
-typedef	of_rs_2_m_cb_t	of_galois_field_code_cb_t;	/* XXX: the two types are synonymous in fact! */
+typedef of_rs_2_m_cb_t
+    of_galois_field_code_cb_t; /* XXX: the two types are synonymous in fact! */
 
 /**
  * just a helper to init all we need to use GF
  */
-of_status_t	of_rs_2m_init(of_galois_field_code_cb_t* ofcb);
+of_status_t of_rs_2m_init(of_galois_field_code_cb_t* ofcb);
 
 /**
  * and the helper to release memory
  */
-void		of_rs_2m_release(of_galois_field_code_cb_t* ofcb);
+void of_rs_2m_release(of_galois_field_code_cb_t* ofcb);
 
 /**
  * even if only decoder is defined, we need an encoding matrix.
  */
-of_status_t	of_rs_2m_build_encoding_matrix(of_galois_field_code_cb_t* ofcb);
+of_status_t of_rs_2m_build_encoding_matrix(of_galois_field_code_cb_t* ofcb);
 
 #ifdef OF_USE_DECODER
-of_status_t	of_rs_2m_build_decoding_matrix(of_galois_field_code_cb_t* ofcb,int* index);
-of_status_t	of_rs_2m_decode(of_galois_field_code_cb_t* ofcb,gf *pkt[], int index[], int sz);
+of_status_t of_rs_2m_build_decoding_matrix(of_galois_field_code_cb_t* ofcb,
+                                           int* index);
+of_status_t of_rs_2m_decode(of_galois_field_code_cb_t* ofcb, gf* pkt[],
+                            int index[], int sz);
 #endif
 
 #ifdef OF_USE_ENCODER
-of_status_t	of_rs_2m_encode(of_galois_field_code_cb_t* ofcb,gf *_src[], gf *_fec, int index, int sz);
+of_status_t of_rs_2m_encode(of_galois_field_code_cb_t* ofcb, gf* _src[],
+                            gf* _fec, int index, int sz);
 #endif
 
-#endif //OF_USE_GALOIS_FIELD_CODES_UTILS
+#endif  // OF_USE_GALOIS_FIELD_CODES_UTILS
 
-#endif //GALOIS_FIELD_CODE_H
+#endif  // GALOIS_FIELD_CODE_H

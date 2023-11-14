@@ -17,14 +17,14 @@
 #include "of_linear_binary_code.h"
 
 
-of_mod2sparse* of_create_pchk_matrix (UINT32		nb_rows,
-				      UINT32		nb_cols,
+of_mod2sparse* of_create_pchk_matrix (_UINT32		nb_rows,
+				      _UINT32		nb_cols,
 				      make_method	make_method,
-				      UINT32		left_degree,
-				      UINT32		seed,
+				      _UINT32		left_degree,
+				      _UINT32		seed,
 				      bool		no4cycle,
 				      of_session_type	type,
-				      UINT8		verbosity)
+				      _UINT8		verbosity)
 {
 	OF_ENTER_FUNCTION
 	of_mod2sparse* m;
@@ -48,20 +48,20 @@ of_mod2sparse* of_create_pchk_matrix (UINT32		nb_rows,
 }
 
 
-of_mod2sparse* of_create_pchk_matrix_general (UINT32		nb_rows,
-					      UINT32		nb_cols,
+of_mod2sparse* of_create_pchk_matrix_general (_UINT32		nb_rows,
+					      _UINT32		nb_cols,
 					      make_method	make_method,
-					      UINT32		left_degree,
-					      UINT32		seed,
+					      _UINT32		left_degree,
+					      _UINT32		seed,
 					      bool		no4cycle,
 					      of_session_type	type,
-					      UINT8		verbosity)
+					      _UINT8		verbosity)
 {
-	UINT32 row_start = 0;
-	UINT32 row_end = 0;
-	UINT32 col_start = 0;
-	UINT32 col_end = 0;
-	INT32 i;
+	_UINT32 row_start = 0;
+	_UINT32 row_end = 0;
+	_UINT32 col_start = 0;
+	_UINT32 col_end = 0;
+	_INT32 i;
 	of_mod2sparse *pchkMatrix = NULL;
 
 	OF_ENTER_FUNCTION
@@ -129,10 +129,10 @@ of_mod2sparse* of_create_pchk_matrix_general (UINT32		nb_rows,
 }
 
 
-of_mod2sparse* of_create_2D_pchk_matrix		(UINT32		nb_rows,
-						UINT32		nb_cols,
+of_mod2sparse* of_create_2D_pchk_matrix		(_UINT32		nb_rows,
+						_UINT32		nb_cols,
 						of_session_type	type,
-						UINT8		verbosity)
+						_UINT8		verbosity)
 {
 	OF_ENTER_FUNCTION
 	of_mod2sparse	*pchkMatrix;
@@ -163,12 +163,12 @@ error:
 
 
 of_mod2sparse* 	of_fill_2D_pchk_matrix 		(of_mod2sparse	*m,
-					         UINT32		d,
-						 UINT32		l,
-					         UINT8		verbosity)
+					         _UINT32		d,
+						 _UINT32		l,
+					         _UINT8		verbosity)
 {
 	OF_ENTER_FUNCTION
-	UINT32		i, j;
+	_UINT32		i, j;
 
 	for (i = 0; i < (l+d); i++)
 	{
@@ -197,21 +197,21 @@ of_mod2sparse* 	of_fill_2D_pchk_matrix 		(of_mod2sparse	*m,
 
 
 of_mod2sparse* of_fill_regular_pchk_matrix (of_mod2sparse	*m,
-					    UINT32		row_start,
-					    UINT32		row_end,
-					    UINT32		col_start,
-					    UINT32		col_end,
+					    _UINT32		row_start,
+					    _UINT32		row_end,
+					    _UINT32		col_start,
+					    _UINT32		col_end,
 					    make_method		make_method,
-					    UINT32		left_degree,
+					    _UINT32		left_degree,
 					    bool		no4cycle,
-					    UINT8		verbosity)
+					    _UINT8		verbosity)
 {
 	of_mod2entry *e;
-	UINT32 added, uneven;
-	INT32 i, j, k, t;
-	UINT32 *u;
+	_UINT32 added, uneven;
+	_INT32 i, j, k, t;
+	_UINT32 *u;
 	of_mod2sparse *pchkMatrix = m;
-	UINT32 nb_col, nb_row;
+	_UINT32 nb_col, nb_row;
 
 	OF_ENTER_FUNCTION
 	nb_col = col_end - col_start;
@@ -236,7 +236,7 @@ of_mod2sparse* of_fill_regular_pchk_matrix (of_mod2sparse	*m,
 		break;
 
 	case Evenboth:
-		u = (UINT32*) of_calloc (left_degree * nb_col, sizeof * u);
+		u = (_UINT32*) of_calloc (left_degree * nb_col, sizeof * u);
 
 		/* initialize a list of possible choices to guarantee a homogeneous "1" distribution */
 		for (k = left_degree * nb_col - 1; k >= 0; k--)
@@ -325,7 +325,7 @@ of_mod2sparse* of_fill_regular_pchk_matrix (of_mod2sparse	*m,
 	/* Add extra bits to try to avoid problems with even column counts. */
 	if (left_degree % 2 == 0 && left_degree < nb_row && nb_col > 1 && added < 2)
 	{
-		UINT32 a;
+		_UINT32 a;
 		for (a = 0; added + a < 2; a++)
 		{
 			do

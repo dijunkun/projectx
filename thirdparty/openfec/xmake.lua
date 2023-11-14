@@ -7,11 +7,14 @@ package("openfec")
     on_install(function (package)
         local configs = {}
         table.insert(configs, "-DDEBUG:STRING=" .. (package:debug() and "ON" or "OFF"))
-        table.insert(configs, "-DLIBRARY_OUTPUT_PATH=" .. (path.join(package:installdir(), "lib")))
+        table.insert(configs, "-DLIBRARY_OUTPUT_PATH=" .. (path.join(package:installdir(), "lib"))) 
       
         import("package.tools.cmake").install(package, configs)
         os.cp("src", package:installdir())
         package:add("includedirs", "src")
+        if is_plat("windows") then
+            os.cp(path.join(package:installdir(), "lib/Release/openfec.lib"), package:installdir("lib"))
+        end
     end)
 
     on_test(function (package)

@@ -38,39 +38,39 @@
 
 #ifndef __cplusplus
 #ifndef bool
-#define		bool		UINT32
+#define		bool		_UINT32
 #define		true		1
 #define		false		0
 #endif
 #endif /* !__cplusplus */
 
-#ifndef UINT32
-#define		INT8		char
-#define		INT16		short
-#define		UINT8		unsigned char
-#define		UINT16		unsigned short
+#ifndef _UINT32
+#define		_INT8		char
+#define		_INT16		short
+#define		_UINT8		unsigned char
+#define		_UINT16		unsigned short
 
 #if defined(__LP64__) || (__WORDSIZE == 64) /* 64 bit architectures */
-#define		INT32		int		/* yes, it's also true in LP64! */
-#define		UINT32		unsigned int	/* yes, it's also true in LP64! */
+#define		_INT32		int		/* yes, it's also true in LP64! */
+#define		_UINT32		unsigned int	/* yes, it's also true in LP64! */
 
 #else  /* 32 bit architectures */
 
-#define		INT32		int		/* int creates fewer compilations pbs than long */
-#define		UINT32		unsigned int	/* int creates fewer compilations pbs than long */
+#define		_INT32		int		/* int creates fewer compilations pbs than long */
+#define		_UINT32		unsigned int	/* int creates fewer compilations pbs than long */
 #endif /* 32/64 architectures */
 
-#endif /* !UINT32 */
+#endif /* !_UINT32 */
 
-#ifndef UINT64
-#ifdef WIN32
-#define		INT64		__int64
-#define		UINT64		__uint64
-#else  /* UNIX */
-#define		INT64		long long
-#define		UINT64		unsigned long long
-#endif /* OS */
-#endif /* !UINT64 */
+#ifndef _UINT64
+// #ifdef _WIN32
+// #define		_INT64		__int64
+// #define		_UINT64		__uint64
+// #else  /* UNIX */
+#define		_INT64		long long
+#define		_UINT64		unsigned long long
+// #endif /* OS */
+#endif /* !_UINT64 */
 
 
 /**
@@ -78,5 +78,104 @@
  * It reprensents a Galois field element.
  */
 typedef unsigned char gf;
+
+/* VR: added for WIN CE support */
+#ifdef _WIN32_WCE
+#define bzero(to,sz)	memset((to), 0, (sz))
+
+#define bcmp(a,b,sz)	memcmp((a), (b), (sz))
+#endif /* WIN32_WCE */
+
+/*
+ * compatibility stuff
+ */
+#if defined(_WIN32)	/* but also for others, e.g. sun... */
+#define NEED_BCOPY
+#define bcmp(a,b,n) memcmp(a,b,n)
+#endif
+
+#ifdef NEED_BCOPY
+#define bcopy(s, d, siz)        memcpy((d), (s), (siz))
+#define bzero(d, siz)   memset((d), '\0', (siz))
+#endif
+
+#ifndef _UINT32
+#define _UINT32 unsigned long
+#endif
+
+/*
+ * stuff used for testing purposes only
+ */
+
+#ifdef TICK		/* VR: avoid a warning under Solaris */
+#undef TICK
+#endif
+
+//#define TEST
+#ifdef	TEST /* { */
+
+#define DEB(x) x
+#define DDB(x) x
+#define	OF_RS_DEBUG	4	/* minimal debugging */
+#if defined(_WIN32)
+#include <time.h>
+struct timeval
+{
+	unsigned long ticks;
+};
+#define gettimeofday(x, dummy) { (x)->ticks = clock() ; }
+#define DIFF_T(a,b) (1+ 1000000*(a.ticks - b.ticks) / CLOCKS_PER_SEC )
+typedef unsigned long _UINT32 ;
+typedef unsigned short u_short ;
+#else /* typically, unix systems */
+#include <sys/time.h>
+#define DIFF_T(a,b) \
+	(1+ 1000000*(a.tv_sec - b.tv_sec) + (a.tv_usec - b.tv_usec) )
+#endif
+
+#define TICK(t) \
+	{struct timeval x ; \
+	gettimeofday(&x, NULL) ; \
+	t = x.tv_usec + 1000000* (x.tv_sec & 0xff ) ; \
+	}
+#define TOCK(t) \
+	{ _UINT32 t1 ; TICK(t1) ; \
+	  if (t1 < t) t = 256000000 + t1 - t ; \
+	  else t = t1 - t ; \
+	  if (t == 0) t = 1 ;}
+
+_UINT32 ticks[10];	/* vars for timekeeping */
+
+#else  /* } { */
+
+#define DEB(x)
+#define DDB(x)
+#define TICK(x)
+#define TOCK(x)
+
+#endif /* } TEST */
+
+
+/*
+ * You should not need to change anything beyond this point.
+ * The first part of the file implements linear algebra in GF.
+ *
+ * gf is the type used to store an element of the Galois Field.
+ * Must constain at least GF_BITS bits.
+ *
+ * Note: unsigned char will work up to GF(256) but int seems to run
+ * faster on the Pentium. We use int whenever have to deal with an
+ * index, since they are generally faster.
+ */
+#if (GF_BITS < 2  && GF_BITS >16)
+#error "GF_BITS must be 2 .. 16"
+#endif
+/*#if (GF_BITS <= 8)
+typedef unsigned char gf;
+#else
+typedef unsigned short gf;
+#endif*/
+
+#define	GF_SIZE ((1 << GF_BITS) - 1)	/* powers of \alpha */
 
 #endif //OF_TYPES

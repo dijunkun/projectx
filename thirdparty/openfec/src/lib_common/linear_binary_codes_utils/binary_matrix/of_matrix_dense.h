@@ -38,7 +38,7 @@
 /* PACKING OF BITS INTO WORDS.  Bits are packed into 32-bit words, with
    the low-order bit coming first. */
 
-typedef UINT32 of_mod2word;	/* Data type that holds packed bits */
+typedef _UINT32 of_mod2word;	/* Data type that holds packed bits */
 
 
 #define of_mod2_wordsize 32	/* Number of bits that fit in a of_mod2word. Can't
@@ -67,10 +67,10 @@ typedef UINT32 of_mod2word;	/* Data type that holds packed bits */
 
 typedef struct
 {
-	UINT32 n_rows;		/* Number of rows in the matrix */
-	UINT32 n_cols;		/* Number of columns in the matrix */
+	_UINT32 n_rows;		/* Number of rows in the matrix */
+	_UINT32 n_cols;		/* Number of columns in the matrix */
 
-	UINT32 n_words;		/* Number of words used to store a column of bits */
+	_UINT32 n_words;		/* Number of words used to store a column of bits */
 
 #ifdef COL_ORIENTED
 	of_mod2word **col;	/* Pointer to array of pointers to columns */
@@ -90,52 +90,52 @@ typedef struct
 
 /* PROCEDURES. */
 
-of_mod2dense *of_mod2dense_allocate (UINT32, UINT32);
+of_mod2dense *of_mod2dense_allocate (_UINT32, _UINT32);
 void of_mod2dense_free (of_mod2dense *);
 
 void of_mod2dense_clear (of_mod2dense *);
 void of_mod2dense_copy (of_mod2dense *, of_mod2dense *);
-void of_mod2dense_copyrows (of_mod2dense*, of_mod2dense *, UINT32 *);
-void of_mod2dense_copycols (of_mod2dense*, of_mod2dense *, UINT32 *);
+void of_mod2dense_copyrows (of_mod2dense*, of_mod2dense *, _UINT32 *);
+void of_mod2dense_copycols (of_mod2dense*, of_mod2dense *, _UINT32 *);
 
 void of_mod2dense_print (FILE *, of_mod2dense *);
-UINT32  of_mod2dense_write (FILE *, of_mod2dense *);
+_UINT32  of_mod2dense_write (FILE *, of_mod2dense *);
 of_mod2dense *of_mod2dense_read (FILE *);
 
-UINT32  of_mod2dense_get (of_mod2dense *, UINT32, UINT32);
-INT32   of_mod2dense_set (of_mod2dense *, UINT32, UINT32, UINT32);
-UINT32  of_mod2dense_flip (of_mod2dense *, UINT32, UINT32);
+_UINT32  of_mod2dense_get (of_mod2dense *, _UINT32, _UINT32);
+_INT32   of_mod2dense_set (of_mod2dense *, _UINT32, _UINT32, _UINT32);
+_UINT32  of_mod2dense_flip (of_mod2dense *, _UINT32, _UINT32);
 
 void of_mod2dense_transpose (of_mod2dense *, of_mod2dense *);
 void of_mod2dense_add (of_mod2dense *, of_mod2dense *, of_mod2dense *);
 void of_mod2dense_multiply (of_mod2dense *, of_mod2dense *, of_mod2dense *);
 
-UINT32 of_mod2dense_equal (of_mod2dense *, of_mod2dense *);
+_UINT32 of_mod2dense_equal (of_mod2dense *, of_mod2dense *);
 
-UINT32 of_mod2dense_invert (of_mod2dense *, of_mod2dense *);
-UINT32 of_mod2dense_forcibly_invert (of_mod2dense *, of_mod2dense *, UINT32 *, UINT32 *);
-UINT32 of_mod2dense_invert_selected (of_mod2dense *, of_mod2dense *, UINT32 *, UINT32 *);
+_UINT32 of_mod2dense_invert (of_mod2dense *, of_mod2dense *);
+_UINT32 of_mod2dense_forcibly_invert (of_mod2dense *, of_mod2dense *, _UINT32 *, _UINT32 *);
+_UINT32 of_mod2dense_invert_selected (of_mod2dense *, of_mod2dense *, _UINT32 *, _UINT32 *);
 
-UINT32 of_mod2dense_triangularize (of_mod2dense *, of_mod2dense *);
+_UINT32 of_mod2dense_triangularize (of_mod2dense *, of_mod2dense *);
 
 
 void of_mod2dense_print_bitmap (of_mod2dense *, char *); //MC added
 void of_mod2dense_print_memory_info (of_mod2dense *); //MC added
 double of_mod2dense_density (of_mod2dense *); // MC added
 
-bool of_mod2dense_row_is_empty (of_mod2dense *m, UINT32	row); // VR added
-UINT32 of_mod2word_weight (of_mod2word); // MC added
+bool of_mod2dense_row_is_empty (of_mod2dense *m, _UINT32	row); // VR added
+_UINT32 of_mod2word_weight (of_mod2word); // MC added
 
-UINT32 of_mod2dense_row_weight (of_mod2dense *, UINT32); // MC added
-UINT32 of_mod2dense_row_weight_ignore_first (of_mod2dense *m, UINT32 i, UINT32 nb_ignore);// MC added
-UINT32 of_mod2dense_col_weight (of_mod2dense *, UINT32); // MC added
+_UINT32 of_mod2dense_row_weight (of_mod2dense *, _UINT32); // MC added
+_UINT32 of_mod2dense_row_weight_ignore_first (of_mod2dense *m, _UINT32 i, _UINT32 nb_ignore);// MC added
+_UINT32 of_mod2dense_col_weight (of_mod2dense *, _UINT32); // MC added
 
 void of_mod2dense_print_stats (FILE *, of_mod2dense *);// MC added
 
-//void of_mod2dense_add_row (of_mod2dense *, UINT32 , UINT32); // MC added
-//void of_mod2dense_add_row_ignore_first (of_mod2dense *, UINT32 , UINT32, UINT32); // MC added
+//void of_mod2dense_add_row (of_mod2dense *, _UINT32 , _UINT32); // MC added
+//void of_mod2dense_add_row_ignore_first (of_mod2dense *, _UINT32 , _UINT32, _UINT32); // MC added
 
-void of_mod2dense_xor_rows(of_mod2dense *m, UINT16 from, UINT16 to);
+void of_mod2dense_xor_rows(of_mod2dense *m, _UINT16 from, _UINT16 to);
 #endif //OF_USE_LINEAR_BINARY_CODES_UTILS
 
 #endif

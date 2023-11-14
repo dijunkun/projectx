@@ -92,7 +92,7 @@
  * Default maximum number of source and encoding symbols for this codec.
  * This value depends in particular on the kind of decoder used. To this
  * limit, codec implementation details might add other limits (e.g. if
- * the ESI values are stored in UINT16 instead of UINT32...).
+ * the ESI values are stored in _UINT16 instead of _UINT32...).
  *
  * Hints:
  * 	If ML decoding is enabled and used, then limit yourself to a value

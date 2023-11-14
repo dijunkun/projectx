@@ -50,21 +50,21 @@
 
 
 /* RFC5170 compliant fonction. DO NOT MODIFY */
-of_mod2sparse* of_create_pchck_matrix_rfc5170_compliant (UINT32		nb_rows,
-							 UINT32		nb_cols,
-							 UINT32		left_degree,
-							 UINT32		seed,
+of_mod2sparse* of_create_pchck_matrix_rfc5170_compliant (_UINT32		nb_rows,
+							 _UINT32		nb_cols,
+							 _UINT32		left_degree,
+							 _UINT32		seed,
 							 of_ldpc_staircase_cb_t	*ofcb)
 {
 	OF_ENTER_FUNCTION
 	of_mod2entry	*e;
-	UINT32		added, uneven;
-	INT32		i, j, k;
-	INT32		t;			/* left limit within the list of possible choices u[] */
-	UINT32		*u;			/* table used to have a homogeneous 1 distrib. */
+	_UINT32		added, uneven;
+	_INT32		i, j, k;
+	_INT32		t;			/* left limit within the list of possible choices u[] */
+	_UINT32		*u;			/* table used to have a homogeneous 1 distrib. */
 	of_mod2sparse	*pchkMatrix = NULL;
-	UINT32		skipCols = 0;		// avoid warning
-	UINT32		nbDataCols = 0;		// avoid warning
+	_UINT32		skipCols = 0;		// avoid warning
+	_UINT32		nbDataCols = 0;		// avoid warning
 
 	skipCols = nb_rows;
 	nbDataCols = nb_cols - skipCols;
@@ -80,7 +80,7 @@ of_mod2sparse* of_create_pchck_matrix_rfc5170_compliant (UINT32		nb_rows,
 	pchkMatrix = of_mod2sparse_allocate (nb_rows, nb_cols);
 	/* create the initial version of the parity check matrix. */
 	/* evenboth make method only */
-	u = (UINT32*) of_calloc (left_degree * nbDataCols, sizeof * u);
+	u = (_UINT32*) of_calloc (left_degree * nbDataCols, sizeof * u);
 	/* initialize a list of possible choices to guarantee a homogeneous "1" distribution */
 	for (k = left_degree * nbDataCols - 1; k >= 0; k--)
 	{

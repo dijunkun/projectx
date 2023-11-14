@@ -47,9 +47,9 @@
  */
 typedef struct of_ldpc_ff_parameters
 {
-	UINT32		nb_source_symbols;	/* must be 1st item */
-	UINT32		nb_repair_symbols;	/* must be 2nd item */
-	UINT32		encoding_symbol_length; /* must be 3rd item */
+	_UINT32		nb_source_symbols;	/* must be 1st item */
+	_UINT32		nb_repair_symbols;	/* must be 2nd item */
+	_UINT32		encoding_symbol_length; /* must be 3rd item */
 	/*
 	* FEC codec id specific attributes follow...
 	*/

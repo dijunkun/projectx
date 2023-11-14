@@ -46,8 +46,8 @@
    and then displays an error message and exits if the space couldn't be
    found. */
 
-void *of_chk_alloc     (UINT32	n,		/* Number of elements */
-			UINT32	size)		/* Size of each element */
+void *of_chk_alloc     (_UINT32	n,		/* Number of elements */
+			_UINT32	size)		/* Size of each element */
 {
 	void *p;
 
@@ -78,11 +78,11 @@ void *of_chk_alloc     (UINT32	n,		/* Number of elements */
    The file read from should have been opened as "binary".
 */
 
-INT32 of_intio_read (FILE *f)		/* File to read from */
+_INT32 of_intio_read (FILE *f)		/* File to read from */
 {
-	UINT8 b[4];
-	INT32 top;
-	INT32 i;
+	_UINT8 b[4];
+	_INT32 top;
+	_INT32 i;
 
 	OF_ENTER_FUNCTION
 	for (i = 0; i < 4; i++)
@@ -93,7 +93,7 @@ INT32 of_intio_read (FILE *f)		/* File to read from */
 			return 0;
 		}
 	}
-	top = b[3] > 127 ? (INT32) b[3] - 256 : b[3];
+	top = b[3] > 127 ? (_INT32) b[3] - 256 : b[3];
 	OF_EXIT_FUNCTION
 	return (top << 24) + (b[2] << 16) + (b[1] << 8) + b[0];
 }
@@ -108,10 +108,10 @@ INT32 of_intio_read (FILE *f)		/* File to read from */
 */
 
 void of_intio_write	(FILE	*f,	/* File to write to */
-			 INT32	v)	/* Value to write to file */
+			 _INT32	v)	/* Value to write to file */
 {
-	UINT8 b;
-	INT32 i;
+	_UINT8 b;
+	_INT32 i;
 
 	OF_ENTER_FUNCTION
 	for (i = 0; i < 3; i++)
@@ -127,9 +127,9 @@ void of_intio_write	(FILE	*f,	/* File to write to */
 #endif
 
 
-void of_print_composition (char* symbol, UINT32 size)
+void of_print_composition (char* symbol, _UINT32 size)
 {
-	UINT32 i;
+	_UINT32 i;
 
 	OF_ENTER_FUNCTION
 	for (i = 0;i < size;i++)

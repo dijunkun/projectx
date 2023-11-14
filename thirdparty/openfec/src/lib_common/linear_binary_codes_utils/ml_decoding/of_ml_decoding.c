@@ -68,7 +68,7 @@ of_linear_binary_code_prepar_linear_system (of_linear_binary_code_cb_t	*ofcb);
 static of_status_t
 of_linear_binary_code_simplify_linear_system_with_a_symbol  (of_linear_binary_code_cb_t	*ofcb,
 								const void			*new_symbol,
-								UINT32				new_symbol_esi);
+								_UINT32				new_symbol_esi);
 
 /**
  * This function creates the simplified linear system, considering only the non empty columns.
@@ -88,13 +88,13 @@ of_linear_binary_code_create_simplified_linear_system (of_linear_binary_code_cb_
 of_status_t
 of_linear_binary_code_finish_decoding_with_ml (of_linear_binary_code_cb_t	*ofcb)
 {
-	INT32		i;
-	UINT32		*permutation_array		= NULL;
+	_INT32		i;
+	_UINT32		*permutation_array		= NULL;
 	of_mod2dense	*dense_pchk_matrix_simplified	= NULL;
-	INT32		*column_idx			= NULL;
+	_INT32		*column_idx			= NULL;
 	void		**const_term			= NULL;
 	void		**variable_member		= NULL;
-	UINT32		nb_computed_repair_in_ml;
+	_UINT32		nb_computed_repair_in_ml;
 #ifdef DEBUG
 	struct timeval	gdtv0;		/* start */
 	struct timeval	gdtv1;		/* end */
@@ -147,15 +147,15 @@ of_linear_binary_code_finish_decoding_with_ml (of_linear_binary_code_cb_t	*ofcb)
 	 * Inject all known repair symbols
 	 */
 	/* Randomize the repair symbols order before injecting them (it makes the decoding process more efficient). */
-	permutation_array = (UINT32 *) of_malloc (ofcb->nb_repair_symbols * sizeof(UINT32));
+	permutation_array = (_UINT32 *) of_malloc (ofcb->nb_repair_symbols * sizeof(_UINT32));
 	for (i = 0 ; i < ofcb->nb_repair_symbols ; i++)
 	{
 		permutation_array[i] = i;
 	}
 	for (i = 0 ; i < ofcb->nb_repair_symbols ; i++)
 	{
-		INT32	backup;
-		INT32	rand_val;
+		_INT32	backup;
+		_INT32	rand_val;
 
 		backup = permutation_array[i];
 		rand_val = rand() % ofcb->nb_repair_symbols;
@@ -200,7 +200,7 @@ of_linear_binary_code_finish_decoding_with_ml (of_linear_binary_code_cb_t	*ofcb)
 	gettimeofday (&gdtv0, NULL);
 	OF_TRACE_LVL (1, ("gauss_decoding_start=%ld.%ld\n", gdtv0.tv_sec, gdtv0.tv_usec))
 #endif
-	if ((column_idx = (INT32 *) of_malloc (of_mod2dense_cols (dense_pchk_matrix_simplified) * sizeof (INT32))) == NULL)
+	if ((column_idx = (_INT32 *) of_malloc (of_mod2dense_cols (dense_pchk_matrix_simplified) * sizeof (_INT32))) == NULL)
 	{
 		goto no_mem;
 	}
@@ -327,17 +327,17 @@ no_mem:
 of_status_t
 of_linear_binary_code_prepar_linear_system (of_linear_binary_code_cb_t		*ofcb)
 {
-	INT32	_row;
-	INT32	_col;
+	_INT32	_row;
+	_INT32	_col;
 
 	OF_ENTER_FUNCTION
 	if (ofcb->index_rows == NULL)
 	{
-		ofcb->index_rows = (UINT32*) of_calloc (ofcb->nb_repair_symbols, sizeof (UINT32));
+		ofcb->index_rows = (_UINT32*) of_calloc (ofcb->nb_repair_symbols, sizeof (_UINT32));
 	}
 	if (ofcb->index_cols == NULL)
 	{
-		ofcb->index_cols = (UINT32*) of_calloc (ofcb->nb_total_symbols, sizeof (UINT32));
+		ofcb->index_cols = (_UINT32*) of_calloc (ofcb->nb_total_symbols, sizeof (_UINT32));
 	}
 	for (_row = 0; _row < ofcb->nb_repair_symbols; _row++)
 	{
@@ -370,11 +370,11 @@ of_linear_binary_code_prepar_linear_system (of_linear_binary_code_cb_t		*ofcb)
 static of_status_t
 of_linear_binary_code_simplify_linear_system_with_a_symbol (of_linear_binary_code_cb_t	*ofcb,
 							    const void			*new_symbol,
-							    UINT32			new_symbol_esi)
+							    _UINT32			new_symbol_esi)
 {
 	of_mod2entry	*_e;		// entry ("1") in parity check matrix and entry to delete in row/column (temp)
 	of_mod2entry	*_del_me;
-	INT32		_row;
+	_INT32		_row;
 
 	OF_ENTER_FUNCTION
 	if (of_mod2sparse_empty_col (ofcb->pchk_matrix, of_get_symbol_col((of_cb_t*)ofcb, new_symbol_esi)))
@@ -422,7 +422,7 @@ of_linear_binary_code_simplify_linear_system_with_a_symbol (of_linear_binary_cod
 		if (ofcb->tab_nb_unknown_symbols[_row] == 1)
 		{
 			of_mod2entry	*__r;
-			UINT32		decoded_symbol_seqno;
+			_UINT32		decoded_symbol_seqno;
 
 			// Get the only one symbol in the equation
 			__r = of_mod2sparse_first_in_row (ofcb->pchk_matrix, _row);
@@ -512,32 +512,32 @@ no_mem:
 
 of_status_t of_linear_binary_code_create_simplified_linear_system (of_linear_binary_code_cb_t	*ofcb)
 {
-	INT32		_row;
-	INT32		_col;
+	_INT32		_row;
+	_INT32		_col;
 	of_mod2sparse	*__pchk_matrix_simplified_cols;
-	UINT32		*index_rows;
-	UINT32		*index_cols;
+	_UINT32		*index_rows;
+	_UINT32		*index_cols;
 
 	OF_ENTER_FUNCTION
 	ofcb->remain_rows = 0;
 	ofcb->remain_cols = 0;
 	if (ofcb->index_rows == NULL)
 	{
-		if ((ofcb->index_rows = (UINT32 *) of_calloc (ofcb->nb_repair_symbols, sizeof (UINT32))) == NULL)
+		if ((ofcb->index_rows = (_UINT32 *) of_calloc (ofcb->nb_repair_symbols, sizeof (_UINT32))) == NULL)
 		{
 			goto no_mem;
 		}
 	}
 	if (ofcb->index_cols == NULL)
 	{
-		if ((ofcb->index_cols = (UINT32 *) of_calloc (ofcb->nb_total_symbols - ofcb->nb_repair_symbol_ready - ofcb->nb_source_symbol_ready,
-								sizeof (UINT32))) == NULL)
+		if ((ofcb->index_cols = (_UINT32 *) of_calloc (ofcb->nb_total_symbols - ofcb->nb_repair_symbol_ready - ofcb->nb_source_symbol_ready,
+								sizeof (_UINT32))) == NULL)
 		{
 			goto no_mem;
 		}
 	}
-	index_rows = (UINT32*) of_malloc(ofcb->nb_repair_symbols * sizeof(UINT32));
-	index_cols = (UINT32*) of_malloc(ofcb->nb_total_symbols  * sizeof(UINT32));
+	index_rows = (_UINT32*) of_malloc(ofcb->nb_repair_symbols * sizeof(_UINT32));
+	index_cols = (_UINT32*) of_malloc(ofcb->nb_total_symbols  * sizeof(_UINT32));
 	if ((index_rows == NULL) || (index_cols == NULL))
 	{
 		goto no_mem;

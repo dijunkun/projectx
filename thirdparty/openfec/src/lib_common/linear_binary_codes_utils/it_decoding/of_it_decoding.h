@@ -40,7 +40,7 @@
 
 
 /**
- * @fn	  of_status_t	of_linear_binary_code_decode_with_new_symbol (of_linear_binary_code_cb_t*	ofcb, void*	const	new_symbol_buf, UINT32		new_symbol_esi)
+ * @fn	  of_status_t	of_linear_binary_code_decode_with_new_symbol (of_linear_binary_code_cb_t*	ofcb, void*	const	new_symbol_buf, _UINT32		new_symbol_esi)
  * @brief (try to) decode with a newly received symbol
  * @param ofcb			(IN) Pointer to the linear binary code control block.
  * @param new_symbol		(IN) Pointer to the encoding symbol now available (i.e. a new
@@ -49,7 +49,7 @@
  * @param new_symbol_esi	(IN) Encoding symbol ID of the newly symbol available, in {0..n-1}.
  * @return			Error status (NB: this function does not return OF_STATUS_FAILURE).
  */
-of_status_t of_linear_binary_code_decode_with_new_symbol(of_linear_binary_code_cb_t* ofcb,void* new_symbol,UINT32 new_symbol_esi);
+of_status_t of_linear_binary_code_decode_with_new_symbol(of_linear_binary_code_cb_t* ofcb,void* new_symbol,_UINT32 new_symbol_esi);
 
 #endif //OF_USE_LINEAR_BINARY_CODES_UTILS
 

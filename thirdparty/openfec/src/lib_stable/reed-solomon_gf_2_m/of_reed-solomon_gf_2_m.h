@@ -51,13 +51,13 @@ typedef struct of_rs_2_m_cb
  ***********************************************************************************/
 	of_codec_id_t		codec_id;		/* must begin with fec_codec_id          */
 	of_codec_type_t		codec_type;		/* must be 2nd item                      */
-	UINT32			nb_source_symbols;	/** k parameter (AKA code dimension).    */
-	UINT32			nb_repair_symbols;	/** r = n - k parameter.                 */
-	UINT32			encoding_symbol_length;	/** symbol length.                       */
+	_UINT32			nb_source_symbols;	/** k parameter (AKA code dimension).    */
+	_UINT32			nb_repair_symbols;	/** r = n - k parameter.                 */
+	_UINT32			encoding_symbol_length;	/** symbol length.                       */
 /***********************************************************************************/
 
-	UINT16			m;		/* in theory between 2..16. Currently only values 4 and 8 are supported */
-	UINT16			field_size; 	/* 2^m */
+	_UINT16			m;		/* in theory between 2..16. Currently only values 4 and 8 are supported */
+	_UINT16			field_size; 	/* 2^m */
 	gf*			of_rs_gf_exp;	/* index->poly form conversion table. */
 	int*			of_rs_gf_log;	/* Poly->index form conversion table. */
 	gf*			of_rs_inverse;	/* inverse of field elem. */
@@ -79,15 +79,15 @@ typedef struct of_rs_2_m_cb
 #endif
 /***********************************************************************************/
 
-	UINT32			magic;
+	_UINT32			magic;
 
 	/** Maximum number of source symbols supported by this codec for practical reasons. */
-	UINT32			max_nb_source_symbols;
+	_UINT32			max_nb_source_symbols;
 	/** Maximum number of encoding symbols supported by this codec for practical reasons. */
-	UINT32			max_nb_encoding_symbols;
+	_UINT32			max_nb_encoding_symbols;
 	/* maximum m value in GF(2^m) supported by the codec */
-	UINT16			max_m;
-	UINT32 			nb_encoding_symbols;
+	_UINT16			max_m;
+	_UINT32 			nb_encoding_symbols;
 #ifdef OF_USE_DECODER
 	/*
 	 * decoder specific variables.
@@ -99,20 +99,20 @@ typedef struct of_rs_2_m_cb
 	void 			** available_symbols_tab;
 	/** Number of available source and repair symbols. This is the number of entries in
 	 * the available_symbols_tab tables. */
-	UINT32 			nb_available_symbols;
+	_UINT32 			nb_available_symbols;
 	/** Number of available source symbols. */
-	UINT32			nb_available_source_symbols;
+	_UINT32			nb_available_source_symbols;
 	bool 			decoding_finished;	/** true as soon as decoding completed. */
 #endif /* OF_USE_DECODER */
 
 
 	/** callbacks for this codec. */
 	void* (*decoded_source_symbol_callback) (void	*context,
-			UINT32	size,	/* size of decoded source symbol */
-			UINT32	esi);	/* encoding symbol ID in {0..k-1} */
+			_UINT32	size,	/* size of decoded source symbol */
+			_UINT32	esi);	/* encoding symbol ID in {0..k-1} */
 	void* (*decoded_repair_symbol_callback) (void	*context,
-			UINT32	size,	/* size of decoded repair symbol */
-			UINT32	esi);	/* encoding symbol ID in {0..k-1} */
+			_UINT32	size,	/* size of decoded repair symbol */
+			_UINT32	esi);	/* encoding symbol ID in {0..k-1} */
 	void*	context_4_callback;
 
 } of_rs_2_m_cb_t;
@@ -162,8 +162,8 @@ of_status_t	of_rs_2_m_set_fec_parameters       (of_rs_2_m_cb_t*		ofcb,
 
 /**
  * @fn of_status_t	of_rs_2_m_set_callback_functions (of_rs_2_m_cb_t	*ofcb,void* (*decoded_source_symbol_callback)
- *  (void	*context,UINT32	size,UINT32	esi),	void* (*decoded_repair_symbol_callback)
- *  (void	*context,UINT32	size,UINT32	esi),void*	context_4_callback)
+ *  (void	*context,_UINT32	size,_UINT32	esi),	void* (*decoded_repair_symbol_callback)
+ *  (void	*context,_UINT32	size,_UINT32	esi),void*	context_4_callback)
  * @brief		set various callbock functions (see header of_open_fec_api.h)
  * @param ofcb		(IN) Pointer to the session.
  *
@@ -187,16 +187,16 @@ of_status_t	of_rs_2_m_set_fec_parameters       (of_rs_2_m_cb_t*		ofcb,
  */
 of_status_t	of_rs_2_m_set_callback_functions	(of_rs_2_m_cb_t*		ofcb,
 			       void* (*decoded_source_symbol_callback) (void	*context,
-					       UINT32	size,	/* size of decoded source symbol */
-					       UINT32	esi),	/* encoding symbol ID in {0..k-1} */
+					       _UINT32	size,	/* size of decoded source symbol */
+					       _UINT32	esi),	/* encoding symbol ID in {0..k-1} */
 			       void* (*decoded_repair_symbol_callback) (void	*context,
-					       UINT32	size,	/* size of decoded repair symbol */
-					       UINT32	esi),	/* encoding symbol ID in {0..k-1} */
+					       _UINT32	size,	/* size of decoded repair symbol */
+					       _UINT32	esi),	/* encoding symbol ID in {0..k-1} */
 			       void*	context_4_callback);
 
 #ifdef OF_USE_ENCODER
 /**
- * @fn		of_status_t	of_rs_2_m_build_repair_symbol (of_rs_2_m_cb_t* ofcb, void* encoding_symbols_tab[], UINT32	esi_of_symbol_to_build)
+ * @fn		of_status_t	of_rs_2_m_build_repair_symbol (of_rs_2_m_cb_t* ofcb, void* encoding_symbols_tab[], _UINT32	esi_of_symbol_to_build)
  * @brief			build a repair symbol (encoder only)
  * @param ofcb			(IN) Pointer to the session.
  * @param encoding_symbols_tab	(IN/OUT) table of source and repair symbols.
@@ -210,12 +210,12 @@ of_status_t	of_rs_2_m_set_callback_functions	(of_rs_2_m_cb_t*		ofcb,
  */
 of_status_t	of_rs_2_m_build_repair_symbol      (of_rs_2_m_cb_t*	ofcb,
 						void*		encoding_symbols_tab[],
-						UINT32		esi_of_symbol_to_build);
+						_UINT32		esi_of_symbol_to_build);
 #endif //OF_USE_ENCODER
 
 #ifdef OF_USE_DECODER
 /**
- * @fn	  of_status_t	of_rs_2_m_decode_with_new_symbol (of_rs_2_m_cb_t*	ofcb, void*	const	new_symbol_buf, UINT32		new_symbol_esi)
+ * @fn	  of_status_t	of_rs_2_m_decode_with_new_symbol (of_rs_2_m_cb_t*	ofcb, void*	const	new_symbol_buf, _UINT32		new_symbol_esi)
  * @brief (try to) decode with a newly received symbol
  * @param ofcb			(IN) Pointer to the session.
  * @param new_symbol		(IN) Pointer to the encoding symbol now available (i.e. a new
@@ -226,7 +226,7 @@ of_status_t	of_rs_2_m_build_repair_symbol      (of_rs_2_m_cb_t*	ofcb,
  */
 of_status_t	of_rs_2_m_decode_with_new_symbol   (of_rs_2_m_cb_t*	ofcb,
 						void*		new_symbol,
-						UINT32		new_symbol_esi);
+						_UINT32		new_symbol_esi);
 
 /**
  * @fn				of_status_t	of_rs_2_m_set_available_symbols (of_rs_2_m_cb_t*	ofcb, void* const	encoding_symbols_tab[]);
@@ -274,7 +274,7 @@ of_status_t	of_rs_2_m_get_source_symbols_tab	(of_rs_2_m_cb_t*	ofcb,
 #endif  //OF_USE_DECODER
 
 /**
- * @fn			of_status_t	of_rs_2_m_set_control_parameter (of_rs_2_m_cb_t* ofcb,UINT32	type,void* value,UINT32	length)
+ * @fn			of_status_t	of_rs_2_m_set_control_parameter (of_rs_2_m_cb_t* ofcb,_UINT32	type,void* value,_UINT32	length)
  * @brief		set a specific FEC parameter
  * @param ofcb		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID specific.
@@ -284,12 +284,12 @@ of_status_t	of_rs_2_m_get_source_symbols_tab	(of_rs_2_m_cb_t*	ofcb,
  * @return		Error status.
  */
 of_status_t	of_rs_2_m_set_control_parameter    (of_rs_2_m_cb_t*	ofcb,
-						UINT32		type,
+						_UINT32		type,
 						void*		value,
-						UINT32		length);
+						_UINT32		length);
 
 /**
- * @fn			of_status_t	of_rs_2_m_get_control_parameter (of_rs_2_m_cb_t* ofcb,UINT32	type,void* value,UINT32	length)
+ * @fn			of_status_t	of_rs_2_m_get_control_parameter (of_rs_2_m_cb_t* ofcb,_UINT32	type,void* value,_UINT32	length)
  * @brief		get a specific FEC parameter
  * @param ofcb		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID specific.
@@ -301,9 +301,9 @@ of_status_t	of_rs_2_m_set_control_parameter    (of_rs_2_m_cb_t*	ofcb,
  * @return		Error status.
  */
 of_status_t	of_rs_2_m_get_control_parameter    (of_rs_2_m_cb_t*	ofcb,
-						UINT32		type,
+						_UINT32		type,
 						void*		value,
-						UINT32		length);
+						_UINT32		length);
 
 
 

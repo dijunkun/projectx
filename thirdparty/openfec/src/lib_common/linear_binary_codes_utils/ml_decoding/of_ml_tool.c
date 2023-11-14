@@ -51,7 +51,7 @@
  * @param ofcb			(IN) Linear-Binary-Code control-block.
  * @return			1 if it's OK, or 0 if an error took place.
  */
-static INT32
+static _INT32
 of_linear_binary_code_triangularize_dense_system (of_linear_binary_code_cb_t	*ofcb,
 						  of_mod2dense			*m,
 						  void				**constant_tab);
@@ -68,11 +68,11 @@ of_linear_binary_code_triangularize_dense_system (of_linear_binary_code_cb_t	*of
  * @param stats			(IN)
  * @return			1 if it's OK, or 0 if an error took place.
  */
-static INT32
+static _INT32
 of_linear_binary_code_col_forward_elimination  (of_linear_binary_code_cb_t	*ofcb,
 						of_mod2dense			*m,
 						void				**constant_tab,
-						INT32				col_idx);
+						_INT32				col_idx);
 
 
 /**
@@ -86,7 +86,7 @@ of_linear_binary_code_col_forward_elimination  (of_linear_binary_code_cb_t	*ofcb
  * @param ofcb			(IN/OUT) Linear-Binary-Code control-block.
  * @return			1 if it's OK, or 0 if an error took place.
  */
-static INT32
+static _INT32
 of_linear_binary_code_backward_substitution (of_linear_binary_code_cb_t	*ofcb,
 					     of_mod2dense		*m,
 					     void			*variable_tab[],
@@ -131,11 +131,11 @@ of_linear_binary_code_solve_dense_system (of_linear_binary_code_cb_t	*ofcb,
 
 
 static
-INT32	of_linear_binary_code_triangularize_dense_system (of_linear_binary_code_cb_t	*ofcb,
+_INT32	of_linear_binary_code_triangularize_dense_system (of_linear_binary_code_cb_t	*ofcb,
 							  of_mod2dense			*m,
 							  void				**constant_tab)
 {
-	INT32 i, n;
+	_INT32 i, n;
 
 	OF_ENTER_FUNCTION
 	n = of_mod2dense_cols (m);
@@ -154,19 +154,19 @@ INT32	of_linear_binary_code_triangularize_dense_system (of_linear_binary_code_cb
 
 
 static
-INT32	of_linear_binary_code_col_forward_elimination  (of_linear_binary_code_cb_t	*ofcb,
+_INT32	of_linear_binary_code_col_forward_elimination  (of_linear_binary_code_cb_t	*ofcb,
 								of_mod2dense			*m,
 								void				**constant_tab,
-								INT32				col_idx)
+								_INT32				col_idx)
 {
 	of_mod2word	*s;
 	of_mod2word	*t;
-	INT32		i, j, k;
-	INT32		n, p;
-	INT32		w;
-	INT32		w0;
-	INT32		b0;
-	INT32		symbol_size;
+	_INT32		i, j, k;
+	_INT32		n, p;
+	_INT32		w;
+	_INT32		w0;
+	_INT32		b0;
+	_INT32		symbol_size;
 	void		*tmp_buffer;
 
 	OF_ENTER_FUNCTION
@@ -271,16 +271,16 @@ INT32	of_linear_binary_code_col_forward_elimination  (of_linear_binary_code_cb_t
 
 /* old trivial backward substitution algorithm. */
 static
-INT32	of_linear_binary_code_backward_substitution    (of_linear_binary_code_cb_t	*ofcb,
+_INT32	of_linear_binary_code_backward_substitution    (of_linear_binary_code_cb_t	*ofcb,
 							of_mod2dense			*m,
 							void				*variable_tab[],
 							void				*constant_tab[])
 {
-	INT32	i;		/* current variable index for which we apply backward substition. It's also the row index. */
-	INT32	j;		/*  */
-	INT32	n;
-	INT32	w0;		/* dense matrix word index for variable j */
-	INT32	b0;		/* dense matrix bit index in word of index w0 */
+	_INT32	i;		/* current variable index for which we apply backward substition. It's also the row index. */
+	_INT32	j;		/*  */
+	_INT32	n;
+	_INT32	w0;		/* dense matrix word index for variable j */
+	_INT32	b0;		/* dense matrix bit index in word of index w0 */
 
 	OF_ENTER_FUNCTION
 	n = of_mod2dense_cols (m);

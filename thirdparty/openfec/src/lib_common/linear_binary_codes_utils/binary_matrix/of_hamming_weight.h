@@ -43,53 +43,53 @@
  * implementation on machines with fast multiplication.
  * It uses 12 arithmetic operations, one of which is a multiply.
  *
- * @fn INT32	of_popcount_3		(UINT64 x)
+ * @fn _INT32	of_popcount_3		(_UINT64 x)
  * @brief		return the number of "1" in a 64 bits word.
  * @param x		(IN) 64bits word
  * @return		count of "1" of x
  */
-INT32	of_popcount_3		(UINT64 x);
+_INT32	of_popcount_3		(_UINT64 x);
 
 /**
  * return the hamming weight of a 32bits word
  *
- * @fn UINT32	of_hweight32		(UINT32 w)
+ * @fn _UINT32	of_hweight32		(_UINT32 w)
  * @brief		return the hamming weight of a 32bits word
  * @param w		(IN) 32bits word
  * @return		hamming weight of w
  */
-UINT32	of_hweight32		(UINT32 w);
+_UINT32	of_hweight32		(_UINT32 w);
 
 /**
  * return the hamming weight of a 32bits word with a naive method
  *
- * @fn UINT32	of_hweight32_naive		(UINT32 w)
+ * @fn _UINT32	of_hweight32_naive		(_UINT32 w)
  * @brief		return the hamming weight of a 32bits word
  * @param w		(IN) 32bits word
  * @return		hamming weight of w
  */
-UINT32	of_hweight32_naive	(UINT32 w);
+_UINT32	of_hweight32_naive	(_UINT32 w);
 
 /**
  * return the hamming weight of a 32bits word with a corresponding table method
  *
- * @fn UINT32	of_hweight32_table		(UINT32 w)
+ * @fn _UINT32	of_hweight32_table		(_UINT32 w)
  * @brief		return the hamming weight of a 32bits word
  * @param w		(IN) 32bits word
  * @return		hamming weight of w
  */
-UINT32	of_hweight32_table	(UINT32 w);
+_UINT32	of_hweight32_table	(_UINT32 w);
 
 /**
  * return the hamming weight of an array word
  *
- * @fn UINT32	of_hweight_array		(UINT32 *array, INT32 size)
+ * @fn _UINT32	of_hweight_array		(_UINT32 *array, _INT32 size)
  * @brief		return the hamming weight of a 32bits word
  * @param array		(IN) pointer to array
  * @param size		(IN) size of array
  * @return		hamming weight of array
  */
-UINT32	of_hweight_array	(UINT32 *array, INT32 size);
+_UINT32	of_hweight_array	(_UINT32 *array, _INT32 size);
 
 #endif //OF_USE_LINEAR_BINARY_CODES_UTILS
 

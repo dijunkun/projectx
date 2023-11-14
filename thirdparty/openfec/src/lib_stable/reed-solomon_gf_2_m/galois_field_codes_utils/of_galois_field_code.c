@@ -37,9 +37,9 @@
 #ifdef OF_USE_REED_SOLOMON_2_M_CODEC
 
 
-gf of_modnn(of_galois_field_code_cb_t* ofcb,INT32 x)
+gf of_modnn(of_galois_field_code_cb_t* ofcb,_INT32 x)
 {
-	UINT16 field_size = ofcb->field_size;
+	_UINT16 field_size = ofcb->field_size;
 	while (x >= field_size)
 	{
 		x -= field_size;
@@ -114,7 +114,7 @@ of_status_t of_rs_2m_build_encoding_matrix(of_galois_field_code_cb_t* ofcb)
 {
 	OF_ENTER_FUNCTION
 	gf *tmp_m, *p;
-	UINT32 k,r,col,row;
+	_UINT32 k,r,col,row;
 	k=ofcb->nb_source_symbols;
 	r = ofcb->nb_repair_symbols;
 	if ((ofcb->enc_matrix = of_malloc((k+r)*(k))) == NULL)
@@ -188,7 +188,7 @@ of_status_t of_rs_2m_build_encoding_matrix(of_galois_field_code_cb_t* ofcb)
 of_status_t of_rs_2m_build_decoding_matrix(of_galois_field_code_cb_t* ofcb, int *index)
 {
 	OF_ENTER_FUNCTION
-	UINT32 k,r,i;
+	_UINT32 k,r,i;
 	gf *p;
 	k = ofcb->nb_source_symbols;
 	r = ofcb->nb_repair_symbols;

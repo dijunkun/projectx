@@ -39,18 +39,18 @@
 
 of_status_t of_linear_binary_code_decode_with_new_symbol (of_linear_binary_code_cb_t*	ofcb,
 							  void*				new_symbol,
-							  UINT32			new_symbol_esi)
+							  _UINT32			new_symbol_esi)
 {
 	of_mod2entry	*e = NULL;			// entry ("1") in parity check matrix
 	of_mod2entry	*mod_entry_to_delete;		// temp: entry to delete in row/column
 	void		*const_term;			// temp: pointer to constant term, containing the sum of
 							// all the known symbols of this equation
-	UINT32		row;				// temp: current row value
-	UINT32		*table_of_check_deg_1 = NULL;	// table of check nodes of degree
+	_UINT32		row;				// temp: current row value
+	_UINT32		*table_of_check_deg_1 = NULL;	// table of check nodes of degree
 							// one after the processing of new_symbol
-	INT32		table_of_check_deg_1_nb = 0;	// number of entries in table
-	UINT32		size_of_table_of_check_deg_1 = 0; // size of the memory block
-	UINT32		decoded_symbol_esi;		// sequence number of decoded symbol
+	_INT32		table_of_check_deg_1_nb = 0;	// number of entries in table
+	_UINT32		size_of_table_of_check_deg_1 = 0; // size of the memory block
+	_UINT32		decoded_symbol_esi;		// sequence number of decoded symbol
 
 	OF_ENTER_FUNCTION
 	ASSERT(ofcb);
@@ -139,7 +139,7 @@ of_status_t of_linear_binary_code_decode_with_new_symbol (of_linear_binary_code_
 		{
 			mod_entry_to_delete = e;
 			of_mod2entry	*tmp_e;		// current symbol in this equation
-			UINT32		tmp_esi;	// corresponding esi
+			_UINT32		tmp_esi;	// corresponding esi
 			void		*tmp_symbol;	// corresponding symbol pointer
 
 			// there's a partial sum for this row...
@@ -219,7 +219,7 @@ of_status_t of_linear_binary_code_decode_with_new_symbol (of_linear_binary_code_
 			{
 				// allocate memory for the table first
 				size_of_table_of_check_deg_1 = 4;
-				if ((table_of_check_deg_1 = (UINT32*) of_calloc (size_of_table_of_check_deg_1, sizeof (UINT32*))) == NULL)
+				if ((table_of_check_deg_1 = (_UINT32*) of_calloc (size_of_table_of_check_deg_1, sizeof (_UINT32*))) == NULL)
 				{
 					goto no_mem;
 				}
@@ -228,7 +228,7 @@ of_status_t of_linear_binary_code_decode_with_new_symbol (of_linear_binary_code_
 			{
 				// not enough size in table, add some more
 				size_of_table_of_check_deg_1 += 4;
-				if ((table_of_check_deg_1 = (UINT32*) of_realloc (table_of_check_deg_1, size_of_table_of_check_deg_1 * sizeof (UINT32*))) == NULL)
+				if ((table_of_check_deg_1 = (_UINT32*) of_realloc (table_of_check_deg_1, size_of_table_of_check_deg_1 * sizeof (_UINT32*))) == NULL)
 				{
 					goto no_mem;
 				}

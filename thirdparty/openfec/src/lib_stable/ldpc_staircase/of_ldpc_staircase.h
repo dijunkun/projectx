@@ -45,12 +45,12 @@ typedef struct of_ldpc_staircase_cb
 	/****** of_cb part { **************************************************/
 	of_codec_id_t	codec_id;
 	of_codec_type_t	codec_type;
-	UINT32		nb_source_symbols;	/** k parameter (AKA code dimension). */
-	UINT32		nb_repair_symbols;	/** r = n - k parameter. */
-	UINT32		encoding_symbol_length;	/** symbol length. */
+	_UINT32		nb_source_symbols;	/** k parameter (AKA code dimension). */
+	_UINT32		nb_repair_symbols;	/** r = n - k parameter. */
+	_UINT32		encoding_symbol_length;	/** symbol length. */
 	/****** } of_cb part **************************************************/
 
-	UINT32		nb_total_symbols;	/** n parameter (AKA code length). */
+	_UINT32		nb_total_symbols;	/** n parameter (AKA code length). */
 
 	/* parity check matrix */
 	of_mod2sparse	*pchk_matrix;
@@ -60,20 +60,20 @@ typedef struct of_ldpc_staircase_cb
 #ifdef OF_DEBUG
 	of_symbols_stats_t	*stats_symbols;
 #endif
-	UINT32		nb_source_symbol_ready; // Number of source symbols ready
-	UINT32		nb_repair_symbol_ready; // Number of parity symbols ready
+	_UINT32		nb_source_symbol_ready; // Number of source symbols ready
+	_UINT32		nb_repair_symbol_ready; // Number of parity symbols ready
 
 #ifdef ML_DECODING  /* { */
-	UINT32		*index_rows;	// Indirection index to access initial m_chekValues array
-	UINT32		*index_cols;	// Indirection index to access initial symbol array
-	UINT32		remain_cols;	// Nb of non empty remaining cols in the future simplified matrix
-	UINT32		remain_rows;	// Nb of non empty remaining rows in the future simplified matrix
+	_UINT32		*index_rows;	// Indirection index to access initial m_chekValues array
+	_UINT32		*index_cols;	// Indirection index to access initial symbol array
+	_UINT32		remain_cols;	// Nb of non empty remaining cols in the future simplified matrix
+	_UINT32		remain_rows;	// Nb of non empty remaining rows in the future simplified matrix
 
 	of_mod2sparse	*pchk_matrix_simplified; // Simplified Parity Check Matrix in sparse mode format
 	of_mod2sparse	*original_pchkMatrix;
 	of_mod2sparse	*pchk_matrix_gauss;	// Parity Check matrix in sparse mode format.
-	UINT32		dec_step;	// Current step in the Gauss decoding algorithm
-	UINT32		threshold_simplification; // threshold (number of symbols) above which we
+	_UINT32		dec_step;	// Current step in the Gauss decoding algorithm
+	_UINT32		threshold_simplification; // threshold (number of symbols) above which we
 					// run the Gaussian Elimination algorithm
 #endif /* } ML_DECODING */
 
@@ -81,43 +81,43 @@ typedef struct of_ldpc_staircase_cb
 	/** table of all check values, i.e. that contain the constant term of each equation. */
 	void**		tab_const_term_of_equ;
 	/** table containing the number of encoding symbols of each equation. */
-	UINT16*		tab_nb_enc_symbols_per_equ;
+	_UINT16*		tab_nb_enc_symbols_per_equ;
 	/** table containing the number of unknow symbols (i.e. neither received nor decoded
 	 *  at that time) of each equation. */
-	UINT16*		tab_nb_unknown_symbols;
+	_UINT16*		tab_nb_unknown_symbols;
 	/** table containing the number of equations in which a repair symbol is included. */
-	UINT16*		tab_nb_equ_for_repair;
+	_UINT16*		tab_nb_equ_for_repair;
 	
 	void**		repair_symbols_values;
 	void**		tmp_tab_symbols;
-	UINT16		nb_tmp_symbols;
+	_UINT16		nb_tmp_symbols;
 #endif /* } OF_USE_DECODER */
 
 	void 		**encoding_symbols_tab;
 
 	/** callbacks registered by the application. */
 	void*	(*decoded_source_symbol_callback) (void	*context,
-						UINT32	size,	/* size of decoded source symbol */
-						UINT32	esi);	/* encoding symbol ID in {0..k-1} */
+						_UINT32	size,	/* size of decoded source symbol */
+						_UINT32	esi);	/* encoding symbol ID in {0..k-1} */
 	void*	(*decoded_repair_symbol_callback) (void	*context,
-						UINT32	size,	/* size of decoded repair symbol */
-						UINT32	esi);	/* encoding symbol ID in {0..k-1} */
+						_UINT32	size,	/* size of decoded repair symbol */
+						_UINT32	esi);	/* encoding symbol ID in {0..k-1} */
 	void*	context_4_callback;
 
 	/****** } of_linear_binary_code_cb part *******************************/
 
 	/** Maximum number of source symbols supported by this codec for practical reasons. */
-	UINT32		max_nb_source_symbols;
+	_UINT32		max_nb_source_symbols;
 	/** Maximum number of encoding symbols supported by this codec for practical reasons. */
-	UINT32		max_nb_encoding_symbols;
+	_UINT32		max_nb_encoding_symbols;
 	/** Seed used to build this code. */
-	UINT32		prng_seed;
+	_UINT32		prng_seed;
 	/** Target number or "1s" per column for H1 (see RFC5170). */
-	UINT8		N1;
+	_UINT8		N1;
 	/** During H1 creation, have extra entries been added per row to make the row hamming weight at least two? */
 	bool		extra_entries_added_in_pchk;
 	/** ESI of first non decoded source symbol. Used by is_decoding_complete function. */
-	UINT32		first_non_decoded;
+	_UINT32		first_non_decoded;
 } of_ldpc_staircase_cb_t;
 
 
@@ -165,8 +165,8 @@ of_status_t	of_ldpc_staircase_set_fec_parameters (of_ldpc_staircase_cb_t*		ofcb,
 
 /**
  * @fn of_status_t	of_ldpc_staircase_set_callback_functions (of_ldpc_staircase_cb_t	*ofcb,void* (*decoded_source_symbol_callback)
- *  (void	*context,UINT32	size,UINT32	esi),	void* (*decoded_repair_symbol_callback)
- *  (void	*context,UINT32	size,UINT32	esi),void*	context_4_callback)
+ *  (void	*context,_UINT32	size,_UINT32	esi),	void* (*decoded_repair_symbol_callback)
+ *  (void	*context,_UINT32	size,_UINT32	esi),void*	context_4_callback)
  * @brief		set various callbock functions (see header of_open_fec_api.h)
  * @param ofcb		(IN) Pointer to the session.
  *
@@ -190,16 +190,16 @@ of_status_t	of_ldpc_staircase_set_fec_parameters (of_ldpc_staircase_cb_t*		ofcb,
  */
 of_status_t	of_ldpc_staircase_set_callback_functions (of_ldpc_staircase_cb_t*		ofcb,
 				       void* (*decoded_source_symbol_callback) (void	*context,
-						       UINT32	size,	/* size of decoded source symbol */
-						       UINT32	esi),	/* encoding symbol ID in {0..k-1} */
+						       _UINT32	size,	/* size of decoded source symbol */
+						       _UINT32	esi),	/* encoding symbol ID in {0..k-1} */
 				       void* (*decoded_repair_symbol_callback) (void	*context,
-						       UINT32	size,	/* size of decoded repair symbol */
-						       UINT32	esi),	/* encoding symbol ID in {0..k-1} */
+						       _UINT32	size,	/* size of decoded repair symbol */
+						       _UINT32	esi),	/* encoding symbol ID in {0..k-1} */
 				       void*	context_4_callback);
 
 #ifdef OF_USE_ENCODER
 /**
- * @fn		of_status_t	of_ldpc_staircase_build_repair_symbol (of_ldpc_staircase_cb_t* ofcb, void* encoding_symbols_tab[], UINT32	esi_of_symbol_to_build)
+ * @fn		of_status_t	of_ldpc_staircase_build_repair_symbol (of_ldpc_staircase_cb_t* ofcb, void* encoding_symbols_tab[], _UINT32	esi_of_symbol_to_build)
  * @brief			build a repair symbol (encoder only)
  * @param ofcb			(IN) Pointer to the session.
  * @param encoding_symbols_tab	(IN/OUT) table of source and repair symbols.
@@ -213,12 +213,12 @@ of_status_t	of_ldpc_staircase_set_callback_functions (of_ldpc_staircase_cb_t*		o
  */
 of_status_t	of_ldpc_staircase_build_repair_symbol (of_ldpc_staircase_cb_t*		ofcb,
 							void*				encoding_symbols_tab[],
-							UINT32				esi_of_symbol_to_build);
+							_UINT32				esi_of_symbol_to_build);
 #endif //OF_USE_ENCODER
 
 #ifdef OF_USE_DECODER
 /**
- * @fn	  of_status_t	of_ldpc_staircase_decode_with_new_symbol (of_ldpc_staircase_cb_t*	ofcb, void*	const	new_symbol_buf, UINT32		new_symbol_esi)
+ * @fn	  of_status_t	of_ldpc_staircase_decode_with_new_symbol (of_ldpc_staircase_cb_t*	ofcb, void*	const	new_symbol_buf, _UINT32		new_symbol_esi)
  * @brief (try to) decode with a newly received symbol
  * @param ofcb			(IN) Pointer to the session.
  * @param new_symbol		(IN) Pointer to the encoding symbol now available (i.e. a new
@@ -229,7 +229,7 @@ of_status_t	of_ldpc_staircase_build_repair_symbol (of_ldpc_staircase_cb_t*		ofcb
  */
 of_status_t	of_ldpc_staircase_decode_with_new_symbol (of_ldpc_staircase_cb_t*	ofcb,
 							  void*				new_symbol,
-							  UINT32			new_symbol_esi);
+							  _UINT32			new_symbol_esi);
 
 /**
  * @fn				of_status_t	of_ldpc_staircase_set_available_symbols (of_ldpc_staircase_cb_t*	ofcb, void* const	encoding_symbols_tab[]);
@@ -275,7 +275,7 @@ of_status_t	of_ldpc_staircase_get_source_symbols_tab (of_ldpc_staircase_cb_t*	of
 							  void*				source_symbols_tab[]);
 
 /**
- * @fn			of_status_t	of_ldpc_staircase_set_control_parameter (of_ldpc_staircase_cb_t* ofcb,UINT32	type,void* value,UINT32	length)
+ * @fn			of_status_t	of_ldpc_staircase_set_control_parameter (of_ldpc_staircase_cb_t* ofcb,_UINT32	type,void* value,_UINT32	length)
  * @brief		set a specific FEC parameter
  * @param ofcb		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID specific.
@@ -285,12 +285,12 @@ of_status_t	of_ldpc_staircase_get_source_symbols_tab (of_ldpc_staircase_cb_t*	of
  * @return		Error status.
  */
 of_status_t	of_ldpc_staircase_set_control_parameter(of_ldpc_staircase_cb_t* ofcb,
-							UINT32			type,
+							_UINT32			type,
 							void*			value,
-							UINT32			length);
+							_UINT32			length);
 
 /**
- * @fn			of_status_t	of_ldpc_staircase_get_control_parameter (of_ldpc_staircase_cb_t* ofcb, UINT32	type, void* value, UINT32	length)
+ * @fn			of_status_t	of_ldpc_staircase_get_control_parameter (of_ldpc_staircase_cb_t* ofcb, _UINT32	type, void* value, _UINT32	length)
  * @brief		get a specific FEC parameter
  * @param ofcb		(IN) Pointer to the session.
  * @param type		(IN) Type of parameter. This type is FEC codec ID specific.
@@ -302,9 +302,9 @@ of_status_t	of_ldpc_staircase_set_control_parameter(of_ldpc_staircase_cb_t* ofcb
  * @return		Error status.
  */
 of_status_t	of_ldpc_staircase_get_control_parameter(of_ldpc_staircase_cb_t* ofcb,
-							UINT32			type,
+							_UINT32			type,
 							void*			value,
-							UINT32			length);
+							_UINT32			length);
 
 /**
  * @brief		Create the LDPC-Staircase matrix as defined in RFC 5170.
@@ -315,10 +315,10 @@ of_status_t	of_ldpc_staircase_get_control_parameter(of_ldpc_staircase_cb_t* ofcb
  * @param ofcb		(IN/OUT) 
  * @return		pointer to the parity check matrix that has just been allocated and initialized.
  */
-of_mod2sparse* of_create_pchck_matrix_rfc5170_compliant (UINT32			nb_rows,
-							 UINT32			nb_cols,
-							 UINT32			left_degree,
-							 UINT32			seed,
+of_mod2sparse* of_create_pchck_matrix_rfc5170_compliant (_UINT32			nb_rows,
+							 _UINT32			nb_cols,
+							 _UINT32			left_degree,
+							 _UINT32			seed,
 							 of_ldpc_staircase_cb_t	*ofcb);
 
 #endif  //OF_USE_DECODER

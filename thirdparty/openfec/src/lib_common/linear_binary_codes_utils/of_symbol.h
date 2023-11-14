@@ -40,8 +40,8 @@
 
 typedef struct of_symbol_stats_op
 {
-	UINT32 nb_xor_for_IT;
-	UINT32 nb_xor_for_ML;
+	_UINT32 nb_xor_for_IT;
+	_UINT32 nb_xor_for_ML;
 } of_symbol_stats_op_t;
 
 
@@ -67,7 +67,7 @@ typedef struct of_symbol_stats_op
  * @param matrix_col	(IN) number of the matrix column
  * @return		Error status.
  */
-#define of_get_symbol_esi(ofcb,matrix_col)	(((matrix_col) < (ofcb)->nb_repair_symbols) ?  (INT32)((matrix_col) + (ofcb)->nb_source_symbols) : (INT32)((matrix_col) - (ofcb)->nb_repair_symbols))
+#define of_get_symbol_esi(ofcb,matrix_col)	(((matrix_col) < (ofcb)->nb_repair_symbols) ?  (_INT32)((matrix_col) + (ofcb)->nb_source_symbols) : (_INT32)((matrix_col) - (ofcb)->nb_repair_symbols))
 
 /**
  * @brief 		get symbol matrix column
@@ -75,7 +75,7 @@ typedef struct of_symbol_stats_op
  * @param esi		(IN) encoding symbol ID
  * @return		Error status.
  */
-#define of_get_symbol_col(ofcb,esi)		(((esi) < (ofcb)->nb_source_symbols) ? (INT32)((esi) + (ofcb)->nb_repair_symbols) : (INT32)((esi) - (ofcb)->nb_source_symbols))
+#define of_get_symbol_col(ofcb,esi)		(((esi) < (ofcb)->nb_source_symbols) ? (_INT32)((esi) + (ofcb)->nb_repair_symbols) : (_INT32)((esi) - (ofcb)->nb_source_symbols))
 
 /**
  * Compute the XOR sum of two symbols: to = to + from.
@@ -90,12 +90,12 @@ typedef struct of_symbol_stats_op
 #ifdef OF_DEBUG
 void	of_add_to_symbol	(void		*to,
 				 const void	*from,
-				 UINT32		symbol_size,
-				 UINT32*);
+				 _UINT32		symbol_size,
+				 _UINT32*);
 #else
 void	of_add_to_symbol	(void		*to,
 				 const void	*from,
-				 UINT32		symbol_size);
+				 _UINT32		symbol_size);
 #endif
 
 /**
@@ -112,14 +112,14 @@ void	of_add_to_symbol	(void		*to,
 #ifdef OF_DEBUG
 void	of_add_from_multiple_symbols	(void		*to,
 					 const void	**from,
-					 UINT32		from_size,
-					 UINT32		symbol_size,
-					 UINT32*);
+					 _UINT32		from_size,
+					 _UINT32		symbol_size,
+					 _UINT32*);
 #else
 void	of_add_from_multiple_symbols	(void		*to,
 					 const void	**from,
-					 UINT32		from_size,
-					 UINT32		symbol_size);
+					 _UINT32		from_size,
+					 _UINT32		symbol_size);
 #endif
 
 /**
@@ -136,14 +136,14 @@ void	of_add_from_multiple_symbols	(void		*to,
 #ifdef OF_DEBUG
 void	of_add_to_multiple_symbols     (void		**to,
 					const void	*from,
-					UINT32		to_size,
-					UINT32		symbol_size,
-					UINT32*);
+					_UINT32		to_size,
+					_UINT32		symbol_size,
+					_UINT32*);
 #else
 void	of_add_to_multiple_symbols     (void		**to,
 					const void	*from,
-					UINT32		to_size,
-					UINT32		symbol_size);
+					_UINT32		to_size,
+					_UINT32		symbol_size);
 #endif
 
 #ifdef OF_DEBUG

@@ -22,11 +22,11 @@
 
 /* ALLOCATE SPACE FOR A DENSE MOD2 MATRIX. */
 
-of_mod2dense *of_mod2dense_allocate (UINT32	n_rows,		/* Number of rows in matrix */
-				     UINT32	n_cols)		/* Number of columns in matrix */
+of_mod2dense *of_mod2dense_allocate (_UINT32	n_rows,		/* Number of rows in matrix */
+				     _UINT32	n_cols)		/* Number of columns in matrix */
 {
 	of_mod2dense	*m;
-	UINT32		j;
+	_UINT32		j;
 
 	OF_ENTER_FUNCTION
 	if (n_rows <= 0 || n_cols <= 0)
@@ -80,7 +80,7 @@ void of_mod2dense_free (of_mod2dense *m)		/* Matrix to free */
 void of_mod2dense_clear (of_mod2dense *r)
 {
 	OF_ENTER_FUNCTION
-	UINT32 k, j;
+	_UINT32 k, j;
 #ifdef COL_ORIENTED
 	for (j = 0; j < of_mod2dense_cols (r); j++)
 	{
@@ -109,7 +109,7 @@ void of_mod2dense_copy (of_mod2dense *m,	/* Matrix to copy */
 			of_mod2dense *r)	/* Place to store copy of matrix */
 {
 	OF_ENTER_FUNCTION
-	UINT32 k, j;
+	_UINT32 k, j;
 
 
 	if (of_mod2dense_rows (m) > of_mod2dense_rows (r)
@@ -168,10 +168,10 @@ void of_mod2dense_copy (of_mod2dense *m,	/* Matrix to copy */
 
 void of_mod2dense_copyrows     (of_mod2dense	*m,	/* Matrix to copy */
 				of_mod2dense	*r,	/* Place to store copy of matrix */
-				UINT32		*rows)	/* Indexes of rows to copy, from 0 */
+				_UINT32		*rows)	/* Indexes of rows to copy, from 0 */
 {
 	OF_ENTER_FUNCTION
-	UINT32 i, j, k;
+	_UINT32 i, j, k;
 
 	if (of_mod2dense_cols (m) > of_mod2dense_cols (r))
 	{
@@ -226,9 +226,9 @@ void of_mod2dense_copyrows     (of_mod2dense	*m,	/* Matrix to copy */
 
 void of_mod2dense_copycols     (of_mod2dense	*m,		/* Matrix to copy */
 				of_mod2dense	*r,		/* Place to store copy of matrix */
-				UINT32		*cols)		/* Indexes of columns to copy, from 0 */
+				_UINT32		*cols)		/* Indexes of columns to copy, from 0 */
 {
-	UINT32  i, j;
+	_UINT32  i, j;
 
 	OF_ENTER_FUNCTION
 	if (of_mod2dense_rows (m) > of_mod2dense_rows (r))
@@ -273,7 +273,7 @@ void of_mod2dense_copycols     (of_mod2dense	*m,		/* Matrix to copy */
 void of_mod2dense_print (FILE		*f,
 			 of_mod2dense	*m)
 {
-	UINT32 i, j;
+	_UINT32 i, j;
 
 	OF_ENTER_FUNCTION
 	for (i = 0; i < of_mod2dense_rows (m); i++)
@@ -300,8 +300,8 @@ void of_mod2dense_print_bitmap (of_mod2dense	*m,
 				char		*fname)
 {
 #ifdef IL_SUPPORT	
-	UINT32	i, j;
-	UINT32	x,y;
+	_UINT32	i, j;
+	_UINT32	x,y;
 	ILuint	lImage;	
 	char	cmd[100];
 	
@@ -311,7 +311,7 @@ void of_mod2dense_print_bitmap (of_mod2dense	*m,
 	ilBindImage(lImage);
 	//of_mod2dense_print_stats(stdout,m);
 	ilTexImage(of_mod2dense_cols (m),of_mod2dense_rows (m)  , 1, 3, IL_RGB, IL_UNSIGNED_BYTE, NULL);
-	UINT32 val =1;
+	_UINT32 val =1;
 	y=of_mod2dense_rows (m);
 	x=of_mod2dense_cols (m);
 	for (i = 0; i < of_mod2dense_rows (m); i++)
@@ -352,10 +352,10 @@ void of_mod2dense_print_bitmap (of_mod2dense	*m,
    with a different byte-ordering.  At present, this assumes that the words
    used to pack bits into are no longer than 32 bits. */
 
-UINT32 of_mod2dense_write (FILE *f, of_mod2dense *m)
+_UINT32 of_mod2dense_write (FILE *f, of_mod2dense *m)
 {
 	OF_ENTER_FUNCTION
-	UINT32 j, k;
+	_UINT32 j, k;
 
 	of_intio_write (f, m->n_rows);
 	if (ferror (f))
@@ -407,9 +407,9 @@ UINT32 of_mod2dense_write (FILE *f, of_mod2dense *m)
 of_mod2dense *of_mod2dense_read (FILE *f)
 {
 	OF_ENTER_FUNCTION
-	UINT32 n_rows, n_cols;
+	_UINT32 n_rows, n_cols;
 	of_mod2dense *m;
-	UINT32 j, k;
+	_UINT32 j, k;
 
 	n_rows = of_intio_read (f);
 	if (feof (f) || ferror (f) || n_rows <= 0)
@@ -462,9 +462,9 @@ of_mod2dense *of_mod2dense_read (FILE *f)
 
 /* GET AN ELEMENT FROM A DENSE MOD2 MATRIX. */
 
-UINT32 of_mod2dense_get (of_mod2dense	*m, 	/* Matrix to get element from */
-			 UINT32		row,	/* Row of element (starting with zero) */
-			 UINT32		col)	/* Column of element (starting with zero) */
+_UINT32 of_mod2dense_get (of_mod2dense	*m, 	/* Matrix to get element from */
+			 _UINT32		row,	/* Row of element (starting with zero) */
+			 _UINT32		col)	/* Column of element (starting with zero) */
 {
 	//OF_ENTER_FUNCTION
 #ifdef OF_DEBUG
@@ -489,10 +489,10 @@ UINT32 of_mod2dense_get (of_mod2dense	*m, 	/* Matrix to get element from */
 
 /* SET AN ELEMENT IN A DENSE MOD2 MATRIX. */
 
-INT32 of_mod2dense_set (of_mod2dense	*m, 	/* Matrix to modify element of */
-			UINT32		row,		/* Row of element (starting with zero) */
-			UINT32		col,		/* Column of element (starting with zero) */
-			UINT32		value)		/* New value of element (0 or 1) */
+_INT32 of_mod2dense_set (of_mod2dense	*m, 	/* Matrix to modify element of */
+			_UINT32		row,		/* Row of element (starting with zero) */
+			_UINT32		col,		/* Column of element (starting with zero) */
+			_UINT32		value)		/* New value of element (0 or 1) */
 {
 	of_mod2word *w;
 
@@ -522,12 +522,12 @@ INT32 of_mod2dense_set (of_mod2dense	*m, 	/* Matrix to modify element of */
 
 /* FLIP AN ELEMENT OF A DENSE MOD2 MATRIX. */
 
-UINT32 of_mod2dense_flip (of_mod2dense	*m, 	/* Matrix to flip element in */
-			  UINT32	row,	/* Row of element (starting with zero) */
-			  UINT32	col)	/* Column of element (starting with zero) */
+_UINT32 of_mod2dense_flip (of_mod2dense	*m, 	/* Matrix to flip element in */
+			  _UINT32	row,	/* Row of element (starting with zero) */
+			  _UINT32	col)	/* Column of element (starting with zero) */
 {
 	of_mod2word *w;
-	UINT32 b;
+	_UINT32 b;
 
 	OF_ENTER_FUNCTION
 	if (row >= of_mod2dense_rows (m) || col >= of_mod2dense_cols (m))
@@ -571,7 +571,7 @@ void of_mod2dense_transpose
 {
 	OF_ENTER_FUNCTION
 	of_mod2word w, v, *p;
-	UINT32 k1, j1, i2, j2;
+	_UINT32 k1, j1, i2, j2;
 
 	if (of_mod2dense_rows (m) != of_mod2dense_cols (r)
 			|| of_mod2dense_cols (m) != of_mod2dense_rows (r))
@@ -651,7 +651,7 @@ void of_mod2dense_add
 )
 {
 	OF_ENTER_FUNCTION
-	UINT32 j, k;
+	_UINT32 j, k;
 
 	if (of_mod2dense_rows (m1) != of_mod2dense_rows (r)
 			|| of_mod2dense_cols (m1) != of_mod2dense_cols (r)
@@ -700,7 +700,7 @@ void of_mod2dense_multiply
 )
 {
 	OF_ENTER_FUNCTION
-	UINT32 i, j, k;
+	_UINT32 i, j, k;
 
 	if (of_mod2dense_cols (m1) != of_mod2dense_rows (m2)
 			|| of_mod2dense_rows (m1) != of_mod2dense_rows (r)
@@ -754,13 +754,13 @@ void of_mod2dense_multiply
 
 /* SEE WHETHER TWO DENSE MOD2 MATRICES ARE EQUAL. */
 
-UINT32 of_mod2dense_equal
+_UINT32 of_mod2dense_equal
 (of_mod2dense *m1,
  of_mod2dense *m2
 )
 {
 	OF_ENTER_FUNCTION
-	UINT32 k, j, w;
+	_UINT32 k, j, w;
 	of_mod2word m;
 
 	if (of_mod2dense_rows (m1) != of_mod2dense_rows (m2)
@@ -824,14 +824,14 @@ UINT32 of_mod2dense_equal
 
 /* INVERT A DENSE MOD2 MATRIX. */
 
-UINT32 of_mod2dense_invert
+_UINT32 of_mod2dense_invert
 (of_mod2dense *m,		/* The matrix to find the inverse of (destroyed) */
  of_mod2dense *r		/* Place to store the inverse */
 )
 {
 	OF_ENTER_FUNCTION
 	of_mod2word *s, *t;
-	UINT32 i, j, k, n, w, k0, b0;
+	_UINT32 i, j, k, n, w, k0, b0;
 
 	if (of_mod2dense_rows (m) != of_mod2dense_cols (m))
 	{
@@ -977,14 +977,14 @@ UINT32 of_mod2dense_invert
 
 /* TRIANGULARIZE A DENSE MOD2 MATRIX. */
 
-UINT32 of_mod2dense_triangularize
+_UINT32 of_mod2dense_triangularize
 (of_mod2dense *m,		/* The matrix to find the inverse of (destroyed) */
  of_mod2dense *r		/* Place to store the inverse */
 )
 {
 	OF_ENTER_FUNCTION
 	of_mod2word *s, *t;
-	UINT32 i, j, k, n, p, w, k0, b0;
+	_UINT32 i, j, k, n, p, w, k0, b0;
 
 	/*  if (of_mod2dense_rows(m)!=of_mod2dense_cols(m)) */
 	/*   { fprintf(stderr,"of_mod2dense_triangularize: Matrix to invert is not square\n"); */
@@ -1147,17 +1147,17 @@ UINT32 of_mod2dense_triangularize
 
 /* INVERT A DENSE MOD2 MATRIX WITH ROWS & COLUMNS SELECTED FROM BIGGER MATRIX.*/
 
-UINT32 of_mod2dense_invert_selected
+_UINT32 of_mod2dense_invert_selected
 (of_mod2dense *m,		/* Matrix from which to pick a submatrix to invert */
  of_mod2dense *r,		/* Place to store the inverse */
- UINT32 *rows,		/* Set to indexes of rows used and not used */
- UINT32 *cols		/* Set to indexes of columns used and not used */
+ _UINT32 *rows,		/* Set to indexes of rows used and not used */
+ _UINT32 *cols		/* Set to indexes of columns used and not used */
 )
 {
 	OF_ENTER_FUNCTION
 	of_mod2word *s, *t;
-	UINT32  R;
-	UINT32 i, j, k, n,  w, k0, b0, n2, c;
+	_UINT32  R;
+	_UINT32 i, j, k, n,  w, k0, b0, n2, c;
 
 	if (r == m)
 	{
@@ -1341,17 +1341,17 @@ UINT32 of_mod2dense_invert_selected
 
 /* FORCIBLY INVERT A DENSE MOD2 MATRIX. */
 
-UINT32 of_mod2dense_forcibly_invert
+_UINT32 of_mod2dense_forcibly_invert
 (of_mod2dense *m, 	/* The matrix to find the inverse of (destroyed) */
  of_mod2dense *r,		/* Place to store the inverse */
- UINT32 *a_row,		/* Place to store row indexes of altered elements */
- UINT32 *a_col		/* Place to store column indexes of altered elements */
+ _UINT32 *a_row,		/* Place to store row indexes of altered elements */
+ _UINT32 *a_col		/* Place to store column indexes of altered elements */
 )
 {
 	OF_ENTER_FUNCTION
 	//  of_mod2word *s, *t;
 
-	UINT32  c = 0;
+	_UINT32  c = 0;
 #ifdef COL_ORIENTED
 	if (of_mod2dense_rows (m) != of_mod2dense_cols (m))
 	{
@@ -1460,9 +1460,9 @@ double of_mod2dense_density (of_mod2dense *m)
 {
 
 	OF_ENTER_FUNCTION
-	UINT32 nb_one = 0;
-	UINT32 nb_entry = 0;
-	UINT32 i, j;
+	_UINT32 nb_one = 0;
+	_UINT32 nb_entry = 0;
+	_UINT32 i, j;
 	double density = 0;
 #ifdef COL_ORIENTED
 	for (j = 0; j < of_mod2dense_cols (m); j++)
@@ -1498,10 +1498,10 @@ double of_mod2dense_density (of_mod2dense *m)
 /* RETURNS TRUE IF THE SPECIFIED ROW IS EMPTY */
 
 bool of_mod2dense_row_is_empty (of_mod2dense	*m,
-				UINT32		row)
+				_UINT32		row)
 {
-	UINT32		i;
-	UINT32		n_w;	// number of of_mod2word in the row
+	_UINT32		i;
+	_UINT32		n_w;	// number of of_mod2word in the row
 	of_mod2word	*w;	// pointer to the current word of the row
 
 	OF_ENTER_FUNCTION
@@ -1525,9 +1525,9 @@ bool of_mod2dense_row_is_empty (of_mod2dense	*m,
 }
 
 
-UINT32 of_mod2dense_row_weight (of_mod2dense *m, UINT32 i)
+_UINT32 of_mod2dense_row_weight (of_mod2dense *m, _UINT32 i)
 {
-	UINT32		weight = 0;
+	_UINT32		weight = 0;
 
 	OF_ENTER_FUNCTION
 	if (i >= of_mod2dense_rows (m))
@@ -1538,9 +1538,9 @@ UINT32 of_mod2dense_row_weight (of_mod2dense *m, UINT32 i)
 	//of_mod2dense_print_memory_info(m);
 #define SLOW_HAMMING_WEIGHT_CALCULATION
 #ifdef  SLOW_HAMMING_WEIGHT_CALCULATION
-	UINT32		j;
-	UINT32		nwords;			/* number of of_mod2word in a row */
-	//UINT32		weight1 = 0;
+	_UINT32		j;
+	_UINT32		nwords;			/* number of of_mod2word in a row */
+	//_UINT32		weight1 = 0;
 
 	nwords = of_mod2dense_cols (m) >> (of_mod2_wordsize_shift);     // number of of_mod2word in a row
 
@@ -1553,7 +1553,7 @@ UINT32 of_mod2dense_row_weight (of_mod2dense *m, UINT32 i)
  	}
  	//printf("weight method2=%d (standard)\n",weight);
 #else
-	weight = of_hweight_array ((UINT32 *) m->row[i], of_mod2dense_cols (m));
+	weight = of_hweight_array ((_UINT32 *) m->row[i], of_mod2dense_cols (m));
 #endif
 
 	OF_EXIT_FUNCTION
@@ -1561,11 +1561,11 @@ UINT32 of_mod2dense_row_weight (of_mod2dense *m, UINT32 i)
 }
 
 
-UINT32 of_mod2dense_row_weight_ignore_first (of_mod2dense *m, UINT32 i, UINT32 nb_ignore)
+_UINT32 of_mod2dense_row_weight_ignore_first (of_mod2dense *m, _UINT32 i, _UINT32 nb_ignore)
 {
-	UINT32		weight = 0;
-	//UINT32	nwords;
-	UINT32		start0;
+	_UINT32		weight = 0;
+	//_UINT32	nwords;
+	_UINT32		start0;
 
 	OF_ENTER_FUNCTION
 	if (i >= of_mod2dense_rows (m))
@@ -1577,25 +1577,25 @@ UINT32 of_mod2dense_row_weight_ignore_first (of_mod2dense *m, UINT32 i, UINT32 n
 	//nwords = of_mod2dense_cols (m) >> of_mod2_wordsize_shift;   // number of of_mod2word in a row
 	start0 = nb_ignore >> (of_mod2_wordsize_shift - 1);
 
-	UINT32 offset32 = nb_ignore >> of_mod2_wordsize_shift; // number of 32bits words that must be ignored
-	UINT32 rem = of_mod2dense_cols (m) - (offset32 << of_mod2_wordsize_shift);     // number of remaining bits to consider
+	_UINT32 offset32 = nb_ignore >> of_mod2_wordsize_shift; // number of 32bits words that must be ignored
+	_UINT32 rem = of_mod2dense_cols (m) - (offset32 << of_mod2_wordsize_shift);     // number of remaining bits to consider
 
-	weight = of_hweight_array ((UINT32 *) & m->row[i][offset32], rem);
+	weight = of_hweight_array ((_UINT32 *) & m->row[i][offset32], rem);
 	OF_EXIT_FUNCTION
 	return weight;
 }
 
 
-UINT32 of_mod2dense_col_weight (of_mod2dense *m, UINT32 i)
+_UINT32 of_mod2dense_col_weight (of_mod2dense *m, _UINT32 i)
 {
 	OF_ENTER_FUNCTION
-	UINT32 weight = 0;
+	_UINT32 weight = 0;
 	if (i >= of_mod2dense_cols (m))
 	{
 		OF_EXIT_FUNCTION
 		return -1;
 	}
-	UINT32 j;
+	_UINT32 j;
 	for (j = 0; j < of_mod2dense_rows (m); j++)
 	{
 		if (of_mod2dense_get (m, j, i))
@@ -1612,18 +1612,18 @@ UINT32 of_mod2dense_col_weight (of_mod2dense *m, UINT32 i)
 void of_mod2dense_print_stats (FILE *f, of_mod2dense *m)
 {
 	OF_ENTER_FUNCTION
-	UINT32		i;
+	_UINT32		i;
 	float		density = 0;
 	float		row_density = 0;
 	float		col_density = 0;
 
 	/* rows stats*/
 	float		aver_nb_entry_per_row = 0;
-	UINT32		max_entry_per_row = 0;
-	UINT32		min_entry_per_row = 9999999;
-	UINT32		nb_entry_row[ROW_MAX_ENTRY];
-	UINT32		nb_entry_current_row = 0;
-	UINT32		ctr = 0;
+	_UINT32		max_entry_per_row = 0;
+	_UINT32		min_entry_per_row = 9999999;
+	_UINT32		nb_entry_row[ROW_MAX_ENTRY];
+	_UINT32		nb_entry_current_row = 0;
+	_UINT32		ctr = 0;
 
 	for (i = 0;i < ROW_MAX_ENTRY;i++)
 	{
@@ -1648,10 +1648,10 @@ void of_mod2dense_print_stats (FILE *f, of_mod2dense *m)
 
 	/* cols stats*/
 	float		aver_nb_entry_per_col = 0;
-	UINT32		max_entry_per_col = 0;
-	UINT32		min_entry_per_col = 9999999;
-	UINT32		nb_entry_col[COL_MAX_ENTRY];
-	UINT32		nb_entry_current_col = 0;
+	_UINT32		max_entry_per_col = 0;
+	_UINT32		min_entry_per_col = 9999999;
+	_UINT32		nb_entry_col[COL_MAX_ENTRY];
+	_UINT32		nb_entry_current_col = 0;
 
 	ctr = 0;
 	for (i = 0;i < COL_MAX_ENTRY;i++)
@@ -1733,9 +1733,9 @@ void of_mod2dense_print_memory_info (of_mod2dense *m)
 }
 
 
-void of_mod2dense_xor_rows(of_mod2dense *m, UINT16 from, UINT16 to)
+void of_mod2dense_xor_rows(of_mod2dense *m, _UINT16 from, _UINT16 to)
 {
-	UINT32		i;
+	_UINT32		i;
 	of_mod2word	*f;
 	of_mod2word	*t;
 

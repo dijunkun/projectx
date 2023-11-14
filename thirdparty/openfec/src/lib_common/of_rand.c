@@ -206,7 +206,7 @@
 #include "of_rand.h"
 
 
-UINT64	of_seed;
+_UINT64	of_seed;
 
 /**
  *  Set this constant to check the conformity for this prng.
@@ -222,8 +222,8 @@ void
 of_check_prng (void)
 {
 	OF_ENTER_FUNCTION
-	INT32		i;
-	UINT64	val;
+	_INT32		i;
+	_UINT64	val;
 
 	of_seed = 1;
 	for (i = 0; i < 10000; i++)
@@ -249,7 +249,7 @@ of_check_prng (void)
  * Initialize the PRNG with a of_seed between 1 and 0x7FFFFFFE
  * (2^^31-2) inclusive.
  */
-void of_rfc5170_srand (UINT64 s)
+void of_rfc5170_srand (_UINT64 s)
 {
 	OF_ENTER_FUNCTION
 	if ( (s >= 1) && (s <= 0x7FFFFFFE))
@@ -279,20 +279,20 @@ void of_rfc5170_srand (UINT64 s)
  * This value is then scaled between 0 and maxv-1 inclusive.
  * This is the PRNG required by the LDPC-staircase RFC 5170.
  */
-UINT64
-of_rfc5170_rand (UINT64	maxv)
+_UINT64
+of_rfc5170_rand (_UINT64	maxv)
 {
 	//OF_ENTER_FUNCTION
-	UINT64	hi, lo;
+	_UINT64	hi, lo;
 	lo = 16807 * (of_seed & 0xFFFF);
 	hi = 16807 * (of_seed >> 16);
 	lo += (hi & 0x7FFF) << 16;
 	lo += hi >> 15;
 	if (lo > 0x7FFFFFFF)
 		lo -= 0x7FFFFFFF;
-	of_seed = (UINT64) lo;
+	of_seed = (_UINT64) lo;
 	//OF_EXIT_FUNCTION
-	return ( (UINT64)
+	return ( (_UINT64)
 		 ( (double) of_seed * (double) maxv / (double) 0x7FFFFFFF));
 }
 

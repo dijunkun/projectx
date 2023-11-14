@@ -47,23 +47,23 @@
 /**
  * Call calloc and exits with an error if it fails
  */
-void *	of_chk_alloc (UINT32	n,
-		      UINT32	size);
+void *	of_chk_alloc (_UINT32	n,
+		      _UINT32	size);
 
 /**
  */
 void	of_print_composition (char*	symbol,
-			      UINT32	size);
+			      _UINT32	size);
 
 /**
  * Read an integer 
  */
-INT32 	of_intio_read (FILE *);
+_INT32 	of_intio_read (FILE *);
 
 /**
  * Write an integer
  */
-void	of_intio_write (FILE *, INT32);
+void	of_intio_write (FILE *, _INT32);
 
 
 #endif //OF_USE_LINEAR_BINARY_CODES_UTILS
