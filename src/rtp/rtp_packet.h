@@ -17,13 +17,13 @@
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |           synchronization source (SSRC) identifier            |
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// |            Contributing source (CSRC) identifiers             |
-// |                             ....                              |
+// |            Contributing source (CSRC) identifiers             |x
+// |                             ....                              |x
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// |       defined by profile      |            length             |
+// |       defined by profile      |            length             |x
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                          Extensions                           |
-// |                             ....                              |
+// |                          Extensions                           |x
+// |                             ....                              |x
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 // |                           Payload                             |
 // |             ....              :  padding...                   |
@@ -41,13 +41,13 @@
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 // |           synchronization source (SSRC) identifier            |
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// |            Contributing source (CSRC) identifiers             |
-// |                             ....                              |
+// |            Contributing source (CSRC) identifiers             |x
+// |                             ....                              |x
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// |       defined by profile      |            length             |
+// |       defined by profile      |            length             |x
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-// |                          Extensions                           |
-// |                             ....                              |
+// |                          Extensions                           |x
+// |                             ....                              |x
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
 // |  FU indicator |   FU header   |                               |
 // |                                                               |
@@ -63,12 +63,44 @@
 // |F|NRI|   Type  |S|E|R|   Type  |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
+// H264 FEC
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                           timestamp                           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |           synchronization source (SSRC) identifier            |
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |            Contributing source (CSRC) identifiers             |x
+// |                             ....                              |x
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |       defined by profile      |            length             |x
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                          Extensions                           |x
+// |                             ....                              |x
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// | FEC symbol id |                                               |
+// |                                                               |
+// |                          Fec Payload                          |
+// |                                                               |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |               padding         | Padding size  |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
 #define DEFAULT_MTU 1500
 #define MAX_NALU_LEN 1400
 
 class RtpPacket {
  public:
-  typedef enum { H264 = 96, OPUS = 97, DATA = 127 } PAYLOAD_TYPE;
+  typedef enum {
+    H264 = 96,
+    H264_FEC = 97,
+    OPUS = 111,
+    DATA = 127
+  } PAYLOAD_TYPE;
+
   typedef enum { UNKNOWN = 0, NALU = 1, FU_A = 28, FU_B = 29 } NAL_UNIT_TYPE;
 
  public:
@@ -133,13 +165,17 @@ class RtpPacket {
     fu_header_.nal_unit_type = fu_header.nal_unit_type;
   }
 
+  void SetFecSymbolId(uint8_t fec_symbol_id) { fec_symbol_id_ = fec_symbol_id; }
+
  public:
   const uint8_t *Encode(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Nalu(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Fua(uint8_t *payload, size_t payload_size);
+  const uint8_t *EncodeH264Fec(uint8_t *payload, size_t payload_size);
   size_t DecodeData(uint8_t *payload = nullptr);
   size_t DecodeH264Nalu(uint8_t *payload = nullptr);
   size_t DecodeH264Fua(uint8_t *payload = nullptr);
+  size_t DecodeH264Fec(uint8_t *payload = nullptr);
 
  public:
   // Get Header
@@ -187,6 +223,8 @@ class RtpPacket {
     ParseRtpData();
     return extension_data_;
   }
+
+  const uint8_t FecSymbolId() { return fec_symbol_id_; }
 
   // Payload
   const uint8_t *Payload() {
@@ -238,6 +276,7 @@ class RtpPacket {
   uint8_t *extension_data_ = nullptr;
   FU_INDICATOR fu_indicator_;
   FU_HEADER fu_header_;
+  uint8_t fec_symbol_id_ = 0;
 
   // Payload
   uint8_t *payload_ = nullptr;

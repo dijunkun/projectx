@@ -49,50 +49,82 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
       fec_encoder_.GetFecPacketsParams(size, num_of_total_packets,
                                        num_of_source_packets, last_packet_size);
 
+      timestamp_ =
+          std::chrono::high_resolution_clock::now().time_since_epoch().count();
+
       for (size_t index = 0; index < num_of_total_packets; index++) {
-        RtpPacket rtp_packet;
-        rtp_packet.SetVerion(version_);
-        rtp_packet.SetHasPadding(has_padding_);
-        rtp_packet.SetHasExtension(has_extension_);
-        rtp_packet.SetMarker(index == num_of_total_packets ? 1 : 0);
-        rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE(payload_type_));
-        rtp_packet.SetSequenceNumber(sequence_number_++);
+        if (index < num_of_source_packets) {
+          RtpPacket rtp_packet;
+          rtp_packet.SetVerion(version_);
+          rtp_packet.SetHasPadding(has_padding_);
+          rtp_packet.SetHasExtension(has_extension_);
+          rtp_packet.SetMarker(index == num_of_source_packets ? 1 : 0);
+          rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE::H264);
+          rtp_packet.SetSequenceNumber(sequence_number_++);
+          rtp_packet.SetTimestamp(timestamp_);
+          rtp_packet.SetSsrc(ssrc_);
 
-        timestamp_ = std::chrono::high_resolution_clock::now()
-                         .time_since_epoch()
-                         .count();
-        rtp_packet.SetTimestamp(timestamp_);
-        rtp_packet.SetSsrc(ssrc_);
+          if (!csrcs_.empty()) {
+            rtp_packet.SetCsrcs(csrcs_);
+          }
 
-        if (!csrcs_.empty()) {
-          rtp_packet.SetCsrcs(csrcs_);
+          if (has_extension_) {
+            rtp_packet.SetExtensionProfile(extension_profile_);
+            rtp_packet.SetExtensionData(extension_data_, extension_len_);
+          }
+
+          RtpPacket::FU_INDICATOR fu_indicator;
+          fu_indicator.forbidden_bit = 0;
+          fu_indicator.nal_reference_idc = 0;
+          fu_indicator.nal_unit_type = FU_A;
+
+          RtpPacket::FU_HEADER fu_header;
+          fu_header.start = index == 0 ? 1 : 0;
+          fu_header.end = index == num_of_source_packets - 1 ? 1 : 0;
+          fu_header.remain_bit = 0;
+          fu_header.nal_unit_type = FU_A;
+
+          rtp_packet.SetFuIndicator(fu_indicator);
+          rtp_packet.SetFuHeader(fu_header);
+
+          if (index == num_of_source_packets - 1) {
+            if (last_packet_size > 0) {
+              rtp_packet.EncodeH264Fua(fec_packets[index], last_packet_size);
+            } else {
+              rtp_packet.EncodeH264Fua(fec_packets[index], MAX_NALU_LEN);
+            }
+          } else {
+            rtp_packet.EncodeH264Fua(fec_packets[index], MAX_NALU_LEN);
+          }
+          packets.emplace_back(rtp_packet);
+        } else if (index >= num_of_source_packets &&
+                   index < num_of_total_packets) {
+          RtpPacket rtp_packet;
+          rtp_packet.SetVerion(version_);
+          rtp_packet.SetHasPadding(has_padding_);
+          rtp_packet.SetHasExtension(has_extension_);
+          rtp_packet.SetMarker(index == num_of_total_packets ? 1 : 0);
+          rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE::H264_FEC);
+          rtp_packet.SetSequenceNumber(sequence_number_++);
+          rtp_packet.SetTimestamp(timestamp_);
+          rtp_packet.SetSsrc(ssrc_);
+
+          if (!csrcs_.empty()) {
+            rtp_packet.SetCsrcs(csrcs_);
+          }
+
+          if (has_extension_) {
+            rtp_packet.SetExtensionProfile(extension_profile_);
+            rtp_packet.SetExtensionData(extension_data_, extension_len_);
+          }
+          rtp_packet.EncodeH264Fec(fec_packets[index], MAX_NALU_LEN);
+          packets.emplace_back(rtp_packet);
         }
 
-        if (has_extension_) {
-          rtp_packet.SetExtensionProfile(extension_profile_);
-          rtp_packet.SetExtensionData(extension_data_, extension_len_);
-        }
-
-        RtpPacket::FU_INDICATOR fu_indicator;
-        fu_indicator.forbidden_bit = 0;
-        fu_indicator.nal_reference_idc = 0;
-        fu_indicator.nal_unit_type = FU_A;
-
-        RtpPacket::FU_HEADER fu_header;
-        fu_header.start = index == 0 ? 1 : 0;
-        fu_header.end = index == num_of_total_packets - 1 ? 1 : 0;
-        fu_header.remain_bit = 0;
-        fu_header.nal_unit_type = FU_A;
-
-        rtp_packet.SetFuIndicator(fu_indicator);
-        rtp_packet.SetFuHeader(fu_header);
-
-        if (index == num_of_source_packets - 1 && last_packet_size > 0) {
-          rtp_packet.EncodeH264Fua(fec_packets[index], last_packet_size);
-        } else {
-          rtp_packet.EncodeH264Fua(fec_packets[index], MAX_NALU_LEN);
-        }
-        packets.emplace_back(rtp_packet);
+        // if (index < num_of_source_packets) {
+        //   rtp_packet.EncodeH264Fua(fec_packets[index], MAX_NALU_LEN);
+        //   packets.emplace_back(rtp_packet);
+        // }
       }
 
       fec_encoder_.ReleaseFecPackets(fec_packets, size);
@@ -134,6 +166,8 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
     } else {
       size_t last_packet_size = size % MAX_NALU_LEN;
       size_t packet_num = size / MAX_NALU_LEN + (last_packet_size ? 1 : 0);
+      timestamp_ =
+          std::chrono::high_resolution_clock::now().time_since_epoch().count();
 
       for (size_t index = 0; index < packet_num; index++) {
         RtpPacket rtp_packet;
@@ -143,10 +177,6 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
         rtp_packet.SetMarker(index == packet_num ? 1 : 0);
         rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE(payload_type_));
         rtp_packet.SetSequenceNumber(sequence_number_++);
-
-        timestamp_ = std::chrono::high_resolution_clock::now()
-                         .time_since_epoch()
-                         .count();
         rtp_packet.SetTimestamp(timestamp_);
         rtp_packet.SetSsrc(ssrc_);
 

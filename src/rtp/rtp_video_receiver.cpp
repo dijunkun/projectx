@@ -48,23 +48,12 @@ void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
 
     rtcp_rr.Encode();
 
-    // SendRtcpRR(rtcp_rr);
+    SendRtcpRR(rtcp_rr);
   }
 
   if (RtpPacket::NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {
     compelete_video_frame_queue_.push(
         VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
-    // if (on_receive_complete_frame_) {
-    //   auto now_complete_frame_ts =
-    //       std::chrono::high_resolution_clock::now().time_since_epoch().count()
-    //       / 1000000;
-    //   uint32_t duration = now_complete_frame_ts - last_complete_frame_ts_;
-    //   LOG_ERROR("Duration {}", 1000 / duration);
-    //   last_complete_frame_ts_ = now_complete_frame_ts;
-
-    //   on_receive_complete_frame_(
-    //       VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
-    // }
   } else if (RtpPacket::NAL_UNIT_TYPE::FU_A == rtp_packet.NalUnitType()) {
     incomplete_frame_list_[rtp_packet.SequenceNumber()] = rtp_packet;
     bool complete = CheckIsFrameCompleted(rtp_packet);
@@ -83,6 +72,9 @@ bool RtpVideoReceiver::CheckIsFrameCompleted(RtpPacket& rtp_packet) {
       auto it = incomplete_frame_list_.find(end_seq);
       complete_frame_size += it->second.PayloadSize();
       if (it == incomplete_frame_list_.end()) {
+        // The last fragment has already received. If all fragments are in
+        // order, then some fragments lost in tranmission and need to be
+        // repaired using FEC
         return false;
       } else if (!it->second.FuAStart()) {
         continue;
@@ -105,19 +97,6 @@ bool RtpVideoReceiver::CheckIsFrameCompleted(RtpPacket& rtp_packet) {
         compelete_video_frame_queue_.push(
             VideoFrame(nv12_data_, complete_frame_size));
 
-        // if (on_receive_complete_frame_) {
-        //   auto now_complete_frame_ts =
-        //   std::chrono::high_resolution_clock::now()
-        //                                    .time_since_epoch()
-        //                                    .count() /
-        //                                1000000;
-        //   uint32_t duration = now_complete_frame_ts -
-        //   last_complete_frame_ts_; LOG_ERROR("Duration {}", 1000 / duration);
-        //   last_complete_frame_ts_ = now_complete_frame_ts;
-
-        //   on_receive_complete_frame_(
-        //       VideoFrame(nv12_data_, complete_frame_size));
-        // }
         return true;
       } else {
         LOG_WARN("What happened?")
@@ -165,8 +144,6 @@ int RtpVideoReceiver::SendRtcpRR(RtcpReceiverReport& rtcp_rr) {
     LOG_ERROR("Send RR failed");
     return -1;
   }
-
-  // LOG_ERROR("Send RR");
 
   return 0;
 }
