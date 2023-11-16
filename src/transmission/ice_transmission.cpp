@@ -175,6 +175,9 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
 
 int IceTransmission::DestroyIceTransmission() {
   LOG_INFO("[{}->{}] Destroy ice transmission", user_id_, remote_user_id_);
+  if (on_ice_status_change_) {
+    on_ice_status_change_("closed");
+  }
   return ice_agent_->DestroyIceAgent();
 }
 

@@ -101,6 +101,10 @@ int PeerConnection::Init(PeerConnectionParams params,
       on_connection_status_(ConnectionStatus::Connected);
       b_force_i_frame_ = true;
       LOG_INFO("Ice finish");
+    } else if ("closed" == ice_status) {
+      ice_ready_ = false;
+      on_connection_status_(ConnectionStatus::Closed);
+      LOG_INFO("Ice closed");
     } else {
       ice_ready_ = false;
     }
