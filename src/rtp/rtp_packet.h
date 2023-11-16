@@ -63,7 +63,7 @@
 // |F|NRI|   Type  |S|E|R|   Type  |
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-// H264 FEC
+// H264 FEC source symbol
 //  0                   1                   2                   3
 //  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
 // +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -81,7 +81,33 @@
 // |                          Extensions                           |x
 // |                             ....                              |x
 // +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
-// | FEC symbol id |                                               |
+// |  FEC symbol id |  src sym num  | FU indicator |   FU header   |
+// |                                                               |
+// |                           FU Payload                          |
+// |                                                               |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |               padding         | Padding size  |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+// H264 FEC repair symbol
+//  0                   1                   2                   3
+//  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |V=2|P|X|  CC   |M|     PT      |       sequence number         |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                           timestamp                           |
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |           synchronization source (SSRC) identifier            |
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |            Contributing source (CSRC) identifiers             |x
+// |                             ....                              |x
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// |       defined by profile      |            length             |x
+// +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+// |                          Extensions                           |x
+// |                             ....                              |x
+// +=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+=+
+// | FEC symbol id |  src sym num  |                               |
 // |                                                               |
 // |                          Fec Payload                          |
 // |                                                               |
@@ -96,7 +122,8 @@ class RtpPacket {
  public:
   typedef enum {
     H264 = 96,
-    H264_FEC = 97,
+    H264_FEC_SOURCE = 97,
+    H264_FEC_REPAIR = 98,
     OPUS = 111,
     DATA = 127
   } PAYLOAD_TYPE;
@@ -171,11 +198,17 @@ class RtpPacket {
   const uint8_t *Encode(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Nalu(uint8_t *payload, size_t payload_size);
   const uint8_t *EncodeH264Fua(uint8_t *payload, size_t payload_size);
-  const uint8_t *EncodeH264Fec(uint8_t *payload, size_t payload_size);
+  const uint8_t *EncodeH264FecSource(uint8_t *payload, size_t payload_size,
+                                     unsigned int fec_symbol_id,
+                                     unsigned int fec_source_symbol_num);
+  const uint8_t *EncodeH264FecRepair(uint8_t *payload, size_t payload_size,
+                                     unsigned int fec_symbol_id,
+                                     unsigned int fec_source_symbol_num);
   size_t DecodeData(uint8_t *payload = nullptr);
   size_t DecodeH264Nalu(uint8_t *payload = nullptr);
   size_t DecodeH264Fua(uint8_t *payload = nullptr);
-  size_t DecodeH264Fec(uint8_t *payload = nullptr);
+  size_t DecodeH264FecSource(uint8_t *payload = nullptr);
+  size_t DecodeH264FecRepair(uint8_t *payload = nullptr);
 
  public:
   // Get Header
@@ -225,6 +258,8 @@ class RtpPacket {
   }
 
   const uint8_t FecSymbolId() { return fec_symbol_id_; }
+
+  const uint8_t FecSourceSymbolNum() { return fec_source_symbol_num_; }
 
   // Payload
   const uint8_t *Payload() {
@@ -277,6 +312,7 @@ class RtpPacket {
   FU_INDICATOR fu_indicator_;
   FU_HEADER fu_header_;
   uint8_t fec_symbol_id_ = 0;
+  uint8_t fec_source_symbol_num_ = 0;
 
   // Payload
   uint8_t *payload_ = nullptr;

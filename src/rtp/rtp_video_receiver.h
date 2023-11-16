@@ -4,7 +4,9 @@
 #include <functional>
 #include <map>
 #include <queue>
+#include <set>
 
+#include "fec_decoder.h"
 #include "frame.h"
 #include "ringbuffer.h"
 #include "rtcp_receiver_report.h"
@@ -46,6 +48,16 @@ class RtpVideoReceiver : public ThreadBase {
   std::unique_ptr<RtpStatistics> rtp_statistics_ = nullptr;
   uint32_t last_send_rtcp_rr_packet_ts_ = 0;
   std::function<int(const char*, size_t)> data_send_func_ = nullptr;
+
+ private:
+  bool fec_enable_ = true;
+  FecDecoder fec_decoder_;
+  uint32_t last_packet_ts_ = 0;
+  // std::map<uint16_t, RtpPacket> incomplete_fec_frame_list_;
+  // std::map<uint32_t, std::map<uint16_t, RtpPacket>> fec_source_symbol_list_;
+  // std::map<uint32_t, std::map<uint16_t, RtpPacket>> fec_repair_symbol_list_;
+  std::set<uint32_t> incomplete_fec_frame_list_;
+  std::map<uint32_t, std::map<uint16_t, RtpPacket>> incomplete_fec_packet_list_;
 };
 
 #endif

@@ -40,6 +40,10 @@ int FecEncoder::Release() {
     }
   }
 
+  if (fec_rs_params_) {
+    free(fec_rs_params_);
+  }
+
   return 0;
 }
 

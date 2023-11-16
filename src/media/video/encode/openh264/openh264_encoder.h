@@ -38,7 +38,7 @@ class OpenH264Encoder : public VideoEncoder {
  private:
   int frame_width_ = 1280;
   int frame_height_ = 720;
-  int key_frame_interval_ = 3000;
+  int key_frame_interval_ = 1;
   int target_bitrate_ = 1000;
   int max_bitrate_ = 500000;
   int max_payload_size_ = 1400;

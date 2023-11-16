@@ -313,7 +313,9 @@ uint8_t IceTransmission::CheckIsVideoPacket(const char *buffer, size_t size) {
   }
 
   uint8_t pt = buffer[1] & 0x7F;
-  if (RtpPacket::PAYLOAD_TYPE::H264 == pt) {
+  if (RtpPacket::PAYLOAD_TYPE::H264 == pt ||
+      RtpPacket::PAYLOAD_TYPE::H264_FEC_SOURCE == pt ||
+      RtpPacket::PAYLOAD_TYPE::H264_FEC_REPAIR == pt) {
     return pt;
   } else {
     return 0;
