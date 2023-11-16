@@ -41,7 +41,7 @@ class RtpCodec {
  private:
   // RtpPacket* rtp_packet_ = nullptr;
   RtpPacket::FU_INDICATOR fu_indicator_;
-  bool fec_enable_ = true;
+  bool fec_enable_ = false;
   FecEncoder fec_encoder_;
 };
 

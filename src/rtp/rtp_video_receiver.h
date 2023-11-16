@@ -50,7 +50,7 @@ class RtpVideoReceiver : public ThreadBase {
   std::function<int(const char*, size_t)> data_send_func_ = nullptr;
 
  private:
-  bool fec_enable_ = true;
+  bool fec_enable_ = false;
   FecDecoder fec_decoder_;
   uint32_t last_packet_ts_ = 0;
   // std::map<uint16_t, RtpPacket> incomplete_fec_frame_list_;
