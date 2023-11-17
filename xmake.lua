@@ -5,6 +5,7 @@ set_license("LGPL-3.0")
 add_rules("mode.release", "mode.debug")
 set_languages("c++17")
 
+set_installdir("$(projectdir)/out")
 
 option("server_only")
     set_showmenu(true)
@@ -20,7 +21,7 @@ if is_os("windows") then
     add_links("windowsapp", "User32", "Strmiids", "Mfuuid", "Secur32", "Bcrypt")
     add_requires("cuda")
 elseif is_os("linux") then 
-    set_config("cflags", "-fPIC")
+    add_cxflags("-fPIC") 
     add_syslinks("pthread")
 elseif is_os("macosx") then
     add_ldflags("-ld_classic", {force = true})
@@ -39,7 +40,7 @@ else
         add_packages("vcpkg::libnice")
         add_requires("openh264 2.1.1", {configs = {shared = false}})
     elseif is_os("linux") then
-        add_requires("ffmpeg 5.1.2")
+        add_requires("ffmpeg 5.1.2", {system = false})
         add_requires("glib", {system = true})
         add_requires("vcpkg::libnice 0.1.21")
         add_requires("openh264 2.1.1", {configs = {shared = false}})
@@ -51,16 +52,17 @@ else
     end
 
     includes("application/remote_desk")
-    includes("application/signal_server")
+    -- includes("application/signal_server")
 
     target("log")
-        set_kind("headeronly")
+        set_kind("static")
         add_packages("spdlog")
-        add_headerfiles("src/log/log.h")
+        add_files("src/log/log.cpp")
         add_includedirs("src/log", {public = true})
 
     target("common")
-        set_kind("headeronly")
+        set_kind("static")
+        add_files("src/common/common.cpp")
         add_includedirs("src/common", {public = true})
 
     target("inih")
@@ -69,7 +71,8 @@ else
         add_includedirs("src/inih", {public = true})
 
     target("ringbuffer")
-        set_kind("headeronly")
+        set_kind("static")
+        add_files("src/ringbuffer/ringbuffer.cpp")
         add_includedirs("src/ringbuffer", {public = true})
 
     target("thread")
@@ -219,45 +222,48 @@ else
         set_kind("shared")
         add_deps("log")
         add_deps("pc")
+        add_installfiles("src/interface/*.h", {prefixdir = "include"})
         add_files("src/rtc/*.cpp")
         add_packages("asio", "nlohmann_json", "cuda")
         add_includedirs("src/rtc", "src/pc", "src/interface")
         add_rules("utils.symbols.export_all", {export_classes = true})
-        -- set_policy("build.merge_archive", true)
-        -- set_targetdir("$(projectdir)/libdrtc/lib")
+        -- after_install(function (target)
+        --     os.rm("$(projectdir)/out/lib/*.a")
+        --     os.rm("$(projectdir)/out/include/log.h")
+        -- end)
 
-    target("host")
-        set_kind("binary")
-        add_deps("projectx")
-        add_files("tests/peerconnection/host.cpp")
-        add_includedirs("src/interface")
+    -- target("host")
+    --     set_kind("binary")
+    --     add_deps("projectx")
+    --     add_files("tests/peerconnection/host.cpp")
+    --     add_includedirs("src/interface")
 
-    target("guest")
-        set_kind("binary")
-        add_deps("projectx")
-        add_files("tests/peerconnection/guest.cpp")
-        add_includedirs("src/interface")
+    -- target("guest")
+    --     set_kind("binary")
+    --     add_deps("projectx")
+    --     add_files("tests/peerconnection/guest.cpp")
+    --     add_includedirs("src/interface")
 
-    target("nicetest")
-        set_kind("binary")
-        add_files("tests/peerconnection/nice.cpp")
-        add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/include/glib-2.0")
-        add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib/glib-2.0/include")
-        add_linkdirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib")
-        add_links("nice", "glib-2.0", "gio-2.0", "gmodule-2.0", "gobject-2.0", "gthread-2.0",
-            "pcre2-8", "pcre2-16", "pcre2-32", "pcre2-posix", 
-            "zlib", "ffi", "libcrypto", "libssl", "intl", "iconv", "charset", "bz2",
-            "Shell32", "Advapi32", "Dnsapi", "Shlwapi", "Iphlpapi")
+    -- target("nicetest")
+    --     set_kind("binary")
+    --     add_files("tests/peerconnection/nice.cpp")
+    --     add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/include/glib-2.0")
+    --     add_includedirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib/glib-2.0/include")
+    --     add_linkdirs("E:/SourceCode/vcpkg/installed/x64-windows-static/lib")
+    --     add_links("nice", "glib-2.0", "gio-2.0", "gmodule-2.0", "gobject-2.0", "gthread-2.0",
+    --         "pcre2-8", "pcre2-16", "pcre2-32", "pcre2-posix", 
+    --         "zlib", "ffi", "libcrypto", "libssl", "intl", "iconv", "charset", "bz2",
+    --         "Shell32", "Advapi32", "Dnsapi", "Shlwapi", "Iphlpapi")
 
-    target("fec_client")
-        set_kind("binary")
-        add_packages("openfec")
-        add_files("tests/fec/simple_client.cpp")
-        add_includedirs("tests/fec")
+    -- target("fec_client")
+    --     set_kind("binary")
+    --     add_packages("openfec")
+    --     add_files("tests/fec/simple_client.cpp")
+    --     add_includedirs("tests/fec")
 
-    target("fec_server")
-        set_kind("binary")
-        add_packages("openfec")
-        add_files("tests/fec/simple_server.cpp")
-        add_includedirs("tests/fec")
+    -- target("fec_server")
+    --     set_kind("binary")
+    --     add_packages("openfec")
+    --     add_files("tests/fec/simple_server.cpp")
+    --     add_includedirs("tests/fec")
 end
