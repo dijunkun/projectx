@@ -428,6 +428,67 @@ int main() {
   std::string client_user_id = "C-" + std::string(GetMac(mac_addr));
   Init(peer_client, client_user_id.c_str());
 
+  {
+    static char server_password[20] = "";
+    std::string user_id = "S-" + std::string(GetMac(mac_addr));
+    CreateConnection(peer_server, mac_addr, server_password);
+
+    nv12_buffer = new char[NV12_BUFFER_SIZE];
+#ifdef _WIN32
+    screen_capture = new ScreenCaptureWgc();
+
+    RECORD_DESKTOP_RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = GetSystemMetrics(SM_CXSCREEN);
+    rect.bottom = GetSystemMetrics(SM_CYSCREEN);
+
+    last_frame_time_ = std::chrono::high_resolution_clock::now();
+    screen_capture->Init(
+        rect, 60,
+        [](unsigned char *data, int size, int width, int height) -> void {
+          auto now_time = std::chrono::high_resolution_clock::now();
+          std::chrono::duration<double> duration = now_time - last_frame_time_;
+          auto tc = duration.count() * 1000;
+
+          if (tc >= 0) {
+            BGRAToNV12FFmpeg(data, width, height, (unsigned char *)nv12_buffer);
+            SendData(peer_server, DATA_TYPE::VIDEO, (const char *)nv12_buffer,
+                     NV12_BUFFER_SIZE);
+            // std::cout << "Send" << std::endl;
+            last_frame_time_ = now_time;
+          }
+        });
+
+    screen_capture->Start();
+
+#elif __linux__
+    screen_capture = new ScreenCaptureX11();
+
+    RECORD_DESKTOP_RECT rect;
+    rect.left = 0;
+    rect.top = 0;
+    rect.right = 0;
+    rect.bottom = 0;
+
+    last_frame_time_ = std::chrono::high_resolution_clock::now();
+    screen_capture->Init(
+        rect, 60,
+        [](unsigned char *data, int size, int width, int height) -> void {
+          auto now_time = std::chrono::high_resolution_clock::now();
+          std::chrono::duration<double> duration = now_time - last_frame_time_;
+          auto tc = duration.count() * 1000;
+
+          if (tc >= 0) {
+            SendData(peer_server, DATA_TYPE::VIDEO, (const char *)data,
+                     NV12_BUFFER_SIZE);
+            last_frame_time_ = now_time;
+          }
+        });
+    screen_capture->Start();
+#endif
+  }
+
   // Setup SDL
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) !=
       0) {
@@ -502,108 +563,117 @@ int main() {
 
       const ImGuiViewport *main_viewport = ImGui::GetMainViewport();
       ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Once);
-      ImGui::SetNextWindowSize(ImVec2(180, 225));
+      ImGui::SetNextWindowSize(ImVec2(180, 130));
 
       ImGui::Begin("Menu", nullptr, ImGuiWindowFlags_NoResize);
 
       {
-        ImGui::Text("LOCAL ID: ");
-        ImGui::SameLine();
+        // ImGui::Text("LOCAL ID: ");
+        // ImGui::SameLine();
 
-        ImGui::Selectable(mac_addr, false,
-                          ImGuiSelectableFlags_AllowDoubleClick);
+        // ImGui::Selectable(mac_addr, false,
+        //                   ImGuiSelectableFlags_AllowDoubleClick);
 
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
-          ImGui::SetClipboardText(mac_addr);
-        }
+        // if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0)) {
+        //   ImGui::SetClipboardText(mac_addr);
+        // }
 
-        ImGui::Spacing();
+        // ImGui::Spacing();
 
-        ImGui::Text("PASSWORD: ");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(110);
-        static char server_password[20] = "";
-        ImGui::InputTextWithHint("server_password", "000001", server_password,
-                                 IM_ARRAYSIZE(server_password),
-                                 ImGuiInputTextFlags_AllowTabInput);
+        // ImGui::Text("PASSWORD: ");
+        // ImGui::SameLine();
+        // ImGui::SetNextItemWidth(110);
+        // static char server_password[20] = "";
+        // ImGui::InputTextWithHint("server_password", "000001",
+        // server_password,
+        //                          IM_ARRAYSIZE(server_password),
+        //                          ImGuiInputTextFlags_AllowTabInput);
 
-        ImGui::Spacing();
-        {
-          static bool online_button_pressed = false;
-          static const char *online_label = "Online";
+        //         ImGui::Spacing();
+        //         {
+        //           static bool online_button_pressed = false;
+        //           static const char *online_label = "Online";
 
-          if (ImGui::Button(online_label)) {
-            std::string user_id = "S-" + std::string(GetMac(mac_addr));
+        //           if (ImGui::Button(online_label)) {
+        //             std::string user_id = "S-" +
+        //             std::string(GetMac(mac_addr));
 
-            if (strcmp(online_label, "Online") == 0) {
-              CreateConnection(peer_server, mac_addr, server_password);
+        //             if (strcmp(online_label, "Online") == 0) {
+        //               CreateConnection(peer_server, mac_addr,
+        //               server_password);
 
-              nv12_buffer = new char[NV12_BUFFER_SIZE];
-#ifdef _WIN32
-              screen_capture = new ScreenCaptureWgc();
+        //               nv12_buffer = new char[NV12_BUFFER_SIZE];
+        // #ifdef _WIN32
+        //               screen_capture = new ScreenCaptureWgc();
 
-              RECORD_DESKTOP_RECT rect;
-              rect.left = 0;
-              rect.top = 0;
-              rect.right = GetSystemMetrics(SM_CXSCREEN);
-              rect.bottom = GetSystemMetrics(SM_CYSCREEN);
+        //               RECORD_DESKTOP_RECT rect;
+        //               rect.left = 0;
+        //               rect.top = 0;
+        //               rect.right = GetSystemMetrics(SM_CXSCREEN);
+        //               rect.bottom = GetSystemMetrics(SM_CYSCREEN);
 
-              last_frame_time_ = std::chrono::high_resolution_clock::now();
-              screen_capture->Init(
-                  rect, 60,
-                  [](unsigned char *data, int size, int width,
-                     int height) -> void {
-                    auto now_time = std::chrono::high_resolution_clock::now();
-                    std::chrono::duration<double> duration =
-                        now_time - last_frame_time_;
-                    auto tc = duration.count() * 1000;
+        //               last_frame_time_ =
+        //               std::chrono::high_resolution_clock::now();
+        //               screen_capture->Init(
+        //                   rect, 60,
+        //                   [](unsigned char *data, int size, int width,
+        //                      int height) -> void {
+        //                     auto now_time =
+        //                     std::chrono::high_resolution_clock::now();
+        //                     std::chrono::duration<double> duration =
+        //                         now_time - last_frame_time_;
+        //                     auto tc = duration.count() * 1000;
 
-                    if (tc >= 0) {
-                      BGRAToNV12FFmpeg(data, width, height,
-                                       (unsigned char *)nv12_buffer);
-                      SendData(peer_server, DATA_TYPE::VIDEO,
-                               (const char *)nv12_buffer, NV12_BUFFER_SIZE);
-                      // std::cout << "Send" << std::endl;
-                      last_frame_time_ = now_time;
-                    }
-                  });
+        //                     if (tc >= 0) {
+        //                       BGRAToNV12FFmpeg(data, width, height,
+        //                                        (unsigned char *)nv12_buffer);
+        //                       SendData(peer_server, DATA_TYPE::VIDEO,
+        //                                (const char *)nv12_buffer,
+        //                                NV12_BUFFER_SIZE);
+        //                       // std::cout << "Send" << std::endl;
+        //                       last_frame_time_ = now_time;
+        //                     }
+        //                   });
 
-              screen_capture->Start();
+        //               screen_capture->Start();
 
-#elif __linux__
-              screen_capture = new ScreenCaptureX11();
+        // #elif __linux__
+        //               screen_capture = new ScreenCaptureX11();
 
-              RECORD_DESKTOP_RECT rect;
-              rect.left = 0;
-              rect.top = 0;
-              rect.right = 0;
-              rect.bottom = 0;
+        //               RECORD_DESKTOP_RECT rect;
+        //               rect.left = 0;
+        //               rect.top = 0;
+        //               rect.right = 0;
+        //               rect.bottom = 0;
 
-              last_frame_time_ = std::chrono::high_resolution_clock::now();
-              screen_capture->Init(
-                  rect, 60,
-                  [](unsigned char *data, int size, int width,
-                     int height) -> void {
-                    auto now_time = std::chrono::high_resolution_clock::now();
-                    std::chrono::duration<double> duration =
-                        now_time - last_frame_time_;
-                    auto tc = duration.count() * 1000;
+        //               last_frame_time_ =
+        //               std::chrono::high_resolution_clock::now();
+        //               screen_capture->Init(
+        //                   rect, 60,
+        //                   [](unsigned char *data, int size, int width,
+        //                      int height) -> void {
+        //                     auto now_time =
+        //                     std::chrono::high_resolution_clock::now();
+        //                     std::chrono::duration<double> duration =
+        //                         now_time - last_frame_time_;
+        //                     auto tc = duration.count() * 1000;
 
-                    if (tc >= 0) {
-                      SendData(peer_server, DATA_TYPE::VIDEO,
-                               (const char *)data, NV12_BUFFER_SIZE);
-                      last_frame_time_ = now_time;
-                    }
-                  });
-              screen_capture->Start();
-#endif
-            } else {
-              LeaveConnection(peer_server);
-            }
-            online_button_pressed = !online_button_pressed;
-            online_label = online_button_pressed ? "Offline" : "Online";
-          }
-        }
+        //                     if (tc >= 0) {
+        //                       SendData(peer_server, DATA_TYPE::VIDEO,
+        //                                (const char *)data, NV12_BUFFER_SIZE);
+        //                       last_frame_time_ = now_time;
+        //                     }
+        //                   });
+        //               screen_capture->Start();
+        // #endif
+        //             } else {
+        //               LeaveConnection(peer_server);
+        //             }
+        //             online_button_pressed = !online_button_pressed;
+        //             online_label = online_button_pressed ? "Offline" :
+        //             "Online";
+        //           }
+        //         }
 
         ImGui::Spacing();
 
@@ -625,14 +695,14 @@ int main() {
 
             ImGui::Spacing();
 
-            ImGui::Text("PASSWORD: ");
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(110);
+            // ImGui::Text("PASSWORD: ");
+            // ImGui::SameLine();
+            // ImGui::SetNextItemWidth(110);
             static char client_password[20] = "";
-            ImGui::InputTextWithHint("client_password", "000003",
-                                     client_password,
-                                     IM_ARRAYSIZE(client_password),
-                                     ImGuiInputTextFlags_AllowTabInput);
+            // ImGui::InputTextWithHint("client_password", "000003",
+            //                          client_password,
+            //                          IM_ARRAYSIZE(client_password),
+            //                          ImGuiInputTextFlags_AllowTabInput);
 
             if (ImGui::Button(connect_label)) {
               if (strcmp(connect_label, "Connect") == 0 && !joined) {
@@ -734,6 +804,8 @@ int main() {
   }
 
   // Cleanup
+  LeaveConnection(peer_server);
+
   ImGui_ImplSDLRenderer2_Shutdown();
   ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();
