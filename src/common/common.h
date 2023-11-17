@@ -3,6 +3,8 @@
 
 #include <iostream>
 
+int CommonDummy();
+
 constexpr size_t HASH_STRING_PIECE(const char *string_piece) {
   std::size_t result = 0;
   while (*string_piece) {

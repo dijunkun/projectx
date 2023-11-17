@@ -3,6 +3,8 @@
 
 #include <string.h>
 
+int RingBufferDummy();
+
 class Data {
  public:
   Data() = default;

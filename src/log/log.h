@@ -31,6 +31,8 @@ constexpr auto LOGGER_NAME = "siganl";
 constexpr auto LOGGER_NAME = "rtc";
 #endif
 
+int LogDummy();
+
 #define LOG_INFO(...)                                                         \
   if (nullptr == spdlog::get(LOGGER_NAME)) {                                  \
     auto now = std::chrono::system_clock::now() + std::chrono::hours(8);      \

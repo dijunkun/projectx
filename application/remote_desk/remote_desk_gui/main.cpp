@@ -708,7 +708,7 @@ int main() {
         SDL_UpdateTexture(sdlTexture, NULL, dst_buffer, pixel_w);
       } else {
         if (joined) {
-          // ProcessMouseKeyEven(event);
+          ProcessMouseKeyEven(event);
         }
       }
     }

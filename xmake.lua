@@ -48,7 +48,7 @@ else
     elseif is_os("macosx") then
         add_requires("ffmpeg 5.1.2", {system = false})
         add_requires("brew::libnice", "brew::glib")
-        add_requires("openh264 2.1.1", {configs = {shared = false}})
+        add_requires("brew::openh264", {configs = {shared = false}})
     end
 
     includes("application/remote_desk")
