@@ -54,6 +54,7 @@ extern "C" {
 #endif
 
 int screen_w = 1280, screen_h = 720;
+int window_w = 1280, window_h = 720;
 const int pixel_w = 1280, pixel_h = 720;
 
 unsigned char dst_buffer[pixel_w * pixel_h * 3 / 2];
@@ -118,7 +119,7 @@ typedef struct {
 } RemoteAction;
 
 inline int ProcessMouseKeyEven(SDL_Event &ev) {
-  float ratio = 1280.0 / screen_w;
+  float ratio = 1280.0 / window_w;
 
   RemoteAction remote_action;
 
@@ -443,21 +444,13 @@ int main() {
   SDL_WindowFlags window_flags =
       (SDL_WindowFlags)(SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
   window = SDL_CreateWindow("Remote Desk", SDL_WINDOWPOS_CENTERED,
-                            SDL_WINDOWPOS_CENTERED, screen_w, screen_h,
+                            SDL_WINDOWPOS_CENTERED, window_w, window_h,
                             window_flags);
 
-  // int new_screen_w = 0;
-  // int new_screen_h = 0;
-  // SDL_GetWindowSize(window, &new_screen_w, &new_screen_h);
-
-  // if (new_screen_w != screen_w) {
-  //   screen_w = new_screen_w;
-  //   screen_h = new_screen_w * 9 / 16;
-  // } else if (new_screen_h != screen_h) {
-  //   screen_w = new_screen_h * 16 / 9;
-  //   screen_h = new_screen_h;
-  // }
-  // SDL_SetWindowSize(window, screen_w, screen_h);
+  SDL_DisplayMode DM;
+  SDL_GetCurrentDisplayMode(0, &DM);
+  screen_w = DM.w;
+  screen_h = DM.h;
 
   sdlRenderer = SDL_CreateRenderer(
       window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
@@ -667,13 +660,13 @@ int main() {
 
       {
         if (ImGui::Button("Fix ratio")) {
-          SDL_GetWindowSize(window, &screen_w, &screen_h);
+          SDL_GetWindowSize(window, &window_w, &window_h);
 
-          if (screen_h != screen_w * 9 / 16) {
-            screen_w = screen_h * 16 / 9;
+          if (window_h != window_w * 9 / 16) {
+            window_w = window_h * 16 / 9;
           }
 
-          SDL_SetWindowSize(window, screen_w, screen_h);
+          SDL_SetWindowSize(window, window_w, window_h);
         }
       }
 
@@ -692,9 +685,9 @@ int main() {
         done = true;
       } else if (event.type == SDL_WINDOWEVENT &&
                  event.window.event == SDL_WINDOWEVENT_RESIZED) {
-        SDL_GetWindowSize(window, &screen_w, &screen_h);
-        SDL_SetWindowSize(window, screen_w, screen_h);
-        // printf("Resize windows: %dx%d\n", screen_w, screen_h);
+        SDL_GetWindowSize(window, &window_w, &window_h);
+        SDL_SetWindowSize(window, window_w, window_h);
+        // printf("Resize windows: %dx%d\n", window_w, window_h);
       } else if (event.type == SDL_WINDOWEVENT &&
                  event.window.event == SDL_WINDOWEVENT_CLOSE &&
                  event.window.windowID == SDL_GetWindowID(window)) {
@@ -702,8 +695,8 @@ int main() {
       } else if (event.type == REFRESH_EVENT) {
         sdlRect.x = 0;
         sdlRect.y = 0;
-        sdlRect.w = screen_w;
-        sdlRect.h = screen_h;
+        sdlRect.w = window_w;
+        sdlRect.h = window_h;
 
         SDL_UpdateTexture(sdlTexture, NULL, dst_buffer, pixel_w);
       } else {
