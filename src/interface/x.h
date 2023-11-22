@@ -1,6 +1,12 @@
 #ifndef _X_H_
 #define _X_H_
 
+#ifdef DLL_EXPORTS
+#define DLLAPI __declspec(dllexport)
+#else
+#define DLLAPI __declspec(dllimport)
+#endif
+
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -34,20 +40,20 @@ typedef struct {
   NetStatusReport net_status_report;
 } Params;
 
-PeerPtr* CreatePeer(const Params* params);
+DLLAPI PeerPtr* CreatePeer(const Params* params);
 
-int Init(PeerPtr* peer_ptr, const char* user_id);
+DLLAPI int Init(PeerPtr* peer_ptr, const char* user_id);
 
-int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id,
-                     const char* password);
+DLLAPI int CreateConnection(PeerPtr* peer_ptr, const char* transmission_id,
+                            const char* password);
 
-int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
-                   const char* password);
+DLLAPI int JoinConnection(PeerPtr* peer_ptr, const char* transmission_id,
+                          const char* password);
 
-int LeaveConnection(PeerPtr* peer_ptr);
+DLLAPI int LeaveConnection(PeerPtr* peer_ptr);
 
-int SendData(PeerPtr* peer_ptr, DATA_TYPE data_type, const char* data,
-             size_t size);
+DLLAPI int SendData(PeerPtr* peer_ptr, DATA_TYPE data_type, const char* data,
+                    size_t size);
 
 #ifdef __cplusplus
 }

@@ -23,10 +23,10 @@ extern "C" {
 #define SAVE_H264_STREAM 0
 
 #define YUV420P_BUFFER_SIZE 1280 * 720 * 3 / 2
-unsigned char yuv420p_buffer[YUV420P_BUFFER_SIZE];
+static unsigned char yuv420p_buffer[YUV420P_BUFFER_SIZE];
 
-int NV12ToYUV420PFFmpeg(unsigned char *src_buffer, int width, int height,
-                        unsigned char *dst_buffer) {
+static int NV12ToYUV420PFFmpeg(unsigned char *src_buffer, int width, int height,
+                               unsigned char *dst_buffer) {
   AVFrame *Input_pFrame = av_frame_alloc();
   AVFrame *Output_pFrame = av_frame_alloc();
   struct SwsContext *img_convert_ctx = sws_getContext(
