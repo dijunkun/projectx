@@ -1,8 +1,8 @@
 #include "OpusEncoderImpl.h"
 
 #include <stdlib.h>
-#include <unistd.h>
 
+#include <chrono>
 #include <cstring>
 
 #include "OpusDecoderImpl.h"
@@ -96,7 +96,7 @@ void OpusEncoderImpl::EncodeRun() {
         access_mutex.unlock();
 
       } else {
-        usleep(1000);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
   });
