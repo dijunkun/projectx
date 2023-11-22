@@ -27,7 +27,7 @@ elseif is_os("macosx") then
     add_ldflags("-ld_classic", {force = true})
 end
 
-add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0", "openfec")
+add_requires("asio 1.24.0", "nlohmann_json", "spdlog 1.11.0", "openfec", "libopus 1.4")
 add_packages("spdlog", "openfec")
 includes("thirdparty")
 
@@ -188,6 +188,11 @@ target("media")
         "src/media/video/encode/ffmpeg",
         "src/media/video/decode/ffmpeg", {public = true})
     end
+    add_packages("opus")
+        add_files("src/media/audio/encode/*.cpp",
+        "src/media/audio/decode/*.cpp")
+    add_includedirs("src/media/audio/encode",
+        "src/media/audio/decode", {public = true})
 
 target("qos")
     set_kind("static")
@@ -258,3 +263,11 @@ target("projectx")
 --     add_packages("openfec")
 --     add_files("tests/fec/simple_server.cpp")
 --     add_includedirs("tests/fec")
+
+target("opus_test")
+    set_kind("binary")
+    add_packages("libopus")
+    add_files("tests/opus/OpusEncoderImpl.cpp",
+        "tests/opus/OpusDecoderImpl.cpp",
+        "tests/opus/main.cpp")
+    add_includedirs("tests/opus")
