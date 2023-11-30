@@ -36,7 +36,7 @@ elseif is_os("macosx") then
     add_requires("brew::libnice", "brew::glib")
     add_requires("brew::openh264", {configs = {shared = false}})
     add_packages("ffmpeg", "glib", "libnice")
-    add_ldflags("-ld_classic", {force = true})
+    add_ldflags("-Wl,-ld_classic")
 end
 
 target("log")

@@ -47,7 +47,7 @@ FfmpegVideoDecoder::~FfmpegVideoDecoder() {
 }
 
 int FfmpegVideoDecoder::Init() {
-  av_log_set_level(AV_LOG_ERROR);
+  av_log_set_level(AV_LOG_QUIET);
 
   codec_id_ = AV_CODEC_ID_H264;
   codec_ = avcodec_find_decoder(codec_id_);

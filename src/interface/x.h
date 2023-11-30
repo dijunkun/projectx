@@ -1,10 +1,12 @@
 #ifndef _X_H_
 #define _X_H_
 
-#ifdef DLL_EXPORTS
+#if defined(_MSC_VER)
 #define DLLAPI __declspec(dllexport)
+#elif defined(__GNUC__)
+#define DLLAPI __attribute__((visibility("default")))
 #else
-#define DLLAPI __declspec(dllimport)
+#define DLLAPI
 #endif
 
 #include <stdint.h>
