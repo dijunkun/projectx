@@ -28,8 +28,8 @@ IceTransmission::~IceTransmission() {
     rtp_video_sender_->Stop();
   }
 
-  if (rtp_video_receiver_) {
-    rtp_video_receiver_->Stop();
+  if (rtp_audio_sender_) {
+    rtp_audio_sender_->Stop();
   }
 
   if (rtp_data_sender_) {
@@ -47,6 +47,7 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
                                          std::string &turn_username,
                                          std::string &turn_password) {
   video_rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::H264);
+  audio_rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::OPUS);
   data_rtp_codec_ = std::make_unique<RtpCodec>(RtpPacket::PAYLOAD_TYPE::DATA);
 
   rtp_video_receiver_ = std::make_unique<RtpVideoReceiver>();
@@ -81,6 +82,26 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
       });
 
   rtp_video_sender_->Start();
+
+  rtp_audio_receiver_ = std::make_unique<RtpAudioReceiver>();
+  rtp_audio_receiver_->SetOnReceiveData(
+      [this](const char *data, size_t size) -> void {
+        on_receive_audio_(data, size, remote_user_id_.data(),
+                          remote_user_id_.size());
+      });
+
+  rtp_audio_sender_ = std::make_unique<RtpAudioSender>();
+  rtp_audio_sender_->SetSendDataFunc(
+      [this](const char *data, size_t size) -> int {
+        if (!ice_agent_) {
+          LOG_ERROR("ice_agent_ is nullptr");
+          return -1;
+        }
+
+        return ice_agent_->Send(data, size);
+      });
+
+  rtp_audio_sender_->Start();
 
   rtp_data_sender_ = std::make_unique<RtpDataSender>();
   rtp_data_sender_->SetSendDataFunc(
@@ -159,6 +180,10 @@ int IceTransmission::InitIceTransmission(std::string &stun_ip, int stun_port,
             if (ice_transmission_obj->CheckIsVideoPacket(buffer, size)) {
               RtpPacket packet((uint8_t *)buffer, size);
               ice_transmission_obj->rtp_video_receiver_->InsertRtpPacket(
+                  packet);
+            } else if (ice_transmission_obj->CheckIsAudioPacket(buffer, size)) {
+              RtpPacket packet((uint8_t *)buffer, size);
+              ice_transmission_obj->rtp_audio_receiver_->InsertRtpPacket(
                   packet);
             } else if (ice_transmission_obj->CheckIsDataPacket(buffer, size)) {
               RtpPacket packet((uint8_t *)buffer, size);
@@ -269,6 +294,12 @@ int IceTransmission::SendData(DATA_TYPE type, const char *data, size_t size) {
         rtp_video_sender_->Enqueue(packets);
       }
     } else if (DATA_TYPE::AUDIO == type) {
+      if (rtp_audio_sender_) {
+        if (audio_rtp_codec_) {
+          audio_rtp_codec_->Encode((uint8_t *)data, size, packets);
+          rtp_audio_sender_->Enqueue(packets);
+        }
+      }
     } else if (DATA_TYPE::DATA == type) {
       if (rtp_data_sender_) {
         if (data_rtp_codec_) {

@@ -4,8 +4,8 @@
  * Copyright (c) 2023 by DI JUNKUN, All Rights Reserved.
  */
 
-#ifndef _RTP_DATA_SENDER_H_
-#define _RTP_DATA_SENDER_H_
+#ifndef _RTP_AUDIO_SENDER_H_
+#define _RTP_AUDIO_SENDER_H_
 
 #include <functional>
 
@@ -15,10 +15,10 @@
 #include "rtp_statistics.h"
 #include "thread_base.h"
 
-class RtpDataSender : public ThreadBase {
+class RtpAudioSender : public ThreadBase {
  public:
-  RtpDataSender();
-  ~RtpDataSender();
+  RtpAudioSender();
+  ~RtpAudioSender();
 
  public:
   void Enqueue(std::vector<RtpPacket> &rtp_packets);

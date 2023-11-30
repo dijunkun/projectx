@@ -1,9 +1,9 @@
 #ifndef _ICE_AGENT_H_
 #define _ICE_AGENT_H_
 
+#include <atomic>
 #include <iostream>
 #include <thread>
-#include <atomic>
 
 #include "gio/gnetworking.h"
 #include "glib.h"

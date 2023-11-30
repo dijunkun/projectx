@@ -20,7 +20,7 @@ WsCore::WsCore() {
 WsCore::~WsCore() {
   m_endpoint_.stop_perpetual();
 
-  if (GetStatus() != "Open") {
+  if (GetStatus() != WsStatus::WsOpened) {
     // Only close open connections
     return;
   }
@@ -42,6 +42,8 @@ WsCore::~WsCore() {
 }
 
 int WsCore::Connect(std::string const &uri) {
+  uri_ = uri;
+
   websocketpp::lib::error_code ec;
 
   client::connection_ptr con = m_endpoint_.get_connection(uri, ec);
@@ -81,6 +83,9 @@ int WsCore::Connect(std::string const &uri) {
 
   m_endpoint_.connect(con);
 
+  ws_status_ = WsStatus::WsOpening;
+  OnWsStatus(WsStatus::WsOpening);
+
   return 0;
 }
 
@@ -118,21 +123,26 @@ void WsCore::Ping(websocketpp::connection_hdl hdl) {
   }
 }
 
-const std::string &WsCore::GetStatus() { return connection_status_; }
+WsStatus WsCore::GetStatus() { return ws_status_; }
 
 void WsCore::OnOpen(client *c, websocketpp::connection_hdl hdl) {
-  connection_status_ = "Open";
+  ws_status_ = WsStatus::WsOpened;
+  OnWsStatus(WsStatus::WsOpened);
 
   ping_thread_ = websocketpp::lib::make_shared<websocketpp::lib::thread>(
       &WsCore::Ping, this, hdl);
 }
 
 void WsCore::OnFail(client *c, websocketpp::connection_hdl hdl) {
-  connection_status_ = "Failed";
+  ws_status_ = WsStatus::WsFailed;
+  OnWsStatus(WsStatus::WsFailed);
+
+  Connect(uri_);
 }
 
 void WsCore::OnClose(client *c, websocketpp::connection_hdl hdl) {
-  connection_status_ = "Closed";
+  ws_status_ = WsStatus::WsClosed;
+  OnWsStatus(WsStatus::WsClosed);
 }
 
 bool WsCore::OnPing(websocketpp::connection_hdl hdl, std::string msg) {
@@ -152,6 +162,8 @@ void WsCore::OnPongTimeout(websocketpp::connection_hdl hdl, std::string msg) {
   LOG_WARN("Pong timeout, reset connection");
   // m_endpoint_.close(hdl, websocketpp::close::status::normal,
   // "OnPongTimeout");
+  ws_status_ = WsStatus::WsReconnecting;
+  OnWsStatus(WsStatus::WsReconnecting);
   m_endpoint_.reset();
 }
 

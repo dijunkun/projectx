@@ -65,9 +65,29 @@ int PeerConnection::Init(PeerConnectionParams params,
   on_receive_video_buffer_ = params.on_receive_video_buffer;
   on_receive_audio_buffer_ = params.on_receive_audio_buffer;
   on_receive_data_buffer_ = params.on_receive_data_buffer;
+  on_signal_status_ = params.on_signal_status;
   on_connection_status_ = params.on_connection_status;
 
   on_receive_ws_msg_ = [this](const std::string &msg) { ProcessSignal(msg); };
+
+  on_ws_status_ = [this](WsStatus ws_status) {
+    if (WsStatus::WsOpening == ws_status) {
+      signal_status_ = SignalStatus::SignalConnecting;
+      on_signal_status_(SignalStatus::SignalConnecting);
+    } else if (WsStatus::WsOpened == ws_status) {
+      signal_status_ = SignalStatus::SignalConnected;
+      on_signal_status_(SignalStatus::SignalConnected);
+    } else if (WsStatus::WsFailed == ws_status) {
+      signal_status_ = SignalStatus::SignalFailed;
+      on_signal_status_(SignalStatus::SignalFailed);
+    } else if (WsStatus::WsClosed == ws_status) {
+      signal_status_ = SignalStatus::SignalClosed;
+      on_signal_status_(SignalStatus::SignalClosed);
+    } else if (WsStatus::WsReconnecting == ws_status) {
+      signal_status_ = SignalStatus::SignalReconnecting;
+      on_signal_status_(SignalStatus::SignalReconnecting);
+    }
+  };
 
   on_receive_video_ = [this](const char *data, size_t size, const char *user_id,
                              size_t user_id_size) {
@@ -83,9 +103,14 @@ int PeerConnection::Init(PeerConnectionParams params,
 
   on_receive_audio_ = [this](const char *data, size_t size, const char *user_id,
                              size_t user_id_size) {
-    if (on_receive_audio_buffer_) {
-      on_receive_audio_buffer_(data, size, user_id, user_id_size);
-    }
+    int num_frame_returned = audio_decoder_->Decode(
+        (uint8_t *)data, size,
+        [this, user_id, user_id_size](uint8_t *data, int size) {
+          if (on_receive_audio_buffer_) {
+            on_receive_audio_buffer_((const char *)data, size, user_id,
+                                     user_id_size);
+          }
+        });
   };
 
   on_receive_data_ = [this](const char *data, size_t size, const char *user_id,
@@ -96,7 +121,12 @@ int PeerConnection::Init(PeerConnectionParams params,
   };
 
   on_ice_status_change_ = [this](std::string ice_status) {
-    if ("completed" == ice_status || "ready" == ice_status) {
+    if ("connecting" == ice_status) {
+      on_connection_status_(ConnectionStatus::Connecting);
+    } else if ("disconnected" == ice_status) {
+      on_connection_status_(ConnectionStatus::Disconnected);
+    } else if ("completed" == ice_status || "ready" == ice_status ||
+               "connected" == ice_status) {
       ice_ready_ = true;
       on_connection_status_(ConnectionStatus::Connected);
       b_force_i_frame_ = true;
@@ -110,18 +140,25 @@ int PeerConnection::Init(PeerConnectionParams params,
     }
   };
 
-  ws_transport_ = std::make_shared<WsTransmission>(on_receive_ws_msg_);
+  ws_transport_ =
+      std::make_shared<WsTransmission>(on_receive_ws_msg_, on_ws_status_);
   uri_ = "ws://" + cfg_signal_server_ip_ + ":" + cfg_signal_server_port_;
   if (ws_transport_) {
     ws_transport_->Connect(uri_);
   }
 
-  do {
-  } while (SignalStatus::SignalConnected != GetSignalStatus());
+  // do {
+  // } while (SignalStatus::SignalConnected != GetSignalStatus());
 
   nv12_data_ = new char[1280 * 720 * 3 / 2];
 
   if (0 != CreateVideoCodec(hardware_acceleration_)) {
+    LOG_ERROR("Create video codec failed");
+    return -1;
+  }
+
+  if (0 != CreateAudioCodec()) {
+    LOG_ERROR("Create audio codec failed");
     return -1;
   }
 
@@ -185,9 +222,30 @@ int PeerConnection::CreateVideoCodec(bool hardware_acceleration) {
   return 0;
 }
 
+int PeerConnection::CreateAudioCodec() {
+  audio_encoder_ = std::make_unique<AudioEncoder>(AudioEncoder(48000, 1, 480));
+  if (!audio_encoder_ || 0 != audio_encoder_->Init()) {
+    LOG_ERROR("Audio encoder init failed");
+    return -1;
+  }
+
+  audio_decoder_ = std::make_unique<AudioDecoder>(AudioDecoder(48000, 1, 480));
+  if (!audio_decoder_ || 0 != audio_decoder_->Init()) {
+    LOG_ERROR("Audio decoder init failed");
+    return -1;
+  }
+
+  return 0;
+}
+
 int PeerConnection::Create(PeerConnectionParams params,
                            const std::string &transmission_id,
                            const std::string &password) {
+  if (SignalStatus::SignalConnected != GetSignalStatus()) {
+    LOG_ERROR("Signal not connected");
+    return -1;
+  }
+
   int ret = 0;
 
   password_ = password;
@@ -208,6 +266,11 @@ int PeerConnection::Create(PeerConnectionParams params,
 int PeerConnection::Join(PeerConnectionParams params,
                          const std::string &transmission_id,
                          const std::string &password) {
+  if (SignalStatus::SignalConnected != GetSignalStatus()) {
+    LOG_ERROR("Signal not connected");
+    return -1;
+  }
+
   int ret = 0;
 
   password_ = password;
@@ -218,6 +281,11 @@ int PeerConnection::Join(PeerConnectionParams params,
 }
 
 int PeerConnection::Leave() {
+  if (SignalStatus::SignalConnected != GetSignalStatus()) {
+    LOG_ERROR("Signal not connected");
+    return -1;
+  }
+
   json message = {{"type", "leave_transmission"},
                   {"user_id", user_id_},
                   {"transmission_id", transmission_id_}};
@@ -245,8 +313,6 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       ws_connection_id_ = j["ws_connection_id"].get<unsigned int>();
       LOG_INFO("Receive local peer websocket connection id [{}]",
                ws_connection_id_);
-      std::lock_guard<std::mutex> l(signal_status_mutex_);
-      signal_status_ = SignalStatus::SignalConnected;
       break;
     }
     case "transmission_id"_H: {
@@ -305,7 +371,7 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
           ice_transmission_list_[remote_user_id]->JoinTransmission();
         }
 
-        on_connection_status_(ConnectionStatus::Connecting);
+        // on_connection_status_(ConnectionStatus::Connecting);
       }
 
       break;
@@ -363,6 +429,8 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
         ice_transmission_list_[remote_user_id]->SetRemoteSdp(remote_sdp);
 
         ice_transmission_list_[remote_user_id]->GatherCandidates();
+
+        on_connection_status_(ConnectionStatus::Connecting);
       }
       break;
     }
@@ -381,6 +449,8 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
             ice_transmission_list_.end()) {
           ice_transmission_list_[remote_user_id]->SetRemoteSdp(remote_sdp);
         }
+
+        on_connection_status_(ConnectionStatus::Connecting);
       }
       break;
     }
@@ -392,6 +462,11 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
 
 int PeerConnection::RequestTransmissionMemberList(
     const std::string &transmission_id, const std::string &password) {
+  if (SignalStatus::SignalConnected != GetSignalStatus()) {
+    LOG_ERROR("Signal not connected");
+    return -1;
+  }
+
   LOG_INFO("Request member list");
 
   json message = {{"type", "query_user_id_list"},
@@ -445,9 +520,17 @@ int PeerConnection::SendVideoData(const char *data, size_t size) {
 }
 
 int PeerConnection::SendAudioData(const char *data, size_t size) {
-  for (auto &ice_trans : ice_transmission_list_) {
-    ice_trans.second->SendData(IceTransmission::DATA_TYPE::AUDIO, data, size);
-  }
+  int ret = audio_encoder_->Encode(
+      (uint8_t *)data, size,
+      [this](char *encoded_audio_buffer, size_t size) -> int {
+        for (auto &ice_trans : ice_transmission_list_) {
+          // LOG_ERROR("opus frame size: [{}]", size);
+          ice_trans.second->SendData(IceTransmission::DATA_TYPE::AUDIO,
+                                     encoded_audio_buffer, size);
+        }
+        return 0;
+      });
+
   return 0;
 }
 

@@ -209,6 +209,7 @@ class RtpPacket {
   size_t DecodeH264Fua(uint8_t *payload = nullptr);
   size_t DecodeH264FecSource(uint8_t *payload = nullptr);
   size_t DecodeH264FecRepair(uint8_t *payload = nullptr);
+  size_t DecodeOpus(uint8_t *payload = nullptr);
 
  public:
   // Get Header

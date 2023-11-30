@@ -19,6 +19,7 @@ PeerPtr *CreatePeer(const Params *params) {
   peer_ptr->pc_params.on_receive_video_buffer = params->on_receive_video_buffer;
   peer_ptr->pc_params.on_receive_audio_buffer = params->on_receive_audio_buffer;
   peer_ptr->pc_params.on_receive_data_buffer = params->on_receive_data_buffer;
+  peer_ptr->pc_params.on_signal_status = params->on_signal_status;
   peer_ptr->pc_params.on_connection_status = params->on_connection_status;
   peer_ptr->pc_params.net_status_report = params->net_status_report;
 
@@ -26,21 +27,36 @@ PeerPtr *CreatePeer(const Params *params) {
 }
 
 int Init(PeerPtr *peer_ptr, const char *user_id) {
+  if (!peer_ptr) {
+    LOG_ERROR("peer_ptr not created");
+    return -1;
+  }
+
   peer_ptr->peer_connection->Init(peer_ptr->pc_params, user_id);
   return 0;
 }
 
 int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id,
                      const char *password) {
-  peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id,
-                                    password);
+  if (!peer_ptr) {
+    LOG_ERROR("peer_ptr not created");
+    return -1;
+  }
+
   LOG_INFO("CreateConnection [{}] with password [{}]", transmission_id,
            password);
-  return 0;
+
+  return peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id,
+                                           password);
 }
 
 int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
                    const char *password) {
+  if (!peer_ptr) {
+    LOG_ERROR("peer_ptr not created");
+    return -1;
+  }
+
   peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id,
                                   password);
   LOG_INFO("JoinConnection[{}] with password [{}]", transmission_id, password);
@@ -48,6 +64,11 @@ int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
 }
 
 int LeaveConnection(PeerPtr *peer_ptr) {
+  if (!peer_ptr) {
+    LOG_ERROR("peer_ptr not created");
+    return -1;
+  }
+
   peer_ptr->peer_connection->Leave();
   LOG_INFO("LeaveConnection");
   return 0;
@@ -55,6 +76,11 @@ int LeaveConnection(PeerPtr *peer_ptr) {
 
 int SendData(PeerPtr *peer_ptr, DATA_TYPE data_type, const char *data,
              size_t size) {
+  if (!peer_ptr) {
+    LOG_ERROR("peer_ptr not created");
+    return -1;
+  }
+
   if (DATA_TYPE::VIDEO == data_type) {
     peer_ptr->peer_connection->SendVideoData(data, size);
   } else if (DATA_TYPE::AUDIO == data_type) {
@@ -64,5 +90,3 @@ int SendData(PeerPtr *peer_ptr, DATA_TYPE data_type, const char *data,
   }
   return 0;
 }
-
-int rtc() { return 0; }

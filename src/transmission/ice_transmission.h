@@ -1,3 +1,9 @@
+/*
+ * @Author: DI JUNKUN
+ * @Date: 2023-11-24
+ * Copyright (c) 2023 by DI JUNKUN, All Rights Reserved.
+ */
+
 #ifndef _ICE_TRANSMISSION_H_
 #define _ICE_TRANSMISSION_H_
 
@@ -6,6 +12,8 @@
 #include "congestion_control.h"
 #include "ice_agent.h"
 #include "ringbuffer.h"
+#include "rtp_audio_receiver.h"
+#include "rtp_audio_sender.h"
 #include "rtp_codec.h"
 #include "rtp_data_receiver.h"
 #include "rtp_data_sender.h"
@@ -107,6 +115,8 @@ class IceTransmission {
   std::unique_ptr<RtpCodec> data_rtp_codec_ = nullptr;
   std::unique_ptr<RtpVideoReceiver> rtp_video_receiver_ = nullptr;
   std::unique_ptr<RtpVideoSender> rtp_video_sender_ = nullptr;
+  std::unique_ptr<RtpAudioReceiver> rtp_audio_receiver_ = nullptr;
+  std::unique_ptr<RtpAudioSender> rtp_audio_sender_ = nullptr;
   std::unique_ptr<RtpDataReceiver> rtp_data_receiver_ = nullptr;
   std::unique_ptr<RtpDataSender> rtp_data_sender_ = nullptr;
   uint8_t *rtp_payload_ = nullptr;

@@ -1,8 +1,14 @@
-#ifndef _FRAME_H_
-#define _FRAME_H_
+/*
+ * @Author: DI JUNKUN
+ * @Date: 2023-11-24
+ * Copyright (c) 2023 by DI JUNKUN, All Rights Reserved.
+ */
 
-#include <stdint.h>
+#ifndef _VIDEO_FRAME_H_
+#define _VIDEO_FRAME_H_
+
 #include <stddef.h>
+#include <stdint.h>
 
 class VideoFrame {
  public:

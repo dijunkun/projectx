@@ -4,7 +4,7 @@
 
 ThreadBase::ThreadBase() {}
 
-ThreadBase::~ThreadBase() {}
+ThreadBase::~ThreadBase() { Stop(); }
 
 void ThreadBase::Start() {
   if (!thread_) {

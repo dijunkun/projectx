@@ -83,7 +83,6 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
 
     g_main_loop_run(gloop_);
     exit_nice_thread_ = true;
-    g_main_loop_unref(gloop_);
   }));
 
   do {
@@ -96,7 +95,6 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
 }
 
 void cb_closed(GObject *src, GAsyncResult *res, gpointer data) {
-  LOG_ERROR("cb_closed");
   NiceAgent *agent = NICE_AGENT(src);
   g_debug("test-turn:%s: %p", G_STRFUNC, agent);
 

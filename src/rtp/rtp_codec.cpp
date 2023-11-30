@@ -216,6 +216,22 @@ void RtpCodec::Encode(uint8_t* buffer, size_t size,
         packets.emplace_back(rtp_packet);
       }
     }
+  } else if (RtpPacket::PAYLOAD_TYPE::OPUS == payload_type_) {
+    RtpPacket rtp_packet;
+    rtp_packet.SetVerion(version_);
+    rtp_packet.SetHasPadding(has_padding_);
+    rtp_packet.SetHasExtension(has_extension_);
+    rtp_packet.SetMarker(1);
+    rtp_packet.SetPayloadType(RtpPacket::PAYLOAD_TYPE(payload_type_));
+    rtp_packet.SetSequenceNumber(sequence_number_++);
+
+    timestamp_ =
+        std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    rtp_packet.SetTimestamp(timestamp_);
+    rtp_packet.SetSsrc(ssrc_);
+
+    rtp_packet.Encode(buffer, size);
+    packets.emplace_back(rtp_packet);
   } else if (RtpPacket::PAYLOAD_TYPE::DATA == payload_type_) {
     RtpPacket rtp_packet;
     rtp_packet.SetVerion(version_);

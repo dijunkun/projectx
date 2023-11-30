@@ -1,6 +1,6 @@
 #include "OpusDecoderImpl.h"
-#define MAX_FRAME_SIZE 6 * 960
-#define CHANNELS 2
+#define MAX_FRAME_SIZE 960
+#define CHANNELS 1
 
 OpusDecoderImpl::OpusDecoderImpl(int sampleRate, int channel) {
   int err;
@@ -9,7 +9,7 @@ OpusDecoderImpl::OpusDecoderImpl(int sampleRate, int channel) {
   sample_rate = sample_rate;
   channel_num = channel;
   if (err < 0 || decoder == NULL) {
-    printf("´´½¨½âÂëÆ÷Ê§°Ü\n");
+    printf("Create opus decoder failed\n");
     return;
   }
 
@@ -22,7 +22,7 @@ bool OpusDecoderImpl::Decode(unsigned char* in_data, int len) {
   auto frame_size = opus_decode(decoder, in_data, len, out, MAX_FRAME_SIZE, 0);
 
   if (frame_size < 0) {
-    printf("½âÂëÊ§°Ü\n");
+    printf("Invalid frame size\n");
     return false;
   }
 

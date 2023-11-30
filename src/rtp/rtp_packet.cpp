@@ -17,6 +17,8 @@ void RtpPacket::TryToDecodeRtpPacket() {
     DecodeH264FecSource();
   } else if (PAYLOAD_TYPE::H264_FEC_REPAIR == PAYLOAD_TYPE(buffer_[1] & 0x7F)) {
     DecodeH264FecRepair();
+  } else if (PAYLOAD_TYPE::OPUS == PAYLOAD_TYPE(buffer_[1] & 0x7F)) {
+    DecodeOpus();
   } else if (PAYLOAD_TYPE::DATA == PAYLOAD_TYPE(buffer_[1] & 0x7F)) {
     DecodeData();
   } else {
@@ -366,6 +368,50 @@ const uint8_t *RtpPacket::EncodeH264FecRepair(
   size_ = payload_size + (14 + payload_offset);
 
   return buffer_;
+}
+
+size_t RtpPacket::DecodeOpus(uint8_t *payload) {
+  version_ = (buffer_[0] >> 6) & 0x03;
+  has_padding_ = (buffer_[0] >> 5) & 0x01;
+  has_extension_ = (buffer_[0] >> 4) & 0x01;
+  total_csrc_number_ = buffer_[0] & 0x0f;
+  marker_ = (buffer_[1] >> 7) & 0x01;
+  payload_type_ = buffer_[1] & 0x7f;
+  sequence_number_ = (buffer_[2] << 8) | buffer_[3];
+  timestamp_ =
+      (buffer_[4] << 24) | (buffer_[5] << 16) | (buffer_[6] << 8) | buffer_[7];
+  ssrc_ = (buffer_[8] << 24) | (buffer_[9] << 16) | (buffer_[10] << 8) |
+          buffer_[11];
+
+  for (uint32_t index = 0; index < total_csrc_number_; index++) {
+    uint32_t csrc = (buffer_[12 + index] << 24) | (buffer_[13 + index] << 16) |
+                    (buffer_[14 + index] << 8) | buffer_[15 + index];
+    csrcs_.push_back(csrc);
+  }
+
+  uint32_t extension_offset = total_csrc_number_ * 4;
+  if (has_extension_) {
+    extension_profile_ =
+        (buffer_[12 + extension_offset] << 8) | buffer_[13 + extension_offset];
+    extension_len_ =
+        (buffer_[14 + extension_offset] << 8) | buffer_[15 + extension_offset];
+
+    // extension_data_ = new uint8_t[extension_len_];
+    // memcpy(extension_data_, buffer_ + 16 + extension_offset,
+    // extension_len_);
+    extension_data_ = buffer_ + 16 + extension_offset;
+  }
+
+  uint32_t payload_offset =
+      (has_extension_ ? extension_len_ : 0) + extension_offset;
+
+  payload_size_ = size_ - (12 + payload_offset);
+  payload_ = buffer_ + 12 + payload_offset;
+  if (payload) {
+    memcpy(payload, payload_, payload_size_);
+  }
+
+  return payload_size_;
 }
 
 size_t RtpPacket::DecodeData(uint8_t *payload) {

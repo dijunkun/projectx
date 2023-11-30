@@ -13,6 +13,8 @@
 
 typedef websocketpp::client<websocketpp::config::asio_client> client;
 
+enum WsStatus { WsOpening = 0, WsOpened, WsFailed, WsClosed, WsReconnecting };
+
 class WsCore {
  public:
   WsCore();
@@ -27,7 +29,7 @@ class WsCore {
 
   void Ping(websocketpp::connection_hdl hdl);
 
-  const std::string &GetStatus();
+  WsStatus GetStatus();
 
   // Callback
   void OnOpen(client *c, websocketpp::connection_hdl hdl);
@@ -46,14 +48,17 @@ class WsCore {
 
   virtual void OnReceiveMessage(const std::string &msg) = 0;
 
+  virtual void OnWsStatus(WsStatus ws_status) = 0;
+
  private:
   client m_endpoint_;
   websocketpp::connection_hdl connection_handle_;
   websocketpp::lib::shared_ptr<websocketpp::lib::thread> m_thread_;
   websocketpp::lib::shared_ptr<websocketpp::lib::thread> ping_thread_;
 
-  std::string connection_status_ = "Connecting";
+  WsStatus ws_status_ = WsStatus::WsClosed;
   int timeout_count_ = 0;
+  std::string uri_;
 };
 
 #endif

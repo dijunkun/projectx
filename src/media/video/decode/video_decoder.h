@@ -1,9 +1,15 @@
+/*
+ * @Author: DI JUNKUN
+ * @Date: 2023-11-24
+ * Copyright (c) 2023 by DI JUNKUN, All Rights Reserved.
+ */
+
 #ifndef _VIDEO_DECODER_H_
 #define _VIDEO_DECODER_H_
 
 #include <functional>
 
-#include "frame.h"
+#include "video_frame.h"
 
 class VideoDecoder {
  public:

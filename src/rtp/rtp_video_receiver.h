@@ -7,12 +7,12 @@
 #include <set>
 
 #include "fec_decoder.h"
-#include "frame.h"
 #include "ringbuffer.h"
 #include "rtcp_receiver_report.h"
 #include "rtp_codec.h"
 #include "rtp_statistics.h"
 #include "thread_base.h"
+#include "video_frame.h"
 
 class RtpVideoReceiver : public ThreadBase {
  public:

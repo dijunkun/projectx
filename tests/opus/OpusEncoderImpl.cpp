@@ -22,7 +22,7 @@ OpusEncoderImpl::OpusEncoderImpl(int sampleRate, int channel)
 
   opus_encoder_ctl(encoder, OPUS_SET_VBR(0));  // 0:CBR, 1:VBR
   opus_encoder_ctl(encoder, OPUS_SET_VBR_CONSTRAINT(true));
-  opus_encoder_ctl(encoder, OPUS_SET_BITRATE(96000));
+  opus_encoder_ctl(encoder, OPUS_SET_BITRATE(sample_rate * channel_num));
   opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(8));  // 8    0~10
   opus_encoder_ctl(encoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
   opus_encoder_ctl(encoder,
@@ -57,13 +57,13 @@ bool OpusEncoderImpl::PopFrame(StreamInfo &info) {
 // 48000 sample rate£¬48 samples/ms * 20ms * 2 channel = 1920
 void OpusEncoderImpl::EncodeRun() {
   m_thread = std::make_unique<std::thread>([this]() {
-    const int frame_size = 48 * 20;  // 960
-    const int input_len = sizeof(opus_int16) * frame_size * 2;
+    const int frame_size = 48 * 20;  // 1920
+    int input_len = sizeof(opus_int16) * frame_size * channel_num;
 
-    OpusDecoderImpl decoder(48000, channel_num);
+    OpusDecoderImpl decoder(sample_rate, channel_num);
 
-    opus_int16 input_data[frame_size * 2] = {0};
-    unsigned char input_buffer[input_len] = {0};
+    opus_int16 input_data[frame_size] = {0};
+    unsigned char *input_buffer = new unsigned char[input_len];
     unsigned char out_data[MAX_PACKET_SIZE] = {0};
 
     while (isRuning) {
@@ -99,6 +99,8 @@ void OpusEncoderImpl::EncodeRun() {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
       }
     }
+
+    free(input_buffer);
   });
 }
 

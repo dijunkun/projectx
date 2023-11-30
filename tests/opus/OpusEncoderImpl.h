@@ -6,6 +6,7 @@
 #include <thread>
 #include <vector>
 
+#include "OpusDecoderImpl.h"
 #include "base_type.h"
 #include "opus/opus.h"
 
@@ -20,6 +21,8 @@ class OpusEncoderImpl {
   bool isRuning = true;
   std::mutex access_mutex;
   std::unique_ptr<std::thread> m_thread;
+
+  OpusDecoderImpl *decoder = nullptr;
 
  public:
   OpusEncoderImpl(int sampleRate, int channel);
