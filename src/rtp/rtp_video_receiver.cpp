@@ -173,15 +173,16 @@ bool RtpVideoReceiver::CheckIsFrameCompleted(RtpPacket& rtp_packet) {
 
     while (end_seq--) {
       auto it = incomplete_frame_list_.find(end_seq);
-      complete_frame_size += it->second.PayloadSize();
       if (it == incomplete_frame_list_.end()) {
         // The last fragment has already received. If all fragments are in
         // order, then some fragments lost in tranmission and need to be
         // repaired using FEC
         return false;
       } else if (!it->second.FuAStart()) {
+        complete_frame_size += it->second.PayloadSize();
         continue;
       } else if (it->second.FuAStart()) {
+        complete_frame_size += it->second.PayloadSize();
         if (!nv12_data_) {
           nv12_data_ = new uint8_t[NV12_BUFFER_SIZE];
         }
