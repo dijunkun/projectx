@@ -33,9 +33,9 @@ elseif is_os("linux") then
     add_syslinks("pthread")
 elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
-    add_requires("brew::libnice", "brew::glib")
+    add_requires("brew::libnice")
     add_requires("brew::openh264", {configs = {shared = false}})
-    add_packages("ffmpeg", "glib", "libnice")
+    add_packages("ffmpeg", "brew::libnice", "brew::openh264")
     add_ldflags("-Wl,-ld_classic")
 end
 
@@ -162,13 +162,17 @@ target("media")
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/ffmpeg/*.cpp",
-        "src/media/video/decode/ffmpeg/*.cpp")
+        "src/media/video/decode/ffmpeg/*.cpp",
+        "src/media/video/encode/openh264/*.cpp",
+        "src/media/video/decode/openh264/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/encode/ffmpeg",
-        "src/media/video/decode/ffmpeg", {public = true})
+        "src/media/video/decode/ffmpeg",
+        "src/media/video/encode/openh264",
+        "src/media/video/decode/openh264", {public = true})
     end
-        add_files("src/media/audio/encode/*.cpp",
+    add_files("src/media/audio/encode/*.cpp",
         "src/media/audio/decode/*.cpp")
     add_includedirs("src/media/audio/encode",
         "src/media/audio/decode", {public = true})

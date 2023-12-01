@@ -2,6 +2,7 @@
 
 #if __APPLE__
 #include "ffmpeg/ffmpeg_video_encoder.h"
+#include "openh264/openh264_encoder.h"
 #else
 #include "ffmpeg/ffmpeg_video_encoder.h"
 #include "nvcodec/nvidia_video_encoder.h"
@@ -17,7 +18,8 @@ VideoEncoderFactory::~VideoEncoderFactory() {}
 std::unique_ptr<VideoEncoder> VideoEncoderFactory::CreateVideoEncoder(
     bool hardware_acceleration) {
 #if __APPLE__
-  return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
+  // return std::make_unique<FFmpegVideoEncoder>(FFmpegVideoEncoder());
+  return std::make_unique<OpenH264Encoder>(OpenH264Encoder());
 #else
   if (hardware_acceleration) {
     if (CheckIsHardwareAccerlerationSupported()) {
