@@ -18,8 +18,8 @@ VideoDecoderFactory::~VideoDecoderFactory() {}
 std::unique_ptr<VideoDecoder> VideoDecoderFactory::CreateVideoDecoder(
     bool hardware_acceleration) {
 #if __APPLE__
-  // return std::make_unique<OpenH264Decoder>(OpenH264Decoder());
-  return std::make_unique<FfmpegVideoDecoder>(FfmpegVideoDecoder());
+  return std::make_unique<OpenH264Decoder>(OpenH264Decoder());
+  // return std::make_unique<FfmpegVideoDecoder>(FfmpegVideoDecoder());
 #else
   if (hardware_acceleration) {
     if (CheckIsHardwareAccerlerationSupported()) {
