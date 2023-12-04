@@ -33,9 +33,9 @@ elseif is_os("linux") then
     add_syslinks("pthread")
 elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
-    add_requires("brew::libnice")
+    add_requires("vcpkg::libnice", {configs = {shared = false}})
     add_requires("brew::openh264", {configs = {shared = false}})
-    add_packages("ffmpeg", "brew::libnice", "brew::openh264")
+    add_packages("ffmpeg", "vcpkg::libnice", "brew::openh264")
     add_ldflags("-Wl,-ld_classic")
 end
 
@@ -99,16 +99,7 @@ target("ice")
         add_includedirs(path.join(os.getenv("VCPKG_ROOT"), 
             "installed/x64-windows-static/lib/glib-2.0/include"), {public = true})
     elseif is_os("macosx") then
-        add_includedirs(path.join("$(shell brew --cellar)",
-            "glib/2.78.0/include/glib-2.0"), {public = true})
-        add_includedirs(path.join("$(shell brew --cellar)",
-            "glib/2.78.0/lib/glib-2.0/include"), {public = true})
-        add_includedirs(path.join("$(shell brew --cellar)",
-            "glib/2.78.0/lib/glib-2.0/include"), {public = true})
-        add_includedirs(path.join("$(shell brew --cellar)",
-            "glib/2.78.0/include"), {public = true})
-        add_includedirs(path.join("$(shell brew --cellar)",
-            "libnice/0.1.21/include"), {public = true})
+
     end
     
 target("ws")
@@ -215,9 +206,7 @@ target("projectx")
         add_linkdirs("thirdparty/nvcodec/Lib/x64")
         add_links("cuda", "nvidia-encode", "nvcuvid")
     elseif is_os("macosx") then
-        add_linkdirs(path.join("$(shell brew --cellar)", "glib/2.78.0/lib"))
-        add_linkdirs(path.join("$(shell brew --cellar)", "libnice/0.1.21/lib"))
-        add_links("nice", "glib-2.0", "gio-2.0", "gobject-2.0")
+
     end
 
     add_installfiles("src/interface/*.h", {prefixdir = "include"})
