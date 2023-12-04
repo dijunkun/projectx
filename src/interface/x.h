@@ -19,7 +19,8 @@ enum ConnectionStatus {
   Disconnected,
   Failed,
   Closed,
-  IncorrectPassword
+  IncorrectPassword,
+  NoSuchTransmissionId
 };
 
 enum SignalStatus {

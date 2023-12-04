@@ -334,7 +334,11 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
       if (status == "failed") {
         std::string reason = j["reason"].get<std::string>();
         LOG_ERROR("{}", reason);
-        on_connection_status_(ConnectionStatus::IncorrectPassword);
+        if ("Incorrect password" == reason) {
+          on_connection_status_(ConnectionStatus::IncorrectPassword);
+        } else if ("No such transmission id" == reason) {
+          on_connection_status_(ConnectionStatus::NoSuchTransmissionId);
+        }
       } else {
         if (user_id_list_.empty()) {
           LOG_WARN("Wait for host create transmission [{}]", transmission_id);
