@@ -222,6 +222,9 @@ int OpenH264Encoder::Encode(
 
   if (on_encoded_image) {
     on_encoded_image((char *)encoded_frame_, encoded_frame_size_);
+    if (SAVE_H264_STREAM) {
+      fwrite(encoded_frame_, 1, encoded_frame_size_, file_h264_);
+    }
   } else {
     OnEncodedImage((char *)encoded_frame_, encoded_frame_size_);
   }
