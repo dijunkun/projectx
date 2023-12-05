@@ -152,6 +152,10 @@ int OpenH264Decoder::Decode(
     fwrite((unsigned char *)data, 1, size, h264_stream_);
   }
 
+  if ((*(data + 4) & 0x1f) == 0x07) {
+    // LOG_WARN("Receive key frame");
+  }
+
   SBufferInfo sDstBufInfo = {0};
   memset(&sDstBufInfo, 0, sizeof(SBufferInfo));
 

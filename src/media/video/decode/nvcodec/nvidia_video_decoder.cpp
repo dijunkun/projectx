@@ -50,6 +50,10 @@ int NvidiaVideoDecoder::Decode(
     return -1;
   }
 
+  if (SAVE_DECODER_STREAM) {
+    fwrite((unsigned char *)data, 1, size, file_);
+  }
+
   if ((*(data + 4) & 0x1f) == 0x07) {
     // LOG_WARN("Receive key frame");
   }
@@ -67,10 +71,6 @@ int NvidiaVideoDecoder::Decode(
               data, decoder->GetWidth() * decoder->GetHeight() * 3 / 2,
               decoder->GetWidth(), decoder->GetHeight());
           on_receive_decoded_frame(decoded_frame);
-          if (SAVE_DECODER_STREAM) {
-            fwrite((unsigned char *)decoded_frame.Buffer(), 1,
-                   decoded_frame.Size(), file_);
-          }
         }
       }
     }

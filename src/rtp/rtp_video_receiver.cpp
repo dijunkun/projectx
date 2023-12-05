@@ -55,7 +55,7 @@ void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
     if (RtpPacket::PAYLOAD_TYPE::H264 == rtp_packet.PayloadType()) {
       if (RtpPacket::NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {
         compelete_video_frame_queue_.push(
-            VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
+            VideoFrame(rtp_packet.Payload(), rtp_packet.PayloadSize()));
       } else if (RtpPacket::NAL_UNIT_TYPE::FU_A == rtp_packet.NalUnitType()) {
         incomplete_frame_list_[rtp_packet.SequenceNumber()] = rtp_packet;
         bool complete = CheckIsFrameCompleted(rtp_packet);
@@ -65,7 +65,7 @@ void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
     if (RtpPacket::PAYLOAD_TYPE::H264 == rtp_packet.PayloadType()) {
       if (RtpPacket::NAL_UNIT_TYPE::NALU == rtp_packet.NalUnitType()) {
         compelete_video_frame_queue_.push(
-            VideoFrame(rtp_packet.Payload(), rtp_packet.Size()));
+            VideoFrame(rtp_packet.Payload(), rtp_packet.PayloadSize()));
       } else if (RtpPacket::NAL_UNIT_TYPE::FU_A == rtp_packet.NalUnitType()) {
         incomplete_frame_list_[rtp_packet.SequenceNumber()] = rtp_packet;
         bool complete = CheckIsFrameCompleted(rtp_packet);
@@ -165,7 +165,6 @@ void RtpVideoReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
 
 bool RtpVideoReceiver::CheckIsFrameCompleted(RtpPacket& rtp_packet) {
   if (rtp_packet.FuAEnd()) {
-    size_t complete_frame_size = 0;
     uint16_t end_seq = rtp_packet.SequenceNumber();
     if (incomplete_frame_list_.size() == end_seq) {
       return true;
@@ -179,10 +178,8 @@ bool RtpVideoReceiver::CheckIsFrameCompleted(RtpPacket& rtp_packet) {
         // repaired using FEC
         return false;
       } else if (!it->second.FuAStart()) {
-        complete_frame_size += it->second.PayloadSize();
         continue;
       } else if (it->second.FuAStart()) {
-        complete_frame_size += it->second.PayloadSize();
         if (!nv12_data_) {
           nv12_data_ = new uint8_t[NV12_BUFFER_SIZE];
         }
