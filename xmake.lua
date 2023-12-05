@@ -34,8 +34,8 @@ elseif is_os("linux") then
 elseif is_os("macosx") then
     add_requires("ffmpeg 5.1.2", {system = false})
     add_requires("vcpkg::libnice", {configs = {shared = false}})
-    add_requires("brew::openh264", {configs = {shared = false}})
-    add_packages("ffmpeg", "vcpkg::libnice", "brew::openh264")
+    add_requires("vcpkg::openh264", {configs = {shared = false}})
+    add_packages("ffmpeg", "vcpkg::libnice", "vcpkg::openh264")
     add_ldflags("-Wl,-ld_classic")
 end
 
