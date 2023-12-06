@@ -44,7 +44,7 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
 
     agent_ = nice_agent_new_full(g_main_loop_get_context(gloop_),
                                  NICE_COMPATIBILITY_RFC5245,
-                                 (NiceAgentOption)(NICE_AGENT_OPTION_NONE));
+                                 (NiceAgentOption)(NICE_AGENT_OPTION_RELIABLE));
 
     if (agent_ == nullptr) {
       LOG_ERROR("Failed to create agent_");
