@@ -40,11 +40,10 @@ class PeerConnection {
  public:
   int Init(PeerConnectionParams params, const std::string &user_id);
 
-  int Create(PeerConnectionParams params,
-             const std::string &transmission_id = "",
+  int Create(const std::string &transmission_id = "",
              const std::string &password = "");
 
-  int Join(PeerConnectionParams params, const std::string &transmission_id,
+  int Join(const std::string &transmission_id,
            const std::string &password = "");
 
   int Leave();

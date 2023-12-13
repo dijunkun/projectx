@@ -25,7 +25,7 @@ class AudioFrame {
 
  public:
   const uint8_t *Buffer() { return buffer_; }
-  const size_t Size() { return size_; }
+  size_t Size() { return size_; }
 
   uint8_t *GetBuffer() { return buffer_; }
 

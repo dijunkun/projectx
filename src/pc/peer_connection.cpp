@@ -167,9 +167,10 @@ int PeerConnection::Init(PeerConnectionParams params,
 }
 
 int PeerConnection::CreateVideoCodec(bool hardware_acceleration) {
+  hardware_acceleration_ = hardware_acceleration;
 #ifdef __APPLE__
-  if (hardware_acceleration) {
-    hardware_acceleration = false;
+  if (hardware_acceleration_) {
+    hardware_acceleration_ = false;
     LOG_WARN(
         "MacOS not support hardware acceleration, use default software codec");
   }
@@ -238,8 +239,7 @@ int PeerConnection::CreateAudioCodec() {
   return 0;
 }
 
-int PeerConnection::Create(PeerConnectionParams params,
-                           const std::string &transmission_id,
+int PeerConnection::Create(const std::string &transmission_id,
                            const std::string &password) {
   if (SignalStatus::SignalConnected != GetSignalStatus()) {
     LOG_ERROR("Signal not connected");
@@ -263,8 +263,7 @@ int PeerConnection::Create(PeerConnectionParams params,
   return ret;
 }
 
-int PeerConnection::Join(PeerConnectionParams params,
-                         const std::string &transmission_id,
+int PeerConnection::Join(const std::string &transmission_id,
                          const std::string &password) {
   if (SignalStatus::SignalConnected != GetSignalStatus()) {
     LOG_ERROR("Signal not connected");

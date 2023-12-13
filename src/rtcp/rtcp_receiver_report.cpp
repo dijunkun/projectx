@@ -24,8 +24,8 @@ void RtcpReceiverReport::SetReportBlock(
 }
 
 const uint8_t *RtcpReceiverReport::Encode() {
-  int pos = rtcp_header_.Encode(DEFAULT_RTCP_VERSION, 0, DEFAULT_RR_BLOCK_NUM,
-                                RTCP_TYPE::RR, DEFAULT_RR_SIZE, buffer_);
+  rtcp_header_.Encode(DEFAULT_RTCP_VERSION, 0, DEFAULT_RR_BLOCK_NUM,
+                      RTCP_TYPE::RR, DEFAULT_RR_SIZE, buffer_);
 
   return buffer_;
 }

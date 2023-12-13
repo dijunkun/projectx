@@ -29,8 +29,6 @@ int AudioEncoder::Init() {
           std::chrono::high_resolution_clock::now().time_since_epoch())
           .count());
   int err;
-  int applications[3] = {OPUS_APPLICATION_AUDIO, OPUS_APPLICATION_VOIP,
-                         OPUS_APPLICATION_RESTRICTED_LOWDELAY};
 
   opus_encoder_ = opus_encoder_create(sample_rate_, channel_num_,
                                       OPUS_APPLICATION_VOIP, &err);

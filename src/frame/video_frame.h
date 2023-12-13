@@ -25,15 +25,15 @@ class VideoFrame {
 
  public:
   const uint8_t *Buffer() { return buffer_; }
-  const size_t Size() { return size_; }
+  size_t Size() { return size_; }
 
   uint8_t *GetBuffer() { return buffer_; }
 
  private:
-  size_t width_ = 0;
-  size_t height_ = 0;
   uint8_t *buffer_ = nullptr;
   size_t size_ = 0;
+  size_t width_ = 0;
+  size_t height_ = 0;
 };
 
 #endif

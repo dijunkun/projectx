@@ -133,7 +133,7 @@ int OpenH264Decoder::Init() {
   sDecParam.eEcActiveIdc = ERROR_CON_SLICE_COPY;
   sDecParam.sVideoProperty.eVideoBsType = VIDEO_BITSTREAM_DEFAULT;
 
-  int32_t iRet = openh264_decoder_->Initialize(&sDecParam);
+  openh264_decoder_->Initialize(&sDecParam);
 
   int trace_level = WELS_LOG_QUIET;
   openh264_decoder_->SetOption(DECODER_OPTION_TRACE_LEVEL, &trace_level);
@@ -156,11 +156,10 @@ int OpenH264Decoder::Decode(
     // LOG_WARN("Receive key frame");
   }
 
-  SBufferInfo sDstBufInfo = {0};
+  SBufferInfo sDstBufInfo;
   memset(&sDstBufInfo, 0, sizeof(SBufferInfo));
 
-  int iRet = openh264_decoder_->DecodeFrameNoDelay(data, size, yuv_data_,
-                                                   &sDstBufInfo);
+  openh264_decoder_->DecodeFrameNoDelay(data, size, yuv_data_, &sDstBufInfo);
 
   if (sDstBufInfo.iBufferStatus == 1) {
     if (on_receive_decoded_frame) {

@@ -125,10 +125,10 @@ int FfmpegVideoDecoder::Decode(
     }
 
     if (on_receive_decoded_frame) {
-      uint64_t start_ts = static_cast<uint64_t>(
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::high_resolution_clock::now().time_since_epoch())
-              .count());
+      // uint64_t start_ts = static_cast<uint64_t>(
+      //     std::chrono::duration_cast<std::chrono::microseconds>(
+      //         std::chrono::high_resolution_clock::now().time_since_epoch())
+      //         .count());
 
       if (1) {
         av_image_fill_arrays(frame_nv12_->data, frame_nv12_->linesize,
@@ -144,10 +144,10 @@ int FfmpegVideoDecoder::Decode(
                frame_->data[1], frame_->width * frame_->height / 2);
       }
 
-      uint64_t now_ts = static_cast<uint64_t>(
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              std::chrono::high_resolution_clock::now().time_since_epoch())
-              .count());
+      // uint64_t now_ts = static_cast<uint64_t>(
+      //     std::chrono::duration_cast<std::chrono::microseconds>(
+      //         std::chrono::high_resolution_clock::now().time_since_epoch())
+      //         .count());
 
       // LOG_ERROR("cost {}", now_ts - start_ts);
 

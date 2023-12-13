@@ -24,14 +24,16 @@ void RtpDataReceiver::InsertRtpPacket(RtpPacket& rtp_packet) {
     RtcpReceiverReport rtcp_rr;
     RtcpReportBlock report;
 
-    auto duration = std::chrono::system_clock::now().time_since_epoch();
-    auto seconds = std::chrono::duration_cast<std::chrono::seconds>(duration);
-    uint32_t seconds_u32 = static_cast<uint32_t>(
-        std::chrono::duration_cast<std::chrono::seconds>(duration).count());
+    // auto duration = std::chrono::system_clock::now().time_since_epoch();
+    // auto seconds =
+    // std::chrono::duration_cast<std::chrono::seconds>(duration); uint32_t
+    // seconds_u32 = static_cast<uint32_t>(
+    //     std::chrono::duration_cast<std::chrono::seconds>(duration).count());
 
-    uint32_t fraction_u32 = static_cast<uint32_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(duration - seconds)
-            .count());
+    // uint32_t fraction_u32 = static_cast<uint32_t>(
+    //     std::chrono::duration_cast<std::chrono::nanoseconds>(duration -
+    //     seconds)
+    //         .count());
 
     report.source_ssrc = 0x00;
     report.fraction_lost = 0;

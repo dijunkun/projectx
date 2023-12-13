@@ -206,7 +206,6 @@ int OpenH264Encoder::Encode(
     }
   }
 
-  const uint8_t start_code[4] = {0, 0, 0, 1};
   size_t frag = 0;
   int encoded_frame_size = 0;
   for (int layer = 0; layer < info.iLayerNum; ++layer) {

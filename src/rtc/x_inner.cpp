@@ -10,8 +10,6 @@
 
 using nlohmann::json;
 
-static PeerConnection *peer_connection;
-
 PeerPtr *CreatePeer(const Params *params) {
   PeerPtr *peer_ptr = new PeerPtr;
   peer_ptr->peer_connection = new PeerConnection();
@@ -46,8 +44,7 @@ int CreateConnection(PeerPtr *peer_ptr, const char *transmission_id,
   LOG_INFO("CreateConnection [{}] with password [{}]", transmission_id,
            password);
 
-  return peer_ptr->peer_connection->Create(peer_ptr->pc_params, transmission_id,
-                                           password);
+  return peer_ptr->peer_connection->Create(transmission_id, password);
 }
 
 int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
@@ -57,8 +54,7 @@ int JoinConnection(PeerPtr *peer_ptr, const char *transmission_id,
     return -1;
   }
 
-  peer_ptr->peer_connection->Join(peer_ptr->pc_params, transmission_id,
-                                  password);
+  peer_ptr->peer_connection->Join(transmission_id, password);
   LOG_INFO("JoinConnection[{}] with password [{}]", transmission_id, password);
   return 0;
 }

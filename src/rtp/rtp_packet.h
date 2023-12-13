@@ -258,9 +258,9 @@ class RtpPacket {
     return extension_data_;
   }
 
-  const uint8_t FecSymbolId() { return fec_symbol_id_; }
+  uint8_t FecSymbolId() { return fec_symbol_id_; }
 
-  const uint8_t FecSourceSymbolNum() { return fec_source_symbol_num_; }
+  uint8_t FecSourceSymbolNum() { return fec_source_symbol_num_; }
 
   // Payload
   const uint8_t *Payload() {

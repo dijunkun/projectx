@@ -36,8 +36,6 @@ int RtpDataSender::SendRtpPacket(RtpPacket& rtp_packet) {
     return -1;
   }
 
-  int ret = 0;
-
   if (0 !=
       data_send_func_((const char*)rtp_packet.Buffer(), rtp_packet.Size())) {
     LOG_ERROR("Send rtp packet failed");
