@@ -117,7 +117,7 @@ int IceAgent::DestroyIceAgent() {
     nice_thread_->join();
   }
 
-  LOG_ERROR("Destroy nice agent success");
+  LOG_INFO("Destroy nice agent success");
   return 0;
 }
 

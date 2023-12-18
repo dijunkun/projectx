@@ -91,7 +91,7 @@ class PeerConnection {
   std::vector<std::string> user_id_list_;
   SignalStatus signal_status_ = SignalStatus::SignalClosed;
   std::mutex signal_status_mutex_;
-  bool leave_ = false;
+  std::atomic<bool> leave_ = false;
 
  private:
   std::map<std::string, std::unique_ptr<IceTransmission>>

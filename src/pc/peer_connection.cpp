@@ -273,6 +273,7 @@ int PeerConnection::Join(const std::string &transmission_id,
   int ret = 0;
 
   password_ = password;
+  leave_ = false;
 
   transmission_id_ = transmission_id;
   ret = RequestTransmissionMemberList(transmission_id_, password);
@@ -295,6 +296,7 @@ int PeerConnection::Leave() {
   }
 
   ice_ready_ = false;
+  leave_ = true;
 
   for (auto &user_id_it : ice_transmission_list_) {
     user_id_it.second->DestroyIceTransmission();
@@ -338,8 +340,13 @@ void PeerConnection::ProcessSignal(const std::string &signal) {
           on_connection_status_(ConnectionStatus::NoSuchTransmissionId);
         }
       } else {
+        if (leave_) {
+          break;
+        }
+
         if (user_id_list_.empty()) {
           LOG_WARN("Wait for host create transmission [{}]", transmission_id);
+          std::this_thread::sleep_for(std::chrono::seconds(1));
           RequestTransmissionMemberList(transmission_id, password_);
           break;
         }
