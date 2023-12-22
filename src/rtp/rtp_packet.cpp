@@ -39,8 +39,12 @@ RtpPacket::RtpPacket() : buffer_(new uint8_t[DEFAULT_MTU]), size_(DEFAULT_MTU) {
 
 RtpPacket::RtpPacket(const uint8_t *buffer, size_t size) {
   if (size > 0) {
-    buffer_ = new uint8_t[size];
-    memcpy(buffer_, buffer, size);
+    buffer_ = (uint8_t *)malloc(size);
+    if (NULL == buffer_) {
+      LOG_ERROR("Malloc failed");
+    } else {
+      memcpy(buffer_, buffer, size);
+    }
     size_ = size;
 
     // TryToDecodeH264RtpPacket(buffer_);
@@ -49,8 +53,12 @@ RtpPacket::RtpPacket(const uint8_t *buffer, size_t size) {
 
 RtpPacket::RtpPacket(const RtpPacket &rtp_packet) {
   if (rtp_packet.size_ > 0) {
-    buffer_ = new uint8_t[rtp_packet.size_];
-    memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
+    buffer_ = (uint8_t *)malloc(rtp_packet.size_);
+    if (NULL == buffer_) {
+      LOG_ERROR("Malloc failed");
+    } else {
+      memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
+    }
     size_ = rtp_packet.size_;
 
     // TryToDecodeH264RtpPacket(buffer_);
@@ -66,13 +74,24 @@ RtpPacket::RtpPacket(RtpPacket &&rtp_packet)
   // TryToDecodeH264RtpPacket(buffer_);
 }
 
+// RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
+//   if (&rtp_packet != this) {
+//     if (buffer_) {
+//       delete[] buffer_;
+//       buffer_ = nullptr;
+//     }
+//     buffer_ = new uint8_t[rtp_packet.size_];
+//     memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
+//     size_ = rtp_packet.size_;
+
+//     // TryToDecodeH264RtpPacket(buffer_);
+//   }
+//   return *this;
+// }
+
 RtpPacket &RtpPacket::operator=(const RtpPacket &rtp_packet) {
   if (&rtp_packet != this) {
-    if (buffer_) {
-      delete[] buffer_;
-      buffer_ = nullptr;
-    }
-    buffer_ = new uint8_t[rtp_packet.size_];
+    buffer_ = (uint8_t *)realloc(buffer_, rtp_packet.size_);
     memcpy(buffer_, rtp_packet.buffer_, rtp_packet.size_);
     size_ = rtp_packet.size_;
 
@@ -95,13 +114,13 @@ RtpPacket &RtpPacket::operator=(RtpPacket &&rtp_packet) {
 
 RtpPacket::~RtpPacket() {
   if (buffer_) {
-    delete[] buffer_;
+    free(buffer_);
     buffer_ = nullptr;
   }
   size_ = 0;
 
   if (extension_data_) {
-    delete[] extension_data_;
+    free(extension_data_);
     extension_data_ = nullptr;
   }
   extension_len_ = 0;
