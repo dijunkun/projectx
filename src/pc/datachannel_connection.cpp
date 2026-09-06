@@ -1,6 +1,9 @@
 #include "datachannel_connection.h"
 
+#include <utility>
+
 #include "common.h"
+#include "ice_utils.h"
 #include "log.h"
 #include "nlohmann/json.hpp"
 
@@ -57,22 +60,32 @@ DataChannelConnection::~DataChannelConnection() { ResetDataChannelTransport(); }
 int DataChannelConnection::Init() {
   if (!info_.stun_server_ip.empty() && info_.stun_server_port > 0 &&
       info_.stun_server_port <= 65535) {
-    peer_connection_config_.iceServers.emplace_back(
-        info_.stun_server_ip,
-        static_cast<uint16_t>(info_.stun_server_port));
+    for (const auto& server : ParseStunServers(info_.stun_server_ip)) {
+      peer_connection_config_.iceServers.emplace_back(
+          server, static_cast<uint16_t>(info_.stun_server_port));
+    }
   }
-  if (!info_.turn_server_ip.empty() && info_.turn_server_port > 0 &&
+  if (info_.turn_mode != TurnMode::TurnDisabled &&
+      !info_.turn_server_ip.empty() && info_.turn_server_port > 0 &&
       info_.turn_server_port <= 65535 &&
       !info_.turn_server_username.empty() &&
       !info_.turn_server_password.empty()) {
-    peer_connection_config_.iceServers.emplace_back(
-        info_.turn_server_ip, static_cast<uint16_t>(info_.turn_server_port),
-        info_.turn_server_username, info_.turn_server_password,
-        ::rtc::IceServer::RelayType::TurnUdp);
-    peer_connection_config_.iceServers.emplace_back(
-        info_.turn_server_ip, static_cast<uint16_t>(info_.turn_server_port),
-        info_.turn_server_username, info_.turn_server_password,
-        ::rtc::IceServer::RelayType::TurnTcp);
+    if (info_.turn_mode != TurnMode::TurnForceTcp) {
+      peer_connection_config_.iceServers.emplace_back(
+          info_.turn_server_ip, static_cast<uint16_t>(info_.turn_server_port),
+          info_.turn_server_username, info_.turn_server_password,
+          ::rtc::IceServer::RelayType::TurnUdp);
+    }
+    if (info_.turn_mode != TurnMode::TurnForceUdp) {
+      peer_connection_config_.iceServers.emplace_back(
+          info_.turn_server_ip, static_cast<uint16_t>(info_.turn_server_port),
+          info_.turn_server_username, info_.turn_server_password,
+          ::rtc::IceServer::RelayType::TurnTcp);
+    }
+  }
+  if (info_.turn_mode == TurnMode::TurnForceUdp ||
+      info_.turn_mode == TurnMode::TurnForceTcp) {
+    peer_connection_config_.iceTransportPolicy = ::rtc::TransportPolicy::Relay;
   }
   // use trickle ice by default
   peer_connection_config_.disableAutoNegotiation = true;
@@ -152,6 +165,13 @@ int DataChannelConnection::SendReliableDataFrame(const char* data, size_t size,
 }
 
 void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
+  if ((!info_.transmission_id.empty() && !msg.transmission_id.empty() &&
+       msg.transmission_id != info_.transmission_id) ||
+      (!info_.remote_user_id.empty() &&
+       msg.remote_user_id != info_.remote_user_id)) {
+    LOG_WARN("Ignoring DataChannel ICE message for another connection");
+    return;
+  }
   switch (msg.type) {
     case IceWorkMsg::Type::Login: {
       break;
@@ -162,10 +182,12 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       LOG_INFO("[{}] Receive notification: user id [{}] join transmission",
                (void*)this, remote_user_id);
       LOG_INFO("Create transmission to user [{}]", remote_user_id);
+      auto early_candidates = std::move(pending_ice_candidates_);
       ResetDataChannelTransport();
+      pending_ice_candidates_ = std::move(early_candidates);
       dc_transport_ = CreateDataChannelConnection(
           peer_connection_config_, clock_, make_weak_ptr(ws_), true,
-          remote_user_id, remote_user_id);
+          msg.transmission_id, remote_user_id);
 
       break;
     }
@@ -184,7 +206,9 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
 
       LOG_INFO("Receive offer from user [{}]", remote_user_id);
 
+      auto early_candidates = std::move(pending_ice_candidates_);
       ResetDataChannelTransport();
+      pending_ice_candidates_ = std::move(early_candidates);
       dc_transport_ = CreateDataChannelConnection(
           peer_connection_config_, clock_, make_weak_ptr(ws_), false,
           transmission_id, remote_user_id);
@@ -194,7 +218,24 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       // LOG_INFO("Set remote description: {}", msg.remote_sdp.c_str());
 
       auto& pc = dc_transport_->GetPeerConnection();
+      pc->onDataChannel([weak = make_weak_ptr(dc_transport_)](
+                            std::shared_ptr<::rtc::DataChannel> dc) {
+        auto transport = weak.lock();
+        if (!transport) return;
+        const auto label = dc->label();
+        LOG_INFO("Got a DataChannel with label: {}", label);
+        dc->onClosed([label]() { LOG_INFO("DataChannel closed: {}", label); });
+        dc->onMessage([](auto data) {
+          if (std::holds_alternative<std::string>(data)) {
+            LOG_INFO("Received message: {}", std::get<std::string>(data));
+          }
+        });
+        // Keep the incoming channel alive with this transport, not a local
+        // variable captured by reference after ProcessIceWorkMsg returns.
+        transport->AddDataStream(label, dc);
+      });
       pc->setRemoteDescription(remote_sdp);
+      FlushRemoteIceCandidates();
 
       pc->setLocalDescription();
 
@@ -214,24 +255,12 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
 
       pc->gatherLocalCandidates();
 
-      std::shared_ptr<::rtc::DataChannel> dc;
-      pc->onDataChannel([&](std::shared_ptr<::rtc::DataChannel> _dc) {
-        LOG_INFO("Got a DataChannel with label: {}", _dc->label());
-        dc = _dc;
-
-        dc->onClosed(
-            [&]() { LOG_INFO("DataChannel closed: {}", dc->label()); });
-
-        dc->onMessage([](auto data) {
-          if (std::holds_alternative<std::string>(data)) {
-            LOG_INFO("Received message: {}", std::get<std::string>(data));
-          }
-        });
-      });
-
       break;
     }
     case IceWorkMsg::Type::Answer: {
+      if (!dc_transport_) break;
+      if (!msg.transmission_id.empty() &&
+          msg.transmission_id != active_transmission_id_) break;
       std::string remote_user_id = msg.remote_user_id;
       ::rtc::Description remote_sdp(msg.remote_sdp, "answer");
 
@@ -239,38 +268,16 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       if (pc) {
         // LOG_INFO("Set remote description: {}", msg.remote_sdp.c_str());
         pc->setRemoteDescription(remote_sdp);
+        FlushRemoteIceCandidates();
 
         pc->gatherLocalCandidates();
       }
 
       break;
     }
-    case IceWorkMsg::Type::NewCandidate: {
-      std::string transmission_id = msg.transmission_id;
-      std::string new_candidate = msg.new_candidate;
-      std::string remote_user_id = msg.remote_user_id;
-
-      auto& pc = dc_transport_->GetPeerConnection();
-      if (pc) {
-        pc->addRemoteCandidate(new_candidate);
-      }
-
-      break;
-    }
+    case IceWorkMsg::Type::NewCandidate:
     case IceWorkMsg::Type::NewCandidateMid: {
-      // std::string transmission_id = msg.transmission_id;
-      // std::string remote_user_id = msg.remote_user_id;
-      // std::string candidate = msg.candidate;
-      // std::string mid = msg.mid;
-      // LOG_INFO("Receive new candidate from [{}]: {}, mid: {}",
-      // remote_user_id,
-      //          candidate, mid);
-
-      //   auto& pc = dc_transport_->GetPeerConnection();
-      //   if (pc) {
-      //     LOG_INFO("Add remote candidate: {}, mid: {}", candidate, mid);
-      //     pc->addRemoteCandidate(::rtc::Candidate(candidate, mid));
-      //   }
+      ApplyRemoteIceCandidate(msg);
       break;
     }
     default: {
@@ -279,7 +286,69 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
   }
 }
 
+void DataChannelConnection::ApplyRemoteIceCandidate(const IceWorkMsg& msg) {
+  const auto signal = ParseIceCandidateSignal(
+      msg.type == IceWorkMsg::Type::NewCandidateMid ? msg.candidate
+                                                   : msg.new_candidate,
+      msg.candidate_ufrag);
+  if (!signal) {
+    LOG_WARN("Reject malformed DataChannel ICE candidate");
+    return;
+  }
+  // libdatachannel 0.24 has no incremental remote-gathering completion API.
+  // Never pass an end marker to Candidate(), which throws for non-candidates.
+  if (signal->complete()) return;
+  if (!active_transmission_id_.empty() && !msg.transmission_id.empty() &&
+      msg.transmission_id != active_transmission_id_) return;
+  auto pc = dc_transport_ ? dc_transport_->GetPeerConnection() : nullptr;
+  const auto remote_description = pc ? pc->remoteDescription() : std::nullopt;
+  if (!remote_description) {
+    const std::string mid =
+        msg.type == IceWorkMsg::Type::NewCandidateMid ? msg.mid : "";
+    for (const auto& pending : pending_ice_candidates_) {
+      const auto& candidate = pending.type == IceWorkMsg::Type::NewCandidateMid
+                                  ? pending.candidate : pending.new_candidate;
+      if (candidate == signal->sdp && pending.candidate_ufrag == signal->ufrag &&
+          pending.mid == mid && pending.transmission_id == msg.transmission_id)
+        return;
+    }
+    if (pending_ice_candidates_.size() < 256) {
+      auto pending = msg;
+      if (msg.type == IceWorkMsg::Type::NewCandidateMid) {
+        pending.candidate = signal->sdp;
+      } else {
+        pending.new_candidate = signal->sdp;
+      }
+      pending.candidate_ufrag = signal->ufrag;
+      pending.mid = mid;
+      pending_ice_candidates_.push_back(std::move(pending));
+    } else {
+      LOG_WARN("DataChannel ICE candidate queue limit reached");
+    }
+    return;
+  }
+  const auto remote_ufrag = remote_description->iceUfrag().value_or("");
+  if (!signal->ufrag.empty() && signal->ufrag != remote_ufrag) return;
+  try {
+    if (msg.type == IceWorkMsg::Type::NewCandidateMid) {
+      pc->addRemoteCandidate(::rtc::Candidate(signal->sdp, msg.mid));
+    } else {
+      pc->addRemoteCandidate(::rtc::Candidate(signal->sdp));
+    }
+  } catch (const std::exception& error) {
+    LOG_WARN("Could not add DataChannel ICE candidate: {}", error.what());
+  }
+}
+
+void DataChannelConnection::FlushRemoteIceCandidates() {
+  auto pending = std::move(pending_ice_candidates_);
+  pending_ice_candidates_.clear();
+  for (const auto& msg : pending) ApplyRemoteIceCandidate(msg);
+}
+
 void DataChannelConnection::ResetDataChannelTransport() {
+  pending_ice_candidates_.clear();
+  active_transmission_id_.clear();
   auto transport = std::move(dc_transport_);
   dc_ready_ = false;
 
@@ -302,6 +371,7 @@ DataChannelConnection::CreateDataChannelConnection(
     std::weak_ptr<WsClient> wws, bool offer_peer, std::string transmission_id,
     std::string remote_user_id) {
   offer_peer_ = offer_peer;
+  active_transmission_id_ = transmission_id;
   auto peer_connection = std::make_shared<::rtc::PeerConnection>(config);
   auto dc_transport = std::make_shared<DataChannelTransport>(
       clock, peer_connection, info_.user_id, remote_user_id, offer_peer_);
@@ -348,13 +418,20 @@ DataChannelConnection::CreateDataChannelConnection(
   });
 
   peer_connection->onLocalCandidate(
-      [this, transmission_id, remote_user_id, wws](::rtc::Candidate candidate) {
+      [this, transmission_id, remote_user_id, wws,
+       wpc = make_weak_ptr(peer_connection)](::rtc::Candidate candidate) {
         json message = {{"type", "new_candidate_mid"},
                         {"transmission_id", transmission_id},
                         {"user_id", info_.user_id},
                         {"remote_user_id", remote_user_id},
                         {"candidate", candidate.candidate()},
                         {"mid", candidate.mid()}};
+
+        if (auto pc = wpc.lock()) {
+          if (auto description = pc->localDescription()) {
+            message["ufrag"] = description->iceUfrag().value_or("");
+          }
+        }
 
         if (auto ws = wws.lock()) {
           // LOG_INFO("[{}] send new candidate to [{}]: {}", info_.user_id,

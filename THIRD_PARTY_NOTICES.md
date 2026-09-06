@@ -11,6 +11,8 @@ Third-party terms continue to apply to their respective code.
 | NVIDIA SDK samples | `src/media/nvcodec` | Redistribution must be verified against the EULA supplied with the exact SDK version |
 
 External runtime dependencies are declared in `xmake.lua` and `thirdparty/`.
+UPnP support is always built and uses GUPnP IGD, GUPnP, GSSDP, libsoup,
+libxml2, libpsl, nghttp2 and SQLite, with platform-dependent support libraries.
 MiniRTC publishes source only; packages downloaded by xmake are not copied into
 this repository, so their license texts are not duplicated here.
 

@@ -2,13 +2,16 @@ package("libdatachannel")
     set_homepage("https://libdatachannel.org/")
     set_description("C/C++ WebRTC network library featuring Data Channels, Media Transport, and WebSockets")
     set_license("MPL-2.0")
+    -- A cache built against pre-UPnP libnice must not survive this dependency change.
+    set_policy("package.librarydeps.strict_compatibility", true)
 
     add_urls("https://github.com/paullouisageneau/libdatachannel/archive/refs/tags/$(version).tar.gz",
              "https://github.com/paullouisageneau/libdatachannel.git", {submodules = false})
 
-    add_versions("v0.23.2", "b9606efc5b2b173f2d22d0be3f6ba4f12af78c00ca02cde5932f3ff902980eb9")
-    add_versions("v0.23.1", "63e14d619ac4d9cc310a0c7620b80e6da88abf878f27ccc78cd099f95d47b121")
-    add_patches("v0.23.2", path.join(os.scriptdir(), "patches", "consent_freshness.patch"), "C62C0312E58694811336E909B8E57EC478FAFECAB97F9EED1411D87E23082638")
+    add_versions("v0.24.5", "454537c3cd526bed935d847bb2dff4046f266eef84d43b2a5f2f2f293c0026f4")
+    -- 0.24 already includes the consent-freshness fix. Its teardown barrier
+    -- still detaches callbacks and closes sockets outside the polling context.
+    add_patches("v0.24.5", path.join(os.scriptdir(), "patches", "nice_context_teardown_0.24.patch"), "3bb46e4ec2b763cb0d12c9740c42a29313dad5e142ee000707a9ab1c027baee6")
 
     add_configs("gnutls", {description = "Use GnuTLS instead of OpenSSL", default = false, type = "boolean", readonly = true})
     add_configs("mbedtls", {description = "Use Mbed TLS instead of OpenSSL", default = false, type = "boolean"})
@@ -51,7 +54,7 @@ package("libdatachannel")
         end
 
         if package:config("nice") then
-            package:add("deps", "libnice 0.1.22")
+            package:add("deps", "libnice 0.1.24")
         else
             package:add("deps", "libjuice")
         end
@@ -74,9 +77,19 @@ package("libdatachannel")
     end)
 
     on_install("!mingw", function (package)
+        -- Upstream explicitly disables UPnP even when libnice includes GUPnP.
+        -- Match the native transport, while respecting relay-only privacy.
+        if package:config("nice") then
+            io.replace("src/impl/icetransport.cpp", '"upnp", FALSE, nullptr',
+                '"upnp", config.iceTransportPolicy == TransportPolicy::Relay ? FALSE : TRUE, nullptr',
+                {plain = true})
+            io.replace("src/impl/icetransport.cpp", '"upnp-timeout", 200, nullptr',
+                '"upnp-timeout", 3000u, nullptr', {plain = true})
+        end
         io.replace("CMakeLists.txt", "set(CMAKE_POSITION_INDEPENDENT_CODE ON)", "", {plain = true})
         -- add -DJUICE_STATIC from config mode 
         io.replace("CMakeLists.txt", "find_package(LibJuice REQUIRED)", "find_package(LibJuice CONFIG REQUIRED)", {plain = true})
+        io.replace("CMakeLists.txt", "find_package(LibJuice 1.7.0 REQUIRED)", "find_package(LibJuice 1.7.0 CONFIG REQUIRED)", {plain = true})
         -- Error evaluating generator expression: $<TARGET_PDB_FILE:datachannel>
         -- TARGET_PDB_FILE is allowed only for targets with linker created artifacts.
         if package:is_plat("windows") then

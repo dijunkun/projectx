@@ -10,10 +10,12 @@
 #include <atomic>
 #include <iostream>
 #include <optional>
+#include <unordered_set>
 
 #include "clock/system_clock.h"
 #include "ice_agent.h"
 #include "ice_component_state.h"
+#include "ice_utils.h"
 #include "ice_transport_controller.h"
 #include "io_statistics.h"
 #include "ringbuffer.h"
@@ -107,6 +109,12 @@ class IceTransport {
 
   int SetRemoteSdp(const std::string& remote_sdp);
 
+  int AddRemoteCandidate(const std::string& candidate_sdp,
+                         const std::string& candidate_ufrag = "");
+
+  int SetRemoteCandidateGatheringDone(
+      const std::string& candidate_ufrag = "");
+
   int SendOffer();
 
   int SendAnswer();
@@ -146,9 +154,7 @@ class IceTransport {
   void OnIceStateChange(NiceAgent* agent, guint stream_id, guint component_id,
                         NiceComponentState state, gpointer user_ptr);
 
-  void OnNewLocalCandidate(NiceAgent* agent, guint stream_id,
-                           guint component_id, gchar* foundation,
-                           gpointer user_ptr);
+  void OnNewLocalCandidate(NiceAgent* agent, NiceCandidate* candidate);
 
   void OnGatheringDone(NiceAgent* agent, guint stream_id, gpointer user_ptr);
 
@@ -220,7 +226,6 @@ class IceTransport {
 
   std::string local_sdp_;
   std::string remote_sdp_;
-  std::string new_local_candidate_;
   std::string local_candidates_;
   std::string remote_candidates_;
   unsigned int connection_id_ = 0;
@@ -229,6 +234,13 @@ class IceTransport {
   std::string user_id_;
   std::string remote_user_id_;
   std::string remote_ice_username_ = "";
+  std::string local_ice_username_ = "";
+  std::unordered_set<std::string> seen_local_candidate_sdps_;
+  std::mutex local_candidate_mutex_;
+  std::unordered_set<std::string> remote_candidate_keys_;
+  std::vector<IceCandidateSignal> pending_remote_candidates_;
+  bool local_gathering_done_sent_ = false;
+  bool remote_gathering_done_ = false;
   std::atomic<NiceComponentState> state_{NICE_COMPONENT_STATE_DISCONNECTED};
   IceComponentStateTracker component_state_tracker_;
   TraversalType traversal_type_ = TraversalType::TP2P;

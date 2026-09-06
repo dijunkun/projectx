@@ -23,6 +23,43 @@ using nlohmann::json;
 namespace minirtc {
 namespace {
 
+const char* CandidateTypeName(NiceCandidateType type) {
+  switch (type) {
+    case NICE_CANDIDATE_TYPE_HOST:
+      return "host";
+    case NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE:
+      return "srflx";
+    case NICE_CANDIDATE_TYPE_PEER_REFLEXIVE:
+      return "prflx";
+    case NICE_CANDIDATE_TYPE_RELAYED:
+      return "relay";
+  }
+  return "unknown";
+}
+
+const char* CandidateTransportName(NiceCandidateTransport transport) {
+  switch (transport) {
+    case NICE_CANDIDATE_TRANSPORT_UDP:
+      return "udp";
+    case NICE_CANDIDATE_TRANSPORT_TCP_ACTIVE:
+      return "tcp-active";
+    case NICE_CANDIDATE_TRANSPORT_TCP_PASSIVE:
+      return "tcp-passive";
+    case NICE_CANDIDATE_TRANSPORT_TCP_SO:
+      return "tcp-so";
+  }
+  return "unknown";
+}
+
+std::string CandidateAddress(const NiceAddress& address) {
+  char ip[NICE_ADDRESS_STRING_LEN] = {};
+  nice_address_to_string(&address, ip);
+  const std::string host = nice_address_ip_version(&address) == 6
+                               ? "[" + std::string(ip) + "]" : ip;
+  return host + ":" +
+         std::to_string(nice_address_get_port(&address));
+}
+
 std::string Trim(std::string value) {
   const auto is_space = [](unsigned char c) { return std::isspace(c); };
   value.erase(value.begin(),
@@ -299,16 +336,15 @@ int IceTransport::InitIceTransmission(std::string& stun_ip, int stun_port,
         }
       });
 
-  ice_agent_->CreateIceAgent(
+  const int init_result = ice_agent_->CreateIceAgent(
       [](NiceAgent* agent, guint stream_id, guint component_id,
          NiceComponentState state, gpointer user_ptr) {
         static_cast<IceTransport*>(user_ptr)->OnIceStateChange(
             agent, stream_id, component_id, state, user_ptr);
       },
-      [](NiceAgent* agent, guint stream_id, guint component_id,
-         gchar* foundation, gpointer user_ptr) {
+      [](NiceAgent* agent, NiceCandidate* candidate, gpointer user_ptr) {
         static_cast<IceTransport*>(user_ptr)->OnNewLocalCandidate(
-            agent, stream_id, component_id, foundation, user_ptr);
+            agent, candidate);
       },
       [](NiceAgent* agent, guint stream_id, gpointer user_ptr) {
         static_cast<IceTransport*>(user_ptr)->OnGatheringDone(agent, stream_id,
@@ -328,6 +364,11 @@ int IceTransport::InitIceTransmission(std::string& stun_ip, int stun_port,
         static_cast<IceTransport*>(user_ptr)->OnDtlsHandshakeDone(user_ptr);
       },
       this);
+
+  if (init_result != 0) {
+    LOG_ERROR("ICE agent initialization failed; aborting transmission");
+    return init_result;
+  }
 
   ice_transport_controller_ = std::make_shared<IceTransportController>(
       clock_, ice_agent_, ice_io_statistics_, enable_srtp_, video_quality_,
@@ -375,40 +416,70 @@ void IceTransport::OnIceStateChange(NiceAgent* agent, guint stream_id,
   }
 }
 
-void IceTransport::OnNewLocalCandidate(NiceAgent* agent, guint stream_id,
-                                       guint component_id, gchar* foundation,
-                                       gpointer user_ptr) {
-  if (use_trickle_ice_) {
-    GSList* cands =
-        nice_agent_get_local_candidates(agent, stream_id, component_id);
-    NiceCandidate* cand;
-    for (GSList* i = cands; i; i = i->next) {
-      cand = (NiceCandidate*)i->data;
-      if (g_strcmp0(cand->foundation, foundation) == 0) {
-        gchar* new_local_candidate_gstr =
-            nice_agent_generate_local_candidate_sdp(agent, cand);
-        new_local_candidate_ = new_local_candidate_gstr;
-        g_free(new_local_candidate_gstr);
-
-        json message = {{"type", "new_candidate"},
-                        {"transmission_id", transmission_id_},
-                        {"user_id", user_id_},
-                        {"remote_user_id", remote_user_id_},
-                        {"sdp", new_local_candidate_}};
-
-        if (ice_ws_transport_) {
-          ice_ws_transport_->Send(message.dump());
-        }
-      }
-    }
-
-    g_slist_free_full(cands, (GDestroyNotify)nice_candidate_free);
+void IceTransport::OnNewLocalCandidate(NiceAgent* agent, NiceCandidate* cand) {
+  if (!use_trickle_ice_ || !cand) return;
+  std::lock_guard<std::mutex> lock(local_candidate_mutex_);
+  if (local_gathering_done_sent_) return;
+  gchar* sdp = nice_agent_generate_local_candidate_sdp(agent, cand);
+  if (!sdp) {
+    LOG_WARN("Failed to serialize local ICE candidate");
+    return;
   }
+  const std::string candidate_sdp(sdp);
+  g_free(sdp);
+  if (!seen_local_candidate_sdps_.insert(candidate_sdp).second) return;
+
+  LOG_INFO("[{}->{}] local ICE candidate type={} transport={} address={} base={}",
+           user_id_, remote_user_id_, CandidateTypeName(cand->type),
+           CandidateTransportName(cand->transport), CandidateAddress(cand->addr),
+           CandidateAddress(cand->base_addr));
+  json message = {{"type", "new_candidate"},
+                  {"transmission_id", transmission_id_},
+                  {"user_id", user_id_},
+                  {"remote_user_id", remote_user_id_},
+                  {"sdp", candidate_sdp},
+                  {"ufrag", local_ice_username_}};
+  if (ice_ws_transport_) ice_ws_transport_->Send(message.dump());
 }
 
 void IceTransport::OnGatheringDone(NiceAgent* agent, guint stream_id,
                                    gpointer user_ptr) {
-  LOG_INFO("[{}->{}] gather_done", user_id_, remote_user_id_);
+  size_t host_count = 0;
+  size_t srflx_count = 0;
+  size_t relay_count = 0;
+  GSList* candidates = nice_agent_get_local_candidates(
+      agent, stream_id, NICE_COMPONENT_TYPE_RTP);
+  for (GSList* item = candidates; item != nullptr; item = item->next) {
+    auto* candidate = static_cast<NiceCandidate*>(item->data);
+    if (candidate->type == NICE_CANDIDATE_TYPE_HOST) {
+      ++host_count;
+    } else if (candidate->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE) {
+      ++srflx_count;
+    } else if (candidate->type == NICE_CANDIDATE_TYPE_RELAYED) {
+      ++relay_count;
+    }
+  }
+  g_slist_free_full(candidates,
+                    reinterpret_cast<GDestroyNotify>(nice_candidate_free));
+  LOG_INFO("[{}->{}] gather_done host={} srflx={} relay={}", user_id_,
+           remote_user_id_, host_count, srflx_count, relay_count);
+
+  if (use_trickle_ice_) {
+    std::lock_guard<std::mutex> lock(local_candidate_mutex_);
+    if (local_gathering_done_sent_) return;
+    local_gathering_done_sent_ = true;
+    // Reuse the established candidate message so signaling servers which
+    // whitelist message types can forward the RFC 8838 completion marker.
+    json message = {{"type", "new_candidate"},
+                    {"transmission_id", transmission_id_},
+                    {"user_id", user_id_},
+                    {"remote_user_id", remote_user_id_},
+                    {"sdp", "a=end-of-candidates\r\n"},
+                    {"ufrag", local_ice_username_}};
+    if (ice_ws_transport_) {
+      ice_ws_transport_->Send(message.dump());
+    }
+  }
 
   if (!use_trickle_ice_) {
     if (offer_peer_) {
@@ -427,7 +498,18 @@ void IceTransport::OnNewSelectedPair(NiceAgent* agent, guint stream_id,
   LOG_INFO("new selected pair: [{}] [{}]", lfoundation, rfoundation);
   NiceCandidate* local = nullptr;
   NiceCandidate* remote = nullptr;
-  nice_agent_get_selected_pair(agent, stream_id, component_id, &local, &remote);
+  if (!nice_agent_get_selected_pair(agent, stream_id, component_id, &local,
+                                    &remote) ||
+      local == nullptr || remote == nullptr) {
+    LOG_WARN("Selected ICE pair is not available yet");
+    return;
+  }
+  LOG_INFO(
+      "selected ICE path local={}/{} {} remote={}/{} {}",
+      CandidateTypeName(local->type), CandidateTransportName(local->transport),
+      CandidateAddress(local->addr), CandidateTypeName(remote->type),
+      CandidateTransportName(remote->transport),
+      CandidateAddress(remote->addr));
   if (local->type == NICE_CANDIDATE_TYPE_RELAYED ||
       remote->type == NICE_CANDIDATE_TYPE_RELAYED) {
     LOG_INFO("Traversal using relay server");
@@ -443,10 +525,12 @@ void IceTransport::OnNewSelectedPair(NiceAgent* agent, guint stream_id,
   MiniRtcNetTrafficStats net_traffic_stats;
   memset(&net_traffic_stats, 0, sizeof(net_traffic_stats));
 
-  on_receive_net_status_report_(user_id_.data(), user_id_.size(),
+  if (on_receive_net_status_report_) {
+    on_receive_net_status_report_(user_id_.data(), user_id_.size(),
                                 TraversalMode(traversal_type_),
                                 &net_traffic_stats, remote_user_id_.data(),
                                 remote_user_id_.size(), user_data_);
+  }
 }
 
 void IceTransport::OnDtlsHandshakeDone(gpointer user_ptr) {
@@ -720,7 +804,7 @@ int IceTransport::DestroyIceTransmission() {
     ice_transport_controller_->Destroy();
   }
 
-  return ice_agent_->DestroyIceAgent();
+  return ice_agent_ ? ice_agent_->DestroyIceAgent() : 0;
 }
 
 int IceTransport::SetTransmissionId(const std::string& transmission_id) {
@@ -745,26 +829,118 @@ int IceTransport::GatherCandidates() {
   if (ret < 0) {
     LOG_ERROR("Gather candidates failed");
   }
-  return 0;
+  return ret;
 }
 
 int IceTransport::SetRemoteSdp(const std::string& remote_sdp) {
-  remote_sdp_ = remote_sdp;
+  const std::string remote_ufrag = GetIceUsername(remote_sdp);
+  if (remote_ufrag.empty()) {
+    LOG_ERROR("Remote SDP has no ICE username fragment");
+    return -1;
+  }
+  if (!remote_ice_username_.empty() && remote_ice_username_ != remote_ufrag) {
+    LOG_ERROR("Changed ICE credentials require a new ICE transport");
+    return -1;
+  }
   std::string media_stream_sdp = GetRemoteCapabilities(remote_sdp);
   if (media_stream_sdp.empty()) {
     LOG_ERROR("Set remote sdp failed due to negotiation failed");
     return -1;
   }
 
-  ice_agent_->SetRemoteSdp(media_stream_sdp.c_str());
+  if (ice_agent_->SetRemoteSdp(media_stream_sdp.c_str()) != 0) {
+    return -1;
+  }
+  remote_sdp_ = remote_sdp;
   // LOG_INFO("[{}] set remote sdp", user_id_);
 
-  remote_ice_username_ = GetIceUsername(media_stream_sdp);
+  remote_ice_username_ = remote_ufrag;
+
+  auto pending_candidates = std::move(pending_remote_candidates_);
+  pending_remote_candidates_.clear();
+  for (const auto& candidate : pending_candidates) {
+    if (AddRemoteCandidate(candidate.sdp, candidate.ufrag) != 0) {
+      LOG_WARN("Failed to apply a queued remote ICE candidate");
+    }
+  }
+
   return 0;
+}
+
+int IceTransport::AddRemoteCandidate(const std::string& candidate_sdp,
+                                     const std::string& candidate_ufrag) {
+  auto signal = ParseIceCandidateSignal(candidate_sdp, candidate_ufrag);
+  if (!signal) {
+    LOG_WARN("Reject malformed ICE candidate signal");
+    return -1;
+  }
+
+  if (!signal->ufrag.empty() && !remote_ice_username_.empty() &&
+      signal->ufrag != remote_ice_username_) {
+    LOG_WARN("Ignoring ICE candidate from another ICE generation");
+    return 0;
+  }
+
+  if (remote_sdp_.empty()) {
+    for (const auto& pending : pending_remote_candidates_) {
+      if (pending.sdp == signal->sdp && pending.ufrag == signal->ufrag) return 0;
+    }
+    // Completion is queued in order with its generation, so a stale marker
+    // cannot overwrite the current generation's completion before SDP arrives.
+    if (pending_remote_candidates_.size() >= 256) {
+      LOG_WARN("Remote ICE candidate queue limit reached before SDP");
+      return -1;
+    }
+    pending_remote_candidates_.push_back(std::move(*signal));
+    return 0;
+  }
+
+  if (signal->complete()) return SetRemoteCandidateGatheringDone(signal->ufrag);
+  if (remote_gathering_done_) {
+    LOG_WARN("Ignore candidate received after end-of-candidates");
+    return 0;
+  }
+  if (!remote_candidate_keys_.insert(signal->sdp).second) {
+    return 0;
+  }
+
+  if (ice_agent_->AddRemoteCandidate(signal->sdp) != 0) {
+    remote_candidate_keys_.erase(signal->sdp);
+    return -1;
+  }
+
+  LOG_DEBUG("[{}->{}] added remote ICE candidate [{}]", user_id_,
+            remote_user_id_, signal->sdp);
+  return 0;
+}
+
+int IceTransport::SetRemoteCandidateGatheringDone(
+    const std::string& candidate_ufrag) {
+  if (!candidate_ufrag.empty() && !remote_ice_username_.empty() &&
+      candidate_ufrag != remote_ice_username_) {
+    LOG_WARN("Ignoring stale ICE gathering completion for ufrag [{}]",
+             candidate_ufrag);
+    return 0;
+  }
+
+  if (remote_sdp_.empty()) {
+    return AddRemoteCandidate("", candidate_ufrag);
+  }
+
+  if (remote_gathering_done_) {
+    return 0;
+  }
+
+  const int result = ice_agent_->SetRemoteCandidateGatheringDone();
+  if (result == 0) {
+    remote_gathering_done_ = true;
+  }
+  return result;
 }
 
 int IceTransport::SendOffer() {
   local_sdp_ = ice_agent_->GenerateLocalSdp();
+  local_ice_username_ = GetIceUsername(local_sdp_);
   AppendLocalCapabilitiesToOffer();
 
   if (enable_srtp_) {
@@ -786,6 +962,7 @@ int IceTransport::SendOffer() {
 
 int IceTransport::SendAnswer() {
   local_sdp_ = ice_agent_->GenerateLocalSdp();
+  local_ice_username_ = GetIceUsername(local_sdp_);
   AppendLocalCapabilitiesToAnswer();
 
   if (enable_srtp_) {

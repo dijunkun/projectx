@@ -74,6 +74,7 @@ struct IceWorkMsg {
   std::string transmission_id;
   std::string remote_user_id;
   std::string new_candidate;
+  std::string candidate_ufrag;
   std::string candidate;
   std::string mid;
   std::string remote_sdp;

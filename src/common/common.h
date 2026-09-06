@@ -28,21 +28,6 @@ constexpr size_t operator""_H(const char *string_piece, size_t) {
   return HASH_STRING_PIECE(string_piece);
 }
 
-inline const std::string GetIceUsername(const std::string &sdp) {
-  std::string result = "";
-
-  std::string start = "ice-ufrag:";
-  std::string end = "\r\n";
-  size_t startPos = sdp.find(start);
-  size_t endPos = sdp.find(end);
-
-  if (startPos != std::string::npos && endPos != std::string::npos) {
-    result = sdp.substr(startPos + start.length(),
-                        endPos - startPos - start.length());
-  }
-  return result;
-}
-
 // SSRCManager is used to manage the SSRCs that have been used.
 
 class SSRCManager {

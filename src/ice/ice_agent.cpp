@@ -5,8 +5,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <utility>
 #include <vector>
 
+#include "ice_utils.h"
 #include "log.h"
 
 // #define SAVE_IO_STREAM
@@ -14,6 +16,26 @@
 namespace minirtc {
 
 namespace {
+
+// libnice probes every A/AAAA result returned for a STUN hostname, but its
+// public API accepts only one hostname per agent. Allow a comma/semicolon
+// separated pool and rotate the selected hostname across connection attempts.
+// This provides endpoint redundancy without changing the wire protocol.
+std::string SelectStunServer(const std::string& configured_servers) {
+  const auto servers = ParseStunServers(configured_servers);
+
+  if (servers.empty()) {
+    return "";
+  }
+
+  static std::atomic<size_t> next_server{0};
+  const size_t selected = next_server.fetch_add(1) % servers.size();
+  if (servers.size() > 1) {
+    LOG_INFO("Selected STUN endpoint [{}] from a pool of {}",
+             servers[selected], servers.size());
+  }
+  return servers[selected];
+}
 
 // libnice requires a numeric address in nice_agent_set_relay_info().  The
 // application configuration normally uses the same hostname for signaling,
@@ -133,7 +155,7 @@ IceAgent::IceAgent(bool offer_peer, bool use_trickle_ice, bool use_reliable_ice,
                    TurnMode turn_mode, bool enable_srtp, std::string& stun_ip,
                    uint16_t stun_port, std::string& turn_ip, uint16_t turn_port,
                    std::string& turn_username, std::string& turn_password)
-    : stun_ip_(stun_ip),
+    : stun_ip_(SelectStunServer(stun_ip)),
       use_trickle_ice_(use_trickle_ice),
       use_reliable_ice_(use_reliable_ice),
       turn_mode_(turn_mode),
@@ -252,19 +274,24 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
       return;
     }
 
-    NiceAgent* agent = nice_agent_new_full(
-        g_main_loop_get_context(loop), NICE_COMPATIBILITY_RFC5245,
-        (NiceAgentOption)(use_trickle_ice_
-                              ? (NICE_AGENT_OPTION_ICE_TRICKLE |
-                                 (use_reliable_ice_ ? NICE_AGENT_OPTION_RELIABLE
-                                                    : NICE_AGENT_OPTION_NONE))
-                              : (use_reliable_ice_ ? NICE_AGENT_OPTION_RELIABLE
-                                                   : NICE_AGENT_OPTION_NONE)));
+    // Use regular nomination from the start: libnice rejects late TCP
+    // candidates if aggressive UDP checks have already started. Receiving
+    // NOMINATION is supported, but does not itself schedule path upgrades.
+    NiceAgentOption agent_options = static_cast<NiceAgentOption>(
+        NICE_AGENT_OPTION_REGULAR_NOMINATION |
+        NICE_AGENT_OPTION_SUPPORT_RENOMINATION |
+        (use_trickle_ice_ ? NICE_AGENT_OPTION_ICE_TRICKLE
+                          : NICE_AGENT_OPTION_NONE) |
+        (use_reliable_ice_ ? NICE_AGENT_OPTION_RELIABLE
+                           : NICE_AGENT_OPTION_NONE));
+    NiceAgent* agent = nice_agent_new_full(g_main_loop_get_context(loop),
+                                           NICE_COMPATIBILITY_RFC5245,
+                                           agent_options);
     agent_.store(agent);
 
     LOG_INFO(
         "Nice agent init with [trickle ice|{}], [reliable mode|{}], "
-        "[turn mode|{}]",
+        "[nomination|regular], [renomination|true], [turn mode|{}]",
         use_trickle_ice_, use_reliable_ice_, TurnModeName(turn_mode_));
 
     if (agent == nullptr) {
@@ -280,15 +307,25 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
       return;
     }
 
-    g_object_set(agent, "stun-server", stun_ip_.c_str(), nullptr);
-    g_object_set(agent, "stun-server-port", stun_port_, nullptr);
+    // An empty hostname starts a failing asynchronous DNS lookup, and port 0
+    // is outside libnice's property range. Leave STUN disabled in that case.
+    if (!stun_ip_.empty() && stun_port_ != 0) {
+      g_object_set(agent, "stun-server", stun_ip_.c_str(),
+                   "stun-server-port", static_cast<guint>(stun_port_), nullptr);
+    }
     g_object_set(agent, "controlling-mode", controlling_, nullptr);
+    // Enable port mapping unless the caller explicitly requires relay-only ICE.
+    const bool enable_upnp = !IsTurnForced(turn_mode_);
+    g_object_set(agent, "upnp", enable_upnp,
+                 "upnp-timeout", 3000u, nullptr);
+    LOG_INFO("ICE UPnP mapping [{}], discovery timeout 3000 ms",
+             enable_upnp);
 
     g_signal_connect(agent, "candidate-gathering-done",
                      G_CALLBACK(on_gathering_done_), user_ptr_);
     g_signal_connect(agent, "new-selected-pair",
                      G_CALLBACK(on_new_selected_pair_), user_ptr_);
-    g_signal_connect(agent, "new-candidate", G_CALLBACK(on_new_candidate_),
+    g_signal_connect(agent, "new-candidate-full", G_CALLBACK(on_new_candidate_),
                      user_ptr_);
     g_signal_connect(agent, "component-state-changed",
                      G_CALLBACK(&IceAgent::OnNiceStateChangedStatic), this);
@@ -604,6 +641,56 @@ int IceAgent::SetRemoteSdp(const std::string& remote_sdp) {
     LOG_ERROR("Failed to parse remote sdp: [{}]", sdp_no_fingerprint);
     return -1;
   }
+}
+
+int IceAgent::AddRemoteCandidate(const std::string& candidate_sdp) {
+  if (!nice_inited_ || agent_ == nullptr || destroyed_ || stream_id_ == 0) {
+    LOG_ERROR("Cannot add remote candidate to an inactive ICE agent");
+    return -1;
+  }
+
+  NiceCandidate* candidate = nice_agent_parse_remote_candidate_sdp(
+      agent_, stream_id_, candidate_sdp.c_str());
+  if (candidate == nullptr) {
+    LOG_ERROR("Failed to parse remote ICE candidate: [{}]", candidate_sdp);
+    return -1;
+  }
+
+  if (candidate->component_id != NICE_COMPONENT_TYPE_RTP) {
+    LOG_WARN("Reject ICE candidate for unsupported component {}",
+             candidate->component_id);
+    nice_candidate_free(candidate);
+    return -1;
+  }
+
+  GSList* candidates = nullptr;
+  candidates = g_slist_append(candidates, candidate);
+  const int added = nice_agent_set_remote_candidates(
+      agent_, stream_id_, candidate->component_id, candidates);
+  g_slist_free(candidates);
+  nice_candidate_free(candidate);
+
+  if (added <= 0) {
+    LOG_ERROR("libnice rejected remote ICE candidate: [{}]", candidate_sdp);
+    return -1;
+  }
+
+  return 0;
+}
+
+int IceAgent::SetRemoteCandidateGatheringDone() {
+  if (!nice_inited_ || agent_ == nullptr || destroyed_ || stream_id_ == 0) {
+    LOG_ERROR("Cannot finish remote gathering on an inactive ICE agent");
+    return -1;
+  }
+
+  if (!nice_agent_peer_candidate_gathering_done(agent_, stream_id_)) {
+    LOG_ERROR("libnice rejected remote candidate-gathering-done");
+    return -1;
+  }
+
+  LOG_INFO("Remote ICE candidate gathering is complete");
+  return 0;
 }
 
 int IceAgent::GatherCandidates() {

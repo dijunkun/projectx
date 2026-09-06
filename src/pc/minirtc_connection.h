@@ -44,6 +44,9 @@ class MiniRtcConnection : public ConnectionInterface {
   void ProcessIceWorkMsg(const IceWorkMsg& msg) override;
 
  private:
+  void ApplyRemoteIceCandidate(const IceWorkMsg& msg);
+  void FlushRemoteIceCandidates();
+
  private:
   std::shared_ptr<SystemClock> clock_ = nullptr;
   std::shared_ptr<WsClient> ws_ = nullptr;
@@ -52,7 +55,8 @@ class MiniRtcConnection : public ConnectionInterface {
   ConnectionCallbacks callbacks_;
 
   std::shared_ptr<IceTransport> ice_transport_;
-  std::atomic_bool is_ice_transport_ready_;
+  std::atomic_bool is_ice_transport_ready_{false};
+  std::vector<IceWorkMsg> pending_ice_candidates_;
 
   std::function<void(std::string, const std::string&)> on_ice_status_change_;
   void* user_data_;
@@ -76,7 +80,6 @@ class MiniRtcConnection : public ConnectionInterface {
   SignalStatus signal_status_ = SignalStatus::SignalClosed;
   std::mutex signal_status_mutex_;
   std::atomic<bool> leave_{false};
-  std::string sdp_without_cands_ = "";
 };
 }  // namespace minirtc
 

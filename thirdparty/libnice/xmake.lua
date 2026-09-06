@@ -5,11 +5,19 @@ package("libnice")
     set_license("LGPL-2.1-or-later")
 
     add_urls("https://gitlab.freedesktop.org/libnice/libnice/-/archive/$(version)/libnice-$(version).tar.gz")
+    add_versions("0.1.24", "1da5ac13ed5d4e175e0d2d46ad3748c6635244f8f3eb2b8e31578ef59aa2ddce")
 
-    add_deps("meson~host", {host = true})
+    add_deps("meson~host", "pkgconf", {host = true})
     add_deps("glib 2.84.1", "openssl3 3.3.2")
+    add_deps("gupnp-igd 1.6.0", {system = false, configs = {shared = false}})
+
+    add_configs("include_virtual_interfaces", {description = "Gather candidates from VPN/TUN interfaces", default = false, type = "boolean"})
 
     on_install(function (package)
+        -- libnice 0.1.24 still requests the older pkg-config API name.
+        -- GUPnP IGD 1.6 retains the C API used by libnice and uses libsoup 3.
+        io.replace("meson.build", "dependency('gupnp-igd-1.0',",
+            "dependency('gupnp-igd-1.6',", {plain = true})
         if package:is_plat("windows") then
             io.replace("meson.build",
                 "syslibs += [cc.find_library('ws2_32')]",
@@ -24,8 +32,41 @@ package("libnice")
             "-Dtests=disabled",
             "-Dgtk_doc=disabled",
             "-Dcrypto-library=openssl",
-            "-Dintrospection=disabled"
+            "-Dintrospection=disabled",
+            "-Dgupnp=enabled"
         }
+
+        if not package:config("include_virtual_interfaces") then
+            table.insert(configs,
+                "-Dignored-network-interface-prefix=docker,veth,virbr,vnet,utun,tun,tap,wg,Wintun,WireGuard,Tailscale,tailscale,ZeroTier,zerotier")
+        end
+
+        if package:is_plat("macosx", "iphoneos") then
+            io.replace("socket/udp-bsd.c",
+                "#endif\n\n  if (recv_tos) {",
+                [[#endif
+
+#if defined(__APPLE__) && defined(IP_BOUND_IF) && defined(IPV6_BOUND_IF)
+  /* A source-address bind alone can still follow a utun default route on
+   * Apple platforms. Pin each ICE socket to the interface that owns its
+   * candidate address, matching the Windows IP_UNICAST_IF behavior above. */
+  if (addr) {
+    guint if_index = nice_interfaces_get_if_index_by_addr (addr);
+    if (if_index) {
+      guint level = nice_address_ip_version (addr) == 6 ? IPPROTO_IPV6 : IPPROTO_IP;
+      guint optname = nice_address_ip_version (addr) == 6 ? IPV6_BOUND_IF : IP_BOUND_IF;
+      GError *gerr = NULL;
+      if (!g_socket_set_option (gsock, level, optname, if_index, &gerr)) {
+        nice_debug ("Could not bind Apple socket to interface: %s", gerr->message);
+        g_clear_error (&gerr);
+      }
+    }
+  }
+#endif
+
+  if (recv_tos) {]],
+                {plain = true})
+        end
 
         import("package.tools.meson").install(package, configs)
     end)

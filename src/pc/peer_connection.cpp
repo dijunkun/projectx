@@ -5,6 +5,7 @@
 
 #include "INIReader.h"
 #include "common.h"
+#include "ice_utils.h"
 #include "log.h"
 #include "nlohmann/json.hpp"
 
@@ -1111,30 +1112,67 @@ void PeerConnection::ProcessSignal(const std::string& signal) {
       break;
     }
     case "new_candidate"_H: {
+      if (!j.contains("transmission_id") || !j["transmission_id"].is_string() ||
+          !j.contains("remote_user_id") || !j["remote_user_id"].is_string() ||
+          !j.contains("sdp") || !j["sdp"].is_string()) {
+        LOG_WARN("Reject candidate with missing or invalid required fields");
+        break;
+      }
+      if (j.contains("ufrag") && !j["ufrag"].is_string()) {
+        LOG_WARN("Reject candidate with invalid ICE username fragment");
+        break;
+      }
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::string new_candidate = j["sdp"].get<std::string>();
       std::string remote_user_id = j["remote_user_id"].get<std::string>();
+      const auto candidate =
+          ParseIceCandidateSignal(new_candidate, j.value("ufrag", ""));
+      if (!candidate) {
+        LOG_WARN("Reject malformed ICE candidate before queueing");
+        break;
+      }
 
       IceWorkMsg msg;
       msg.type = IceWorkMsg::Type::NewCandidate;
       msg.transmission_id = transmission_id;
       msg.remote_user_id = remote_user_id;
-      msg.new_candidate = new_candidate;
+      msg.new_candidate = candidate->sdp;
+      msg.candidate_ufrag = candidate->ufrag;
       PushIceWorkMsg(msg);
 
       break;
     }
     case "new_candidate_mid"_H: {
+      if (!j.contains("transmission_id") || !j["transmission_id"].is_string() ||
+          !j.contains("remote_user_id") || !j["remote_user_id"].is_string() ||
+          !j.contains("candidate") || !j["candidate"].is_string() ||
+          !j.contains("mid") || !j["mid"].is_string()) {
+        LOG_WARN("Reject candidate with missing or invalid required fields");
+        break;
+      }
+      if (j.contains("ufrag") && !j["ufrag"].is_string()) {
+        LOG_WARN("Reject candidate with invalid ICE username fragment");
+        break;
+      }
       std::string transmission_id = j["transmission_id"].get<std::string>();
       std::string remote_user_id = j["remote_user_id"].get<std::string>();
       std::string candidate = j["candidate"].get<std::string>();
       std::string mid = j["mid"].get<std::string>();
+      const auto parsed_candidate =
+          ParseIceCandidateSignal(candidate, j.value("ufrag", ""));
+      if (!parsed_candidate || mid.size() > 256 ||
+          mid.find('\0') != std::string::npos ||
+          mid.find_first_of(" \t\r\n") != std::string::npos) {
+        LOG_WARN("Reject malformed ICE candidate before queueing");
+        break;
+      }
 
       IceWorkMsg msg;
       msg.type = IceWorkMsg::Type::NewCandidateMid;
       msg.transmission_id = transmission_id;
       msg.remote_user_id = remote_user_id;
-      msg.candidate = candidate;
+      msg.candidate = parsed_candidate->sdp;
+      msg.candidate_ufrag = parsed_candidate->ufrag;
       msg.mid = mid;
       PushIceWorkMsg(msg);
 

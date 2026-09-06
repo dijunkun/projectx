@@ -76,6 +76,8 @@ class DataChannelConnection : public ConnectionInterface {
                                        const std::string opusSamples);
 
   void ResetDataChannelTransport();
+  void ApplyRemoteIceCandidate(const IceWorkMsg& msg);
+  void FlushRemoteIceCandidates();
 
  private:
   std::shared_ptr<SystemClock> clock_ = nullptr;
@@ -88,6 +90,8 @@ class DataChannelConnection : public ConnectionInterface {
   std::atomic_bool dc_ready_ = false;
 
   ::rtc::Configuration peer_connection_config_;
+  std::vector<IceWorkMsg> pending_ice_candidates_;
+  std::string active_transmission_id_;
 
   std::vector<int> video_payload_types_ = {rtp::PAYLOAD_TYPE::H264,
                                            rtp::PAYLOAD_TYPE::AV1};

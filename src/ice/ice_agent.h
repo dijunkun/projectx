@@ -45,9 +45,8 @@ using nice_cb_state_changed_t = void (*)(NiceAgent* agent, guint stream_id,
                                          guint component_id,
                                          NiceComponentState state,
                                          gpointer data);
-using nice_cb_new_candidate_t = void (*)(NiceAgent* agent, guint stream_id,
-                                         guint component_id, gchar* foundation,
-                                         gpointer data);
+using nice_cb_new_candidate_t = void (*)(NiceAgent* agent,
+                                         NiceCandidate* candidate, gpointer data);
 using nice_cb_new_selected_pair_t = void (*)(NiceAgent* agent, guint stream_id,
                                              guint component_id,
                                              const char* lfoundation,
@@ -88,6 +87,8 @@ class IceAgent {
   std::string AppendFingerprintLine(const std::string& sdp);
   std::string GetLocalStreamSdp(uint32_t stream_id);
   int SetRemoteSdp(const std::string& remote_sdp);
+  int AddRemoteCandidate(const std::string& candidate_sdp);
+  int SetRemoteCandidateGatheringDone();
   int GatherCandidates();
   ICE_STATE GetIceState();
 

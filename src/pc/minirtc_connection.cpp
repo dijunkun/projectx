@@ -1,5 +1,7 @@
 #include "minirtc_connection.h"
 
+#include <utility>
+
 #include "log.h"
 #include "nlohmann/json.hpp"
 
@@ -122,6 +124,7 @@ int MiniRtcConnection::RequestAllVideoKeyFrames() {
 }
 
 int MiniRtcConnection::ReleaseAllIceTransmission() {
+  pending_ice_candidates_.clear();
   if (ice_transport_) {
     ice_transport_->DestroyIceTransmission();
   }
@@ -176,6 +179,13 @@ int MiniRtcConnection::SendReliableDataFrame(const char* data, size_t size,
 }
 
 void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
+  if ((!info_.transmission_id.empty() && !msg.transmission_id.empty() &&
+       msg.transmission_id != info_.transmission_id) ||
+      (!info_.remote_user_id.empty() &&
+       msg.remote_user_id != info_.remote_user_id)) {
+    LOG_WARN("Ignoring ICE message for another connection");
+    return;
+  }
   switch (msg.type) {
     case IceWorkMsg::Type::Login: {
       break;
@@ -215,10 +225,16 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       ice_transport_->SetOnReceiveNetStatusReportFunc(
           callbacks_.on_net_status_report);
 
-      ice_transport_->InitIceTransmission(
+      if (ice_transport_->InitIceTransmission(
           info_.stun_server_ip, info_.stun_server_port, info_.turn_server_ip,
           info_.turn_server_port, info_.turn_server_username,
-          info_.turn_server_password);
+          info_.turn_server_password) != 0) {
+        is_ice_transport_ready_ = false;
+        ice_transport_.reset();
+        pending_ice_candidates_.clear();
+        on_ice_status_change_("failed", remote_user_id);
+        break;
+      }
 
       for (auto& stream_id : media_stream_ids_.video) {
         ice_transport_->AddVideoStream(stream_id);
@@ -235,6 +251,7 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       } else {
         ice_transport_->GatherCandidates();
       }
+      FlushRemoteIceCandidates();
 
       break;
     }
@@ -242,11 +259,8 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       std::string remote_user_id = msg.remote_user_id;
       LOG_INFO("[{}] Receive notification: user id [{}] leave transmission",
                (void*)this, remote_user_id);
-      if (ice_transport_) {
-        ice_transport_->DestroyIceTransmission();
-        is_ice_transport_ready_ = false;
-        LOG_INFO("Terminate transmission to user [{}]", remote_user_id);
-      }
+      ReleaseAllIceTransmission();
+      LOG_INFO("Terminate transmission to user [{}]", remote_user_id);
       break;
     }
     case IceWorkMsg::Type::Offer: {
@@ -278,10 +292,16 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       ice_transport_->SetOnReceiveNetStatusReportFunc(
           callbacks_.on_net_status_report);
 
-      ice_transport_->InitIceTransmission(
+      if (ice_transport_->InitIceTransmission(
           info_.stun_server_ip, info_.stun_server_port, info_.turn_server_ip,
           info_.turn_server_port, info_.turn_server_username,
-          info_.turn_server_password);
+          info_.turn_server_password) != 0) {
+        is_ice_transport_ready_ = false;
+        ice_transport_.reset();
+        pending_ice_candidates_.clear();
+        on_ice_status_change_("failed", remote_user_id);
+        break;
+      }
       ice_transport_->SetTransmissionId(transmission_id);
 
       for (auto& stream_id : media_stream_ids_.video) {
@@ -300,9 +320,9 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
         LOG_ERROR("Set remote sdp failed");
         break;
       }
+      FlushRemoteIceCandidates();
 
       if (info_.trickle_ice) {
-        sdp_without_cands_ = remote_sdp;
         ice_transport_->SendAnswer();
       }
       ice_transport_->GatherCandidates();
@@ -321,7 +341,6 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
         }
 
         if (info_.trickle_ice) {
-          sdp_without_cands_ = remote_sdp;
           ice_transport_->GatherCandidates();
         }
       }
@@ -329,21 +348,47 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       break;
     }
     case IceWorkMsg::Type::NewCandidate: {
-      std::string transmission_id = msg.transmission_id;
-      std::string new_candidate = msg.new_candidate;
-      std::string remote_user_id = msg.remote_user_id;
-
-      // LOG_INFO("[{}] receive new candidate from [{}]:[{}]", info_.user_id,
-      //          remote_user_id, new_candidate);
-      if (ice_transport_) {
-        ice_transport_->SetRemoteSdp(sdp_without_cands_ + new_candidate);
-      }
+      ApplyRemoteIceCandidate(msg);
       break;
     }
     default: {
       break;
     }
   }
+}
+
+void MiniRtcConnection::ApplyRemoteIceCandidate(const IceWorkMsg& msg) {
+  const auto signal =
+      ParseIceCandidateSignal(msg.new_candidate, msg.candidate_ufrag);
+  if (!signal) {
+    LOG_WARN("Reject malformed ICE candidate");
+    return;
+  }
+  if (ice_transport_) {
+    ice_transport_->AddRemoteCandidate(signal->sdp, signal->ufrag);
+    return;
+  }
+
+  // The signaling thread can replace the connection before the ICE worker
+  // processes its offer/join message. Preserve early candidates and EOC in order.
+  for (const auto& pending : pending_ice_candidates_) {
+    if (pending.new_candidate == signal->sdp &&
+        pending.candidate_ufrag == signal->ufrag) return;
+  }
+  if (pending_ice_candidates_.size() >= 256) {
+    LOG_WARN("ICE candidate queue limit reached before transport creation");
+    return;
+  }
+  auto pending = msg;
+  pending.new_candidate = signal->sdp;
+  pending.candidate_ufrag = signal->ufrag;
+  pending_ice_candidates_.push_back(std::move(pending));
+}
+
+void MiniRtcConnection::FlushRemoteIceCandidates() {
+  auto pending = std::move(pending_ice_candidates_);
+  pending_ice_candidates_.clear();
+  for (const auto& msg : pending) ProcessIceWorkMsg(msg);
 }
 
 }  // namespace minirtc
