@@ -14,6 +14,18 @@
 
 namespace minirtc {
 
+inline constexpr char kRelayUpgradeAttribute[] = "a=x-minirtc-relay-upgrade:1";
+
+inline bool SupportsRelayUpgrade(const std::string& sdp) {
+  std::istringstream lines(sdp);
+  std::string line;
+  while (std::getline(lines, line)) {
+    if (!line.empty() && line.back() == '\r') line.pop_back();
+    if (line == kRelayUpgradeAttribute) return true;
+  }
+  return false;
+}
+
 inline std::string TrimIceWhitespace(const std::string& value) {
   const auto start = value.find_first_not_of(" \t\r\n");
   if (start == std::string::npos) return {};

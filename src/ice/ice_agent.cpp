@@ -275,8 +275,8 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
     }
 
     // Use regular nomination from the start: libnice rejects late TCP
-    // candidates if aggressive UDP checks have already started. Receiving
-    // NOMINATION is supported, but does not itself schedule path upgrades.
+    // candidates if aggressive UDP checks have already started. Background
+    // upgrades are enabled separately after negotiating the MiniRTC extension.
     NiceAgentOption agent_options = static_cast<NiceAgentOption>(
         NICE_AGENT_OPTION_REGULAR_NOMINATION |
         NICE_AGENT_OPTION_SUPPORT_RENOMINATION |
@@ -305,6 +305,11 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
       notify_init(-1);
       exit_nice_thread_ = true;
       return;
+    }
+
+    if (g_object_class_find_property(G_OBJECT_GET_CLASS(agent),
+                                     "relay-upgrade-timeout") == nullptr) {
+      LOG_WARN("libnice has no relay upgrade extension; rebuild dependencies");
     }
 
     // An empty hostname starts a failing asynchronous DNS lookup, and port 0
@@ -587,6 +592,11 @@ std::string IceAgent::GenerateLocalSdp() {
     local_sdp_ += data_stream_sdp_;
   }
 
+  if (!use_reliable_ice_ && !IsTurnForced(turn_mode_) &&
+      g_object_class_find_property(G_OBJECT_GET_CLASS(agent_.load()),
+                                   "relay-upgrade-timeout") != nullptr) {
+    local_sdp_ += std::string(kRelayUpgradeAttribute) + "\r\n";
+  }
   return local_sdp_;
 }
 
@@ -634,6 +644,21 @@ int IceAgent::SetRemoteSdp(const std::string& remote_sdp) {
   }
 
   std::string sdp_no_fingerprint = ExtractAndStripFingerprint(remote_sdp);
+  // Both peers must agree to keep checking after the first regular nomination.
+  // An unmodified peer continues to use the standard libnice behavior.
+  const bool has_upgrade_extension =
+      g_object_class_find_property(G_OBJECT_GET_CLASS(agent_.load()),
+                                   "relay-upgrade-timeout") != nullptr;
+  const bool upgrade = has_upgrade_extension && !use_reliable_ice_ &&
+                       SupportsRelayUpgrade(remote_sdp) &&
+                       !IsTurnForced(turn_mode_);
+  if (has_upgrade_extension) {
+    g_object_set(agent_.load(), "relay-upgrade-timeout", upgrade ? 30000u : 0u,
+                 nullptr);
+  }
+  LOG_INFO("ICE relay upgrade peer_support={} forced_relay={} reliable={} window_ms={}",
+           SupportsRelayUpgrade(remote_sdp), IsTurnForced(turn_mode_),
+           use_reliable_ice_, upgrade ? 30000 : 0);
   int ret = nice_agent_parse_remote_sdp(agent_, sdp_no_fingerprint.c_str());
   if (ret >= 0) {
     return 0;
@@ -667,6 +692,14 @@ int IceAgent::AddRemoteCandidate(const std::string& candidate_sdp) {
   candidates = g_slist_append(candidates, candidate);
   const int added = nice_agent_set_remote_candidates(
       agent_, stream_id_, candidate->component_id, candidates);
+  if (added > 0) {
+    char address[NICE_ADDRESS_STRING_LEN] = {};
+    nice_address_to_string(&candidate->addr, address);
+    LOG_INFO("Remote ICE candidate type={} transport={} address={}:{} priority={}",
+             nice_candidate_type_to_string(candidate->type),
+             nice_candidate_transport_to_string(candidate->transport), address,
+             nice_address_get_port(&candidate->addr), candidate->priority);
+  }
   g_slist_free(candidates);
   nice_candidate_free(candidate);
 

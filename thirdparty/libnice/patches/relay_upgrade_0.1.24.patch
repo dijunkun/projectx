@@ -1,0 +1,219 @@
+--- a/agent/agent-priv.h
++++ b/agent/agent-priv.h
+@@ -154,6 +154,7 @@
+   guint stun_initial_timeout;     /* property: stun initial timeout, RTO */
+   guint stun_reliable_timeout;    /* property: stun reliable timeout */
+   NiceNominationMode nomination_mode; /* property: Nomination mode */
++  guint relay_upgrade_timeout; /* negotiated MiniRTC extension, milliseconds */
+   gboolean support_renomination;  /* property: support RENOMINATION STUN attribute */
+   guint idle_timeout;             /* property: conncheck timeout before stop */
+ 
+--- a/agent/agent.c
++++ b/agent/agent.c
+@@ -128,6 +128,7 @@
+   PROP_NOMINATION_MODE,
+   PROP_ICE_TRICKLE,
+   PROP_SUPPORT_RENOMINATION,
++  PROP_RELAY_UPGRADE_TIMEOUT,
+   PROP_IDLE_TIMEOUT,
+   PROP_CONSENT_FRESHNESS,
+   PROP_CLOSE_FORCED,
+@@ -507,6 +508,13 @@
+          "corresponding candidates pair gets selected.",
+          FALSE,
+          G_PARAM_READWRITE));
++
++  /* MiniRTC extension. Enable only after both peers explicitly negotiate
++   * repeated regular nomination of higher-priority direct pairs. */
++  g_object_class_install_property (gobject_class, PROP_RELAY_UPGRADE_TIMEOUT,
++      g_param_spec_uint ("relay-upgrade-timeout", "Relay upgrade timeout",
++          "Background direct-check window after selecting a relay, in ms",
++          0, 60000, 0, G_PARAM_READWRITE));
+ 
+   /**
+    * NiceAgent:idle-timeout
+@@ -1478,6 +1486,10 @@
+       g_value_set_enum (value, agent->nomination_mode);
+       break;
+ 
++    case PROP_RELAY_UPGRADE_TIMEOUT:
++      g_value_set_uint (value, agent->relay_upgrade_timeout);
++      break;
++
+     case PROP_SUPPORT_RENOMINATION:
+       g_value_set_boolean (value, agent->support_renomination);
+       break;
+@@ -1716,6 +1728,10 @@
+ 
+     case PROP_NOMINATION_MODE:
+       agent->nomination_mode = g_value_get_enum (value);
++      break;
++
++    case PROP_RELAY_UPGRADE_TIMEOUT:
++      agent->relay_upgrade_timeout = g_value_get_uint (value);
+       break;
+ 
+     case PROP_SUPPORT_RENOMINATION:
+--- a/agent/component.h
++++ b/agent/component.h
+@@ -173,6 +173,8 @@
+   guint socket_sources_age;    /* incremented when socket_sources changes */
+   GQueue incoming_checks;     /* list of IncomingCheck objs */
+   GList *turn_servers;             /* List of TurnServer objs */
++  gint64 relay_upgrade_deadline; /* zero until first relay selection */
++  gint64 relay_upgrade_next_retry;
+   CandidatePair selected_pair; /* independent from checklists, 
+ 				    see ICE 11.1. "Sending Media" (ID-19) */
+   gboolean fallback_mode;      /* in this case, accepts packets from all, ignore candidate validation */
+--- a/agent/component.c
++++ b/agent/component.c
+@@ -521,6 +521,8 @@
+ 
+   /* Reset the priority to 0 to make sure we get a new pair */
+   cmp->selected_pair.priority = 0;
++  cmp->relay_upgrade_deadline = 0;
++  cmp->relay_upgrade_next_retry = 0;
+ 
+   cmp->have_local_consent = TRUE;
+ 
+--- a/agent/conncheck.c
++++ b/agent/conncheck.c
+@@ -782,6 +782,100 @@
+   return stun_sent;
+ }
+ 
++
++/* Background checks share the existing sockets, credentials and Ta pacing.
++ * They never clear the selected relay or restart ICE/DTLS. The extension is
++ * opt-in because RFC 8445 regular nomination normally stops after selection. */
++static gboolean
++priv_selected_pair_is_relay (NiceComponent *component)
++{
++  CandidatePair *pair = &component->selected_pair;
++  return pair->local && pair->remote &&
++      (pair->local->c.type == NICE_CANDIDATE_TYPE_RELAYED ||
++       pair->remote->c.type == NICE_CANDIDATE_TYPE_RELAYED);
++}
++
++static gboolean
++priv_relay_upgrade_active (NiceAgent *agent, NiceComponent *component)
++{
++  return agent->relay_upgrade_timeout > 0 && !agent->force_relay &&
++      agent->nomination_mode == NICE_NOMINATION_MODE_REGULAR &&
++      priv_selected_pair_is_relay (component) &&
++      component->relay_upgrade_deadline > g_get_monotonic_time ();
++}
++
++static gboolean
++priv_is_direct_upgrade (NiceComponent *component, CandidateCheckPair *pair)
++{
++  return pair->component_id == component->id &&
++      pair->priority > component->selected_pair.priority &&
++      pair->local->type != NICE_CANDIDATE_TYPE_RELAYED &&
++      pair->remote->type != NICE_CANDIDATE_TYPE_RELAYED;
++}
++
++static gboolean
++priv_conn_check_tick_relay_upgrade (NiceAgent *agent, NiceStream *stream)
++{
++  GSList *i, *j;
++  gboolean keep_timer_going = FALSE;
++  gint64 now = g_get_monotonic_time ();
++
++  for (i = stream->components; i; i = i->next) {
++    NiceComponent *component = i->data;
++    gboolean nominate_pending = FALSE;
++    gboolean retry;
++    if (!priv_relay_upgrade_active (agent, component))
++      continue;
++    keep_timer_going = TRUE;
++    retry = now >= component->relay_upgrade_next_retry;
++    if (retry)
++      component->relay_upgrade_next_retry = now + 3 * G_USEC_PER_SEC;
++
++    /* Do not nominate a second pair while another nomination is in flight. */
++    for (j = stream->conncheck_list; j; j = j->next) {
++      CandidateCheckPair *p = j->data;
++      if (priv_is_direct_upgrade (component, p) &&
++          p->use_candidate_on_next_check && !p->nominated &&
++          p->state != NICE_CHECK_FAILED)
++        nominate_pending = TRUE;
++    }
++    for (j = stream->conncheck_list; j; j = j->next) {
++      CandidateCheckPair *p = j->data;
++      CandidateCheckPair *check;
++      if (!priv_is_direct_upgrade (component, p))
++        continue;
++      if (agent->controlling_mode && !nominate_pending && p->valid &&
++          !p->nominated && (p->state == NICE_CHECK_SUCCEEDED ||
++                           p->state == NICE_CHECK_DISCOVERED)) {
++        check = p->succeeded_pair ? p->succeeded_pair : p;
++        if (check->state == NICE_CHECK_SUCCEEDED &&
++            !check->use_candidate_on_next_check) {
++          check->use_candidate_on_next_check = TRUE;
++          priv_add_pair_to_triggered_check_queue (agent, check);
++          nominate_pending = TRUE;
++          nice_debug ("Agent %p : relay upgrade: nominate direct pair %p",
++              agent, p);
++        }
++      }
++      /* UDP sockets survive a timeout. Failed TCP checks can own a closed
++       * socket, so only keep their initial attempt, without reusing it. */
++      if (retry && p->state == NICE_CHECK_FAILED && !p->succeeded_pair &&
++          p->local->transport == NICE_CANDIDATE_TRANSPORT_UDP) {
++        p->valid = FALSE;
++        p->nominated = FALSE;
++        p->use_candidate_on_next_check = FALSE;
++        p->mark_nominated_on_response_arrival = FALSE;
++        if (p->discovered_pair) {
++          p->discovered_pair->valid = FALSE;
++          p->discovered_pair->nominated = FALSE;
++        }
++        SET_PAIR_STATE (agent, p, NICE_CHECK_WAITING);
++        nice_debug ("Agent %p : relay upgrade: retry direct pair %p", agent, p);
++      }
++    }
++  }
++  return keep_timer_going;
++}
+ 
+ static gboolean
+ priv_conn_check_tick_stream_nominate (NiceAgent *agent, NiceStream *stream)
+@@ -1183,6 +1277,8 @@
+ 
+     if (priv_conn_check_tick_stream_nominate (agent, stream))
+       keep_timer_going = TRUE;
++    if (priv_conn_check_tick_relay_upgrade (agent, stream))
++      keep_timer_going = TRUE;
+   }
+ 
+   /* note: we provide a grace period before declaring a component as
+@@ -2058,6 +2154,13 @@
+     cpair.remote_consent.have = TRUE;
+ 
+     nice_component_update_selected_pair (agent, component, &cpair);
++    if (agent->relay_upgrade_timeout && !agent->force_relay &&
++        priv_selected_pair_is_relay (component) &&
++        component->relay_upgrade_deadline == 0) {
++      component->relay_upgrade_deadline = g_get_monotonic_time () +
++          (gint64) agent->relay_upgrade_timeout * 1000;
++      component->relay_upgrade_next_retry = g_get_monotonic_time ();
++    }
+ 
+     priv_conn_keepalive_tick_unlocked (agent);
+ 
+@@ -3036,6 +3139,14 @@
+     GSList *next = i->next;
+ 
+     if (p->component_id != component->id) {
++      i = next;
++      continue;
++    }
++
++    /* Keep higher-priority direct checks during the negotiated background
++     * window. They do not delay READY for the working relay. */
++    if (priv_relay_upgrade_active (agent, component) &&
++        priv_is_direct_upgrade (component, p)) {
+       i = next;
+       continue;
+     }

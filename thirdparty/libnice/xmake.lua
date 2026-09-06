@@ -6,6 +6,10 @@ package("libnice")
 
     add_urls("https://gitlab.freedesktop.org/libnice/libnice/-/archive/$(version)/libnice-$(version).tar.gz")
     add_versions("0.1.24", "1da5ac13ed5d4e175e0d2d46ad3748c6635244f8f3eb2b8e31578ef59aa2ddce")
+    add_patches("0.1.24", path.join(os.scriptdir(), "patches", "relay_upgrade_0.1.24.patch"),
+        "81c7acc267a044fd6d0053f0c4d0bbdc414d1032b0e51e072a7e93e8bf85bc7a")
+    -- Include the extension in the package identity to invalidate old binaries.
+    add_configs("relay_upgrade", {description = "MiniRTC negotiated relay upgrade extension", default = true, type = "boolean", readonly = true})
 
     add_deps("meson~host", "pkgconf", {host = true})
     add_deps("glib 2.84.1", "openssl3 3.3.2")

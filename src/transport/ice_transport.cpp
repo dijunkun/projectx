@@ -513,8 +513,22 @@ void IceTransport::OnNewSelectedPair(NiceAgent* agent, guint stream_id,
   if (local->type == NICE_CANDIDATE_TYPE_RELAYED ||
       remote->type == NICE_CANDIDATE_TYPE_RELAYED) {
     LOG_INFO("Traversal using relay server");
+    if (traversal_type_ != TraversalType::TRelay &&
+        g_object_class_find_property(G_OBJECT_GET_CLASS(agent),
+                                     "relay-upgrade-timeout") != nullptr) {
+      guint upgrade_window_ms = 0;
+      g_object_get(agent, "relay-upgrade-timeout", &upgrade_window_ms, nullptr);
+      if (upgrade_window_ms > 0) {
+        LOG_INFO("[{}->{}] Keep relay active while checking direct paths for up to {} ms",
+                 user_id_, remote_user_id_, upgrade_window_ms);
+      }
+    }
     traversal_type_ = TraversalType::TRelay;
   } else {
+    if (traversal_type_ == TraversalType::TRelay) {
+      LOG_INFO("[{}->{}] ICE relay upgraded to P2P without restarting media",
+               user_id_, remote_user_id_);
+    }
     LOG_INFO("Traversal using p2p");
     traversal_type_ = TraversalType::TP2P;
   }
@@ -848,6 +862,12 @@ int IceTransport::SetRemoteSdp(const std::string& remote_sdp) {
     return -1;
   }
 
+  // Capability extraction keeps only the video section, while the extension
+  // can occur in any section of the full offer/answer.
+  if (SupportsRelayUpgrade(remote_sdp) &&
+      !SupportsRelayUpgrade(media_stream_sdp)) {
+    media_stream_sdp += "\r\n" + std::string(kRelayUpgradeAttribute) + "\r\n";
+  }
   if (ice_agent_->SetRemoteSdp(media_stream_sdp.c_str()) != 0) {
     return -1;
   }
