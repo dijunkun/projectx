@@ -13,7 +13,9 @@ package("libsoup")
         {system = false, configs = {shared = false}})
     add_includedirs("include/libsoup-3.0")
     add_links("soup-3.0")
-    if is_plat("macosx", "iphoneos", "windows", "mingw") then
+    -- iOS uses the proxy-libintl archive and headers bundled with GLib.
+    -- The standalone libintl package does not support iphoneos.
+    if is_plat("macosx", "windows", "mingw") then
         add_deps("libintl", {system = false, configs = {shared = false}})
     end
     if is_plat("windows", "mingw") then add_syslinks("ws2_32") end
@@ -30,7 +32,8 @@ package("libsoup")
         -- nghttp2's pkg-config file omits the static-library define on Windows.
         local cxflags = package:is_plat("windows", "mingw") and {"-DNGHTTP2_STATICLIB"} or {}
         import("package.tools.meson").install(package, configs,
-            {cxflags = cxflags, packagedeps = package:dep("libintl") and {"libintl"} or {}})
+            {cxflags = cxflags, packagedeps = package:is_plat("iphoneos") and {"glib"} or
+                (package:dep("libintl") and {"libintl"} or {})})
     end)
 
 package("gssdp")

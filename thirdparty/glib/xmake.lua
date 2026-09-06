@@ -60,6 +60,7 @@ package("glib")
         -- GLib falls back to its bundled proxy-libintl on iOS. Meson installs
         -- that archive next to GLib, so expose it to consumers and to the
         -- package link test.
+        add_includedirs("include")
         add_links("intl")
     end
 
