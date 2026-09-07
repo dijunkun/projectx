@@ -1,0 +1,121 @@
+--- a/agent/agent.c
++++ b/agent/agent.c
+@@ -222,6 +222,7 @@
+ 
+   /* Check if we have a close_task and if we can close */
+   if (agent->close_task && agent->pruning_refreshes == NULL &&
++      agent->pruning_streams == NULL &&
+       agent->stun_resolving_list == NULL &&
+       agent->turn_resolving_count == 0)
+     close_task = g_steal_pointer (&agent->close_task);
+@@ -4968,6 +4969,12 @@
+     g_free (big_buf);
+   }
+ 
++  /* Removed streams remain readable only to finish TURN deallocation. */
++  if (g_slist_find (agent->pruning_streams, stream) != NULL) {
++    retval = RECV_OOB;
++    goto done;
++  }
++
+   if (!nice_component_verify_remote_candidate (component,
+       message->from, nicesock)) {
+     if (nice_debug_is_verbose ()) {
+@@ -6305,6 +6312,47 @@
+   }
+ 
+   stream = agent_find_stream (agent, component->stream_id);
++
++  if (stream == NULL) {
++    GSList *i;
++
++    /* nice_agent_close_async() removes streams from the public list before
++     * sending TURN Refresh(lifetime=0). Keep their sockets readable until
++     * the replies arrive; otherwise every close waits for retransmission
++     * timeout even when the TURN server replies immediately. */
++    for (i = agent->pruning_streams; i; i = i->next) {
++      NiceStream *closing_stream = i->data;
++      if (closing_stream->id == component->stream_id) {
++        stream = closing_stream;
++        break;
++      }
++    }
++
++    if (stream != NULL) {
++      guint received;
++
++      /* Drain control replies independently of application receive callbacks.
++       * Bound the batch so late media cannot starve the cleanup sources. */
++      for (received = 0; received < 64; ++received) {
++        GInputVector buffer = {
++          component->recv_buffer, component->recv_buffer_size
++        };
++        NiceInputMessage message = { &buffer, 1, NULL, 0 };
++        RecvStatus status = agent_recv_message_unlocked (agent, stream,
++            component, socket_source->socket, &message, NULL);
++
++        if (status == RECV_ERROR ||
++            g_source_is_destroyed (g_main_current_source ()))
++          goto out;
++        if (status == RECV_WOULD_BLOCK)
++          break;
++      }
++
++      agent_unlock_and_emit (agent);
++      g_object_unref (agent);
++      return G_SOURCE_CONTINUE;
++    }
++  }
+ 
+   if (stream == NULL) {
+     nice_debug ("%s: stream %d destroyed", G_STRFUNC, component->stream_id);
+--- a/agent/conncheck.c
++++ b/agent/conncheck.c
+@@ -4308,6 +4308,15 @@
+   return trans_found;
+ }
+ 
++/* A final TURN reply can release the stream and its SocketSource. Defer
++ * that release until the receive callback has finished using its buffers. */
++static gboolean
++priv_free_relay_refresh (NiceAgent *agent, gpointer data)
++{
++  refresh_free (agent, data);
++  return G_SOURCE_REMOVE;
++}
++
+ static gboolean priv_map_reply_to_relay_remove (NiceAgent *agent,
+     StunMessage *resp)
+ {
+@@ -4336,7 +4345,12 @@
+           "with lifetime %u.", agent, cand, res, lifetime);
+ 
+       if (res != STUN_USAGE_TURN_RETURN_INVALID) {
+-        refresh_free (agent, cand);
++        if (cand->tick_source) {
++          g_source_destroy (cand->tick_source);
++          g_clear_pointer (&cand->tick_source, g_source_unref);
++        }
++        agent_timeout_add_with_context (agent, &cand->tick_source,
++            "TURN deallocate completed", 0, priv_free_relay_refresh, cand);
+         return TRUE;
+       }
+     }
+@@ -4616,6 +4630,17 @@
+ 
+   g_free (validater_data.password);
+ 
++  /* A removed stream must not restart connectivity checks or deliver media.
++   * Only authenticated/matched responses to pending TURN deletes matter. */
++  if (g_slist_find (agent->pruning_streams, stream) != NULL) {
++    if (valid == STUN_VALIDATION_SUCCESS &&
++        stun_message_get_method (&req) == STUN_REFRESH &&
++        (stun_message_get_class (&req) == STUN_RESPONSE ||
++         stun_message_get_class (&req) == STUN_ERROR))
++      priv_map_reply_to_relay_remove (agent, &req);
++    return TRUE;
++  }
++
+   if (valid == STUN_VALIDATION_NOT_STUN ||
+       valid == STUN_VALIDATION_INCOMPLETE_STUN ||
+       valid == STUN_VALIDATION_BAD_REQUEST)

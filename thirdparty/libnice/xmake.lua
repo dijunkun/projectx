@@ -8,6 +8,9 @@ package("libnice")
     add_versions("0.1.24", "1da5ac13ed5d4e175e0d2d46ad3748c6635244f8f3eb2b8e31578ef59aa2ddce")
     add_patches("0.1.24", path.join(os.scriptdir(), "patches", "relay_upgrade_0.1.24.patch"),
         "81c7acc267a044fd6d0053f0c4d0bbdc414d1032b0e51e072a7e93e8bf85bc7a")
+    add_patches("0.1.24", path.join(os.scriptdir(), "patches", "turn_close_receive_0.1.24.patch"),
+        "87e061a6d41c322827bbe7138707df546cd70b9c228d689d0edf5462370df578")
+    add_configs("turn_close_receive", {description = "Receive TURN replies while closing streams", default = true, type = "boolean", readonly = true})
     -- Include the extension in the package identity to invalidate old binaries.
     add_configs("relay_upgrade", {description = "MiniRTC negotiated relay upgrade extension", default = true, type = "boolean", readonly = true})
 
