@@ -5,7 +5,7 @@
 
 #include "libyuv.h"
 #include "log.h"
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
 #include "native_nv12_frame.h"
 #endif
 
@@ -18,7 +18,7 @@ OpenH264Decoder::OpenH264Decoder(std::shared_ptr<SystemClock> clock,
                                  bool native_video_output)
     : clock_(std::move(clock)),
       native_video_output_(native_video_output) {
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__linux__)
   native_video_output_ = false;
 #endif
 }
@@ -111,10 +111,10 @@ int OpenH264Decoder::Init() {
                                       frame_width_, frame_height_);
   }
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
   if (native_video_output_) {
     native_frame_pool_ = NativeNv12FramePool::Create();
-    LOG_INFO("OpenH264 Windows pooled NV12 output enabled");
+    LOG_INFO("OpenH264 pooled native NV12 output enabled");
   }
 #endif
 
@@ -169,7 +169,7 @@ int OpenH264Decoder::Decode(
       int stride_u = sDstBufInfo.UsrData.sSystemBuffer.iStride[1];
       int stride_v = stride_u;
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
       if (native_video_output_) {
         auto* native_frame = native_frame_pool_
                                  ? native_frame_pool_->Acquire(frame_width_,

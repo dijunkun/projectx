@@ -26,6 +26,9 @@ class CudaInitializer {
  public:
   static bool Init() {
     static bool initialized = []() {
+      if (LoadNvCodecDll() != 0) {
+        return false;
+      }
       CUresult res = cuInit_ld(0);
       if (res != CUDA_SUCCESS) {
         return false;

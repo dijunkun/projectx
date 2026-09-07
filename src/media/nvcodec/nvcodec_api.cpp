@@ -179,7 +179,7 @@ int LoadNvCodecDll() {
   }
 
   if (LoadLibraryHelper(reinterpret_cast<void**>(&nvcuda_dll), "nvcuda.dll",
-                        "libcuda.so") != 0) {
+                        "libcuda.so.1") != 0) {
     CleanupFailedNvCodecLoad();
     return -1;
   }
@@ -224,7 +224,7 @@ int LoadNvCodecDll() {
   }
 
   if (LoadLibraryHelper(reinterpret_cast<void**>(&nvcuvid_dll), "nvcuvid.dll",
-                        "libnvcuvid.so") != 0) {
+                        "libnvcuvid.so.1") != 0) {
     CleanupFailedNvCodecLoad();
     return -1;
   }
@@ -260,7 +260,7 @@ int LoadNvCodecDll() {
   }
 
   if (LoadLibraryHelper(reinterpret_cast<void**>(&nvencodeapi_dll),
-                        "nvEncodeAPI64.dll", "libnvidia-encode.so") != 0) {
+                        "nvEncodeAPI64.dll", "libnvidia-encode.so.1") != 0) {
     CleanupFailedNvCodecLoad();
     return -1;
   }

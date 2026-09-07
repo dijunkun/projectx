@@ -20,7 +20,7 @@
 
 namespace minirtc {
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
 class NativeNv12FramePool;
 #endif
 
@@ -42,7 +42,7 @@ class OpenH264Decoder : public MediaCodec {
  private:
   std::shared_ptr<SystemClock> clock_ = nullptr;
   bool native_video_output_ = false;
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
   std::shared_ptr<NativeNv12FramePool> native_frame_pool_;
 #endif
   ISVCDecoder* openh264_decoder_ = nullptr;

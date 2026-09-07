@@ -8,13 +8,13 @@
 // #define SAVE_RECEIVED_AV1_STREAM
 
 #include "libyuv.h"
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
 #include "native_nv12_frame.h"
 #endif
 
 namespace minirtc {
 
-class ScopedDav1dPicture : public std::shared_ptr<ScopedDav1dPicture> {
+class ScopedDav1dPicture {
  public:
   ~ScopedDav1dPicture() { dav1d_picture_unref(&picture_); }
 
@@ -38,27 +38,11 @@ class ScopedDav1dData {
 void NullFreeCallback([[maybe_unused]] const uint8_t *buffer,
                       [[maybe_unused]] void *opaque) {}
 
-void Yuv420pToNv12(unsigned char *SrcY, unsigned char *SrcU,
-                   unsigned char *SrcV, int y_stride, int uv_stride,
-                   unsigned char *Dst, int Width, int Height) {
-  for (int i = 0; i < Height; i++) {
-    memcpy(Dst + i * Width, SrcY + i * y_stride, Width);
-  }
-
-  unsigned char *DstUV = Dst + Width * Height;
-  for (int i = 0; i < Height / 2; i++) {
-    for (int j = 0; j < Width / 2; j++) {
-      DstUV[i * Width + 2 * j] = SrcU[i * uv_stride + j];
-      DstUV[i * Width + 2 * j + 1] = SrcV[i * uv_stride + j];
-    }
-  }
-}
-
 Dav1dAv1Decoder::Dav1dAv1Decoder(std::shared_ptr<SystemClock> clock,
                                  bool native_video_output)
     : clock_(std::move(clock)),
       native_video_output_(native_video_output) {
-#if !defined(_WIN32)
+#if !defined(_WIN32) && !defined(__linux__)
   native_video_output_ = false;
 #endif
 }
@@ -111,10 +95,10 @@ int Dav1dAv1Decoder::Init() {
     return -1;
   }
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
   if (native_video_output_) {
     native_frame_pool_ = NativeNv12FramePool::Create();
-    LOG_INFO("dav1d Windows pooled NV12 output enabled");
+    LOG_INFO("dav1d pooled native NV12 output enabled");
   }
 #endif
 
@@ -175,9 +159,8 @@ int Dav1dAv1Decoder::Decode(
     }
   }
 
-  std::shared_ptr<ScopedDav1dPicture> scoped_dav1d_picture(
-      new ScopedDav1dPicture{});
-  Dav1dPicture &dav1d_picture = scoped_dav1d_picture->Picture();
+  ScopedDav1dPicture scoped_dav1d_picture;
+  Dav1dPicture &dav1d_picture = scoped_dav1d_picture.Picture();
   if (int get_picture_res = dav1d_get_picture(context_, &dav1d_picture)) {
     // On EAGAIN, it means dav1d has not enough data to decode
     // therefore this is not a decoding error but just means
@@ -200,7 +183,7 @@ int Dav1dAv1Decoder::Decode(
   frame_height_ = dav1d_picture.p.h;
   nv12_frame_size_ = dav1d_picture.p.w * dav1d_picture.p.h * 3 / 2;
 
-#if defined(_WIN32)
+#if defined(_WIN32) || defined(__linux__)
   if (native_video_output_) {
     auto* native_frame = native_frame_pool_
                              ? native_frame_pool_->Acquire(frame_width_,
@@ -260,21 +243,12 @@ int Dav1dAv1Decoder::Decode(
     nv12_frame_ = new unsigned char[nv12_frame_capacity_];
   }
 
-  if (0) {
-    Yuv420pToNv12((unsigned char *)dav1d_picture.data[0],
-                  (unsigned char *)dav1d_picture.data[1],
-                  (unsigned char *)dav1d_picture.data[2],
-                  (int)dav1d_picture.stride[0], (int)dav1d_picture.stride[1],
-                  nv12_frame_, frame_width_, frame_height_);
-  } else {
-    libyuv::I420ToNV12(
-        (const uint8_t *)dav1d_picture.data[0], (int)dav1d_picture.stride[0],
-        (const uint8_t *)dav1d_picture.data[1], (int)dav1d_picture.stride[1],
-        (const uint8_t *)dav1d_picture.data[2], (int)dav1d_picture.stride[1],
-        (uint8_t *)nv12_frame_, frame_width_,
-        (uint8_t *)nv12_frame_ + frame_width_ * frame_height_, frame_width_,
-        frame_width_, frame_height_);
-  }
+  libyuv::I420ToNV12(
+      (const uint8_t *)dav1d_picture.data[0], (int)dav1d_picture.stride[0],
+      (const uint8_t *)dav1d_picture.data[1], (int)dav1d_picture.stride[1],
+      (const uint8_t *)dav1d_picture.data[2], (int)dav1d_picture.stride[1],
+      nv12_frame_, frame_width_, nv12_frame_ + frame_width_ * frame_height_,
+      frame_width_, frame_width_, frame_height_);
 
   if (!decoded_frame_) {
     decoded_frame_ = new DecodedFrame(frame_width_ * frame_height_ * 3 / 2,

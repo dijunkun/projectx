@@ -193,7 +193,7 @@ int NvidiaVideoDecoder::Init() {
                                       frame_width_, frame_height_);
   }
   if (native_video_output_) {
-    LOG_INFO("NVIDIA Windows native CUDA NV12 output enabled");
+    LOG_INFO("NVIDIA native CUDA NV12 output enabled");
   }
 
 #ifdef SAVE_DECODED_NV12_STREAM
