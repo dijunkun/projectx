@@ -191,6 +191,7 @@ class VideoToolboxDecoder::Impl {
   std::function<void(const DecodedFrame*)> on_receive_decoded_frame_;
   std::atomic<uint64_t> submitted_frame_count_{0};
   std::atomic<uint64_t> decoded_frame_count_{0};
+  std::atomic<bool> session_needs_recovery_{false};
 
   VTDecompressionSessionRef decompression_session_;
   CMVideoFormatDescriptionRef format_desc_;
@@ -311,13 +312,22 @@ int VideoToolboxDecoder::Impl::Decode(
     }
 
     if (sps != last_sps_ || pps != last_pps_) {
-      LOG_INFO("Creating new decompression session with SPS/PPS");
-      if (!CreateSession(sps, pps)) {
-        LOG_ERROR("Failed to create decompression session");
-        return -1;
-      }
-      last_sps_ = sps;
-      last_pps_ = pps;
+      last_sps_ = std::move(sps);
+      last_pps_ = std::move(pps);
+      session_needs_recovery_.store(true);
+    }
+  }
+
+  if (!decompression_session_ || session_needs_recovery_.load()) {
+    // A decoder invalidated by iOS backgrounding must be recreated even when
+    // the stream's SPS/PPS are unchanged. Resume at an IDR so references from
+    // the old session are never used by the replacement session. Returning an
+    // error while waiting also makes the receiver request a key frame.
+    if (!is_keyframe || last_sps_.empty() || last_pps_.empty()) return -1;
+    LOG_INFO("Creating/recovering VideoToolbox decompression session at IDR");
+    if (!CreateSession(last_sps_, last_pps_)) {
+      LOG_ERROR("Failed to create decompression session");
+      return -1;
     }
   }
 
@@ -381,6 +391,7 @@ int VideoToolboxDecoder::Impl::Decode(
                                              nullptr, nullptr);
   CFRelease(sample_buffer);
   if (status != noErr) {
+    session_needs_recovery_.store(true);
     LOG_ERROR("VTDecompressionSessionDecodeFrame failed, status: {}", status);
   } else {
     const uint64_t frame_count = ++submitted_frame_count_;
@@ -406,6 +417,9 @@ bool VideoToolboxDecoder::Impl::CreateSession(const std::vector<uint8_t>& sps,
     CFRelease(format_desc_);
     format_desc_ = nullptr;
   }
+  // WaitForAsynchronousFrames above can deliver errors from the old session.
+  // Clear them only after it has drained; callbacks never recreate a session.
+  session_needs_recovery_.store(false);
   const uint8_t* sets[] = {sps.data(), pps.data()};
   const size_t sizes[] = {sps.size(), pps.size()};
   size_t param_set_cnt = 2;  // at least 2 (SPS and PPS)
@@ -480,9 +494,12 @@ void VideoToolboxDecoder::Impl::DecodeCallback(void* decompression_output_ref_co
   }
 
   if (status != noErr) {
+    impl->session_needs_recovery_.store(true);
     LOG_ERROR("Decode callback received error status: {}", status);
     return;
   }
+
+  if (impl->session_needs_recovery_.load()) return;
 
   if (!image_buffer) {
     LOG_ERROR("Decode callback received null image buffer");
