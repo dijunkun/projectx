@@ -131,9 +131,6 @@ Params MakeParams(const char* login_identity,
   std::snprintf(params.signal_server_ip, sizeof(params.signal_server_ip),
                 "%s", "203.0.113.10");
   params.signal_server_port = 9099;
-  std::snprintf(params.stun_server_ip, sizeof(params.stun_server_ip),
-                "%s", "203.0.113.10");
-  params.stun_server_port = 3478;
   params.hardware_acceleration = true;
   params.native_video_output = false;
   params.av1_encoding = false;

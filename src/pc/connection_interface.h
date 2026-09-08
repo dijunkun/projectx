@@ -9,9 +9,11 @@
 
 #include <functional>
 #include <map>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include "ice_server_config.h"
 #include "minirtc.h"
 
 namespace minirtc {
@@ -23,12 +25,7 @@ struct MediaStreamIds {
 };
 
 struct ConnectionInfo {
-  std::string stun_server_ip;
-  int stun_server_port;
-  std::string turn_server_ip;
-  int turn_server_port;
-  std::string turn_server_username;
-  std::string turn_server_password;
+  std::optional<IceServerConfiguration> ice_config;
   std::string transmission_id;
   std::string user_id;
   std::string remote_user_id;
@@ -45,6 +42,10 @@ struct ConnectionInfo {
   int video_frame_rate;
   VideoDegradationPreference video_degradation_preference;
 };
+
+inline bool ConnectionIceConfigFresh(const ConnectionInfo& info) {
+  return info.ice_config && info.ice_config->Fresh();
+}
 
 struct ConnectionCallbacks {
   OnReceiveVideoFrame on_receive_video_frame;

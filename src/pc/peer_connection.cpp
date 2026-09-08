@@ -196,12 +196,6 @@ int PeerConnection::Init(PeerConnectionParams params) {
     INIReader reader(params.cfg_path);
     cfg_signal_server_ip_ = reader.Get("signal server", "ip", "-1");
     cfg_signal_server_port_ = reader.Get("signal server", "port", "-1");
-    cfg_stun_server_ip_ = reader.Get("stun server", "ip", "-1");
-    cfg_stun_server_port_ = reader.Get("stun server", "port", "-1");
-    cfg_turn_server_ip_ = reader.Get("turn server", "ip", "");
-    cfg_turn_server_port_ = reader.Get("turn server", "port", "-1");
-    cfg_turn_server_username_ = reader.Get("turn server", "username", "");
-    cfg_turn_server_password_ = reader.Get("turn server", "password", "");
     cfg_hardware_acceleration_ =
         reader.Get("hardware acceleration", "turn_on", "false");
     cfg_native_video_output_ =
@@ -217,11 +211,7 @@ int PeerConnection::Init(PeerConnectionParams params) {
     cfg_video_degradation_preference_ = reader.Get(
         "video degradation preference", "preference", "maintain_resolution");
 
-    std::regex regex("\n");
-
     signal_server_port_ = stoi(cfg_signal_server_port_);
-    stun_server_port_ = stoi(cfg_stun_server_port_);
-    turn_server_port_ = stoi(cfg_turn_server_port_);
 
     hardware_acceleration_ =
         cfg_hardware_acceleration_ == "true" ? true : false;
@@ -245,12 +235,6 @@ int PeerConnection::Init(PeerConnectionParams params) {
   } else {
     cfg_signal_server_ip_ = params.signal_server_ip;
     signal_server_port_ = params.signal_server_port;
-    cfg_stun_server_ip_ = params.stun_server_ip;
-    stun_server_port_ = params.stun_server_port;
-    cfg_turn_server_ip_ = params.turn_server_ip;
-    turn_server_port_ = params.turn_server_port;
-    cfg_turn_server_username_ = params.turn_server_username;
-    cfg_turn_server_password_ = params.turn_server_password;
     hardware_acceleration_ = params.hardware_acceleration;
     native_video_output_ = params.native_video_output;
     av1_encoding_ = params.av1_encoding;
@@ -269,16 +253,10 @@ int PeerConnection::Init(PeerConnectionParams params) {
         params.video_degradation_preference);
 
     cfg_signal_server_port_ = std::to_string(signal_server_port_);
-    cfg_stun_server_port_ = std::to_string(stun_server_port_);
-    cfg_turn_server_port_ = std::to_string(turn_server_port_);
   }
 
-  connection_info_.stun_server_ip = cfg_stun_server_ip_;
-  connection_info_.stun_server_port = stun_server_port_;
-  connection_info_.turn_server_ip = cfg_turn_server_ip_;
-  connection_info_.turn_server_port = turn_server_port_;
-  connection_info_.turn_server_username = cfg_turn_server_username_;
-  connection_info_.turn_server_password = cfg_turn_server_password_;
+  legacy_turn_config_.reset();
+  per_connection_ice_config_ = false;
   connection_info_.hardware_acceleration = hardware_acceleration_;
   connection_info_.native_video_output = native_video_output_;
   connection_info_.trickle_ice = trickle_ice_;
@@ -296,16 +274,6 @@ int PeerConnection::Init(PeerConnectionParams params) {
 
   LOG_INFO("Signal server ip [{}] port [{}]", cfg_signal_server_ip_,
            cfg_signal_server_port_);
-
-  LOG_INFO("Stun server ip [{}] port [{}]", cfg_stun_server_ip_,
-           cfg_stun_server_port_);
-
-  if (!cfg_turn_server_ip_.empty() && 0 != turn_server_port_ &&
-      !cfg_turn_server_username_.empty() &&
-      !cfg_turn_server_password_.empty()) {
-    LOG_INFO("Turn server ip [{}] port [{}] username [{}]",
-             cfg_turn_server_ip_, turn_server_port_, cfg_turn_server_username_);
-  }
 
   LOG_INFO("Hardware accelerated codec [{}]",
            hardware_acceleration_ ? "ON" : "OFF");
@@ -425,7 +393,11 @@ int PeerConnection::Login() {
 
   int ret = 0;
 
-  json message = {{"type", "login"}, {"user_id", user_id_with_pwd_}};
+  json message = {{"type", "login"},
+                  {"user_id", user_id_with_pwd_},
+                  {"ice_config_version", 1}};
+  legacy_turn_config_.reset();
+  per_connection_ice_config_ = false;
 
   if (ws_transport_) {
     ws_transport_->Send(message.dump());
@@ -566,7 +538,8 @@ bool PeerConnection::IsTerminalConnectionStatus(ConnectionStatus status) const {
 }
 
 std::shared_ptr<ConnectionInterface>
-PeerConnection::CreateManagedPeerConnection(const std::string& remote_user_id) {
+PeerConnection::CreateManagedPeerConnection(const std::string& remote_user_id,
+                                            const ConnectionInfo& info) {
   auto weak_connection = std::make_shared<std::weak_ptr<ConnectionInterface>>();
   ConnectionCallbacks callbacks = connection_callbacks_;
   callbacks.on_connection_status = [this, remote_user_id, weak_connection](
@@ -607,10 +580,10 @@ PeerConnection::CreateManagedPeerConnection(const std::string& remote_user_id) {
   std::shared_ptr<ConnectionInterface> connection;
   if (remote_user_id.find("web") == std::string::npos) {
     connection = std::make_shared<MiniRtcConnection>(
-        clock_, ws_transport_, connection_info_, media_stream_ids_, callbacks);
+        clock_, ws_transport_, info, media_stream_ids_, callbacks);
   } else {
     connection = std::make_shared<DataChannelConnection>(
-        clock_, ws_transport_, connection_info_, media_stream_ids_, callbacks);
+        clock_, ws_transport_, info, media_stream_ids_, callbacks);
   }
 
   *weak_connection = connection;
@@ -653,7 +626,8 @@ bool PeerConnection::IsCurrentPeerConnection(
 
 std::shared_ptr<ConnectionInterface>
 PeerConnection::ReplaceOrCreatePeerConnection(const std::string& remote_user_id,
-                                              const char* context) {
+                                              const char* context,
+                                              const ConnectionInfo& info) {
   std::shared_ptr<ConnectionInterface> replaced;
   std::shared_ptr<ConnectionInterface> connection;
   {
@@ -666,7 +640,7 @@ PeerConnection::ReplaceOrCreatePeerConnection(const std::string& remote_user_id,
                user_id_, remote_user_id, context);
     }
 
-    connection = CreateManagedPeerConnection(remote_user_id);
+    connection = CreateManagedPeerConnection(remote_user_id, info);
     peer_connection_map_.emplace(remote_user_id, connection);
   }
 
@@ -674,8 +648,14 @@ PeerConnection::ReplaceOrCreatePeerConnection(const std::string& remote_user_id,
     replaced->ReleaseAllIceTransmission();
   }
 
-  if (connection) {
-    connection->Init();
+  if (connection && connection->Init() != 0) {
+    if (RetirePeerConnection(remote_user_id, connection,
+                             ConnectionStatus::Failed) &&
+        on_connection_status_) {
+      on_connection_status_(ConnectionStatus::Failed, remote_user_id.data(),
+                            remote_user_id.size(), user_data_);
+    }
+    return nullptr;
   }
 
   return connection;
@@ -875,54 +855,103 @@ int64_t PeerConnection::GetSystemTimeMicros() {
   return 0;
 }
 
-bool PeerConnection::ApplyTurnCredentials(const json& message) {
-  if (!message.contains("turn") || !message["turn"].is_object()) {
-    return false;
-  }
-
-  const json& turn = message["turn"];
+namespace {
+bool ParseLegacyTurnConfig(const json& message,
+                           IceServerConfiguration& config) {
+  if (!message.contains("turn") || !message["turn"].is_object()) return false;
+  const auto& turn = message["turn"];
   if (!turn.contains("host") || !turn["host"].is_string() ||
-      !turn.contains("port") ||
-      (!turn["port"].is_number_integer() &&
-       !turn["port"].is_number_unsigned()) ||
+      !turn.contains("port") || !turn["port"].is_number_integer() ||
       !turn.contains("username") || !turn["username"].is_string() ||
       !turn.contains("password") || !turn["password"].is_string() ||
-      !turn.contains("expires_at") ||
-      (!turn["expires_at"].is_number_integer() &&
-       !turn["expires_at"].is_number_unsigned())) {
-    LOG_WARN("Ignore malformed dynamic TURN credentials");
+      !ReadIceExpiry(turn, config.expires_at))
+    return false;
+  if (turn["port"] < 1 || turn["port"] > 65535) return false;
+  const auto host = turn["host"].get<std::string>();
+  IceServerEndpoint server;
+  if (!ParseIceServerUrl(
+          "turn:" + StunEndpoint{host, turn["port"].get<uint16_t>()}.ToString(),
+          server))
+    return false;
+  server.username = turn["username"].get<std::string>();
+  server.password = turn["password"].get<std::string>();
+  server.expires_at = config.expires_at;
+  if (server.username.empty() || server.username.size() > 512 ||
+      server.password.empty() || server.password.size() > 512 ||
+      server.username.find('\0') != std::string::npos ||
+      server.password.find('\0') != std::string::npos)
+    return false;
+  config.id = "legacy";
+  config.servers = {server};
+  server.tcp = true;
+  config.servers.push_back(server);
+  // Legacy signaling supplies the Coturn endpoint used for STUN as well.
+  IceServerEndpoint stun;
+  stun.host = server.host;
+  stun.port = server.port;
+  config.servers.push_back(std::move(stun));
+  return config.Fresh();
+}
+}  // namespace
+
+bool PeerConnection::ApplyTurnCredentials(const json& message) {
+  // Login/standalone updates are only a compatibility cache for old servers.
+  // New servers must supply a fresh snapshot on each join/offer.
+  if (per_connection_ice_config_) return false;
+  IceServerConfiguration config;
+  if (!ParseLegacyTurnConfig(message, config)) return false;
+  legacy_turn_config_ = std::move(config);
+  LOG_INFO("Received legacy TURN credentials, expires at [{}]",
+           legacy_turn_config_->expires_at);
+  return true;
+}
+
+bool PeerConnection::BuildConnectionInfo(const json& message,
+                                         const std::string& transmission_id,
+                                         const std::string& remote_user_id,
+                                         ConnectionInfo& info) {
+  info = connection_info_;
+  info.transmission_id = transmission_id;
+  info.user_id = user_id_;
+  info.remote_user_id = remote_user_id;
+  const bool modern = message.contains("ice");
+  IceServerConfiguration config;
+  if (modern) {
+    if (!ParseIceServerConfiguration(message["ice"], config)) {
+      LOG_WARN("Reject invalid or expired per-connection ICE configuration");
+      return false;
+    }
+  } else if (per_connection_ice_config_) {
+    LOG_WARN(
+        "Signaling server omitted negotiated per-connection ICE configuration");
+    return false;
+  } else if (message.contains("turn")) {
+    if (!ParseLegacyTurnConfig(message, config)) {
+      LOG_WARN("Reject invalid or expired connection TURN credentials");
+      return false;
+    }
+  } else if (legacy_turn_config_ && legacy_turn_config_->Fresh()) {
+    config = *legacy_turn_config_;
+  } else {
+    LOG_WARN("No fresh ICE configuration was supplied by signaling");
     return false;
   }
-
-  const std::string host = turn["host"].get<std::string>();
-  const int64_t port = turn["port"].get<int64_t>();
-  const std::string username = turn["username"].get<std::string>();
-  const std::string password = turn["password"].get<std::string>();
-  const int64_t expires_at = turn["expires_at"].get<int64_t>();
-  const int64_t now = std::chrono::duration_cast<std::chrono::seconds>(
-                          std::chrono::system_clock::now().time_since_epoch())
-                          .count();
-
-  if (host.empty() || port < 1 || port > 65535 || username.empty() ||
-      password.empty() || expires_at <= now) {
-    LOG_WARN("Ignore invalid or expired dynamic TURN credentials");
+  if ((turn_mode_ == TurnMode::TurnForceUdp ||
+       turn_mode_ == TurnMode::TurnForceTcp) &&
+      std::none_of(config.servers.begin(), config.servers.end(),
+                   [&](const auto& server) {
+                     return IceTurnTransportAllowed(server, turn_mode_);
+                   })) {
+    LOG_WARN(
+        "Per-connection ICE configuration has no relay matching forced TURN "
+        "mode");
     return false;
   }
-
-  cfg_turn_server_ip_ = host;
-  turn_server_port_ = static_cast<int>(port);
-  cfg_turn_server_port_ = std::to_string(turn_server_port_);
-  cfg_turn_server_username_ = username;
-  cfg_turn_server_password_ = password;
-  turn_credential_expires_at_ = expires_at;
-
-  connection_info_.turn_server_ip = cfg_turn_server_ip_;
-  connection_info_.turn_server_port = turn_server_port_;
-  connection_info_.turn_server_username = cfg_turn_server_username_;
-  connection_info_.turn_server_password = cfg_turn_server_password_;
-
-  LOG_INFO("Updated dynamic TURN credentials for [{}:{}], expires at [{}]",
-           cfg_turn_server_ip_, turn_server_port_, turn_credential_expires_at_);
+  LOG_INFO(
+      "Using per-connection ICE configuration [{}], endpoints [{}], expires "
+      "[{}]",
+      config.id, config.servers.size(), config.expires_at);
+  info.ice_config = std::move(config);
   return true;
 }
 
@@ -934,6 +963,8 @@ void PeerConnection::ProcessSignal(const std::string& signal) {
   switch (HASH_STRING_PIECE(type.c_str())) {
     case "login"_H: {
       if (j["status"].get<std::string>() == "success") {
+        per_connection_ice_config_ =
+            j.contains("ice_config_version") && j["ice_config_version"] == 1;
         ApplyTurnCredentials(j);
         std::string user_id_with_pwd = j["user_id"].get<std::string>();
         std::string password;
@@ -1014,7 +1045,6 @@ void PeerConnection::ProcessSignal(const std::string& signal) {
                                 user_data_);
         }
       } else {
-        ApplyTurnCredentials(j);
         std::string remote_user_id = j["user_id"].get<std::string>();
 
         if (remote_user_id.empty()) {
@@ -1027,11 +1057,13 @@ void PeerConnection::ProcessSignal(const std::string& signal) {
           break;
         }
 
-        connection_info_.transmission_id = transmission_id;
-        connection_info_.user_id = user_id_;
-        connection_info_.remote_user_id = remote_user_id;
-
-        ReplaceOrCreatePeerConnection(remote_user_id, "join");
+        ConnectionInfo info;
+        if (!BuildConnectionInfo(j, transmission_id, remote_user_id, info)) {
+          on_connection_status_(ConnectionStatus::Failed, remote_user_id.data(),
+                                remote_user_id.size(), user_data_);
+          break;
+        }
+        if (!ReplaceOrCreatePeerConnection(remote_user_id, "join", info)) break;
 
         IceWorkMsg msg;
         msg.type = IceWorkMsg::Type::UserJoinTransmission;
@@ -1057,7 +1089,6 @@ void PeerConnection::ProcessSignal(const std::string& signal) {
       remote_user_id_ = remote_user_id;
 
       if (j.contains("sdp")) {
-        ApplyTurnCredentials(j);
         std::string remote_sdp = j["sdp"].get<std::string>();
         LOG_INFO("[{}] receive offer from [{}]", user_id_, remote_user_id);
 
@@ -1066,11 +1097,14 @@ void PeerConnection::ProcessSignal(const std::string& signal) {
           break;
         }
 
-        connection_info_.transmission_id = transmission_id;
-        connection_info_.user_id = user_id_;
-        connection_info_.remote_user_id = remote_user_id;
-
-        ReplaceOrCreatePeerConnection(remote_user_id, "offer");
+        ConnectionInfo info;
+        if (!BuildConnectionInfo(j, transmission_id, remote_user_id, info)) {
+          on_connection_status_(ConnectionStatus::Failed, remote_user_id.data(),
+                                remote_user_id.size(), user_data_);
+          break;
+        }
+        if (!ReplaceOrCreatePeerConnection(remote_user_id, "offer", info))
+          break;
 
         IceWorkMsg msg;
         msg.type = IceWorkMsg::Type::Offer;

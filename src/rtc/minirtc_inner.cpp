@@ -43,12 +43,6 @@ PeerPtr* CreatePeer(const Params* params) {
   } else {
     peer_ptr->pc_params.signal_server_ip = params->signal_server_ip;
     peer_ptr->pc_params.signal_server_port = params->signal_server_port;
-    peer_ptr->pc_params.stun_server_ip = params->stun_server_ip;
-    peer_ptr->pc_params.stun_server_port = params->stun_server_port;
-    peer_ptr->pc_params.turn_server_ip = params->turn_server_ip;
-    peer_ptr->pc_params.turn_server_port = params->turn_server_port;
-    peer_ptr->pc_params.turn_server_username = params->turn_server_username;
-    peer_ptr->pc_params.turn_server_password = params->turn_server_password;
     peer_ptr->pc_params.hardware_acceleration = params->hardware_acceleration;
     peer_ptr->pc_params.native_video_output =
         params->native_video_output;

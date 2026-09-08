@@ -314,14 +314,12 @@ int IceTransport::SetLocalCapabilities(
   return 0;
 }
 
-int IceTransport::InitIceTransmission(std::string& stun_ip, int stun_port,
-                                      std::string& turn_ip, int turn_port,
-                                      std::string& turn_username,
-                                      std::string& turn_password) {
-  ice_agent_ = std::make_unique<IceAgent>(
-      offer_peer_, use_trickle_ice_, use_reliable_ice_, turn_mode_,
-      enable_srtp_, stun_ip, stun_port, turn_ip, turn_port, turn_username,
-      turn_password);
+int IceTransport::InitIceTransmission(
+    const IceServerConfiguration& ice_config) {
+  if (!ice_config.Fresh()) return -1;
+  ice_agent_ = std::make_unique<IceAgent>(offer_peer_, use_trickle_ice_,
+                                          use_reliable_ice_, turn_mode_,
+                                          enable_srtp_, ice_config);
 
   ice_io_statistics_ = std::make_unique<IOStatistics>(
       [this](const IOStatistics::NetTrafficStats& net_traffic_stats) {
@@ -867,6 +865,10 @@ int IceTransport::SetRemoteSdp(const std::string& remote_sdp) {
   if (SupportsRelayUpgrade(remote_sdp) &&
       !SupportsRelayUpgrade(media_stream_sdp)) {
     media_stream_sdp += "\r\n" + std::string(kRelayUpgradeAttribute) + "\r\n";
+  }
+  if (SupportsP2pEnhancement(remote_sdp) &&
+      !SupportsP2pEnhancement(media_stream_sdp)) {
+    media_stream_sdp += "\r\n" + std::string(kP2pEnhancementAttribute) + "\r\n";
   }
   if (ice_agent_->SetRemoteSdp(media_stream_sdp.c_str()) != 0) {
     return -1;

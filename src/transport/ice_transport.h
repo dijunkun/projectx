@@ -59,10 +59,7 @@ class IceTransport {
                            std::vector<int>& video_payload_types,
                            std::vector<int>& audio_payload_types);
 
-  int InitIceTransmission(std::string& stun_ip, int stun_port,
-                          std::string& turn_ip, int turn_port,
-                          std::string& turn_username,
-                          std::string& turn_password);
+  int InitIceTransmission(const IceServerConfiguration& ice_config);
 
   int DestroyIceTransmission();
 

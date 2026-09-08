@@ -53,12 +53,6 @@ typedef struct {
 
   const char* signal_server_ip;
   int signal_server_port;
-  const char* stun_server_ip;
-  int stun_server_port;
-  const char* turn_server_ip;
-  int turn_server_port;
-  const char* turn_server_username;
-  const char* turn_server_password;
   bool hardware_acceleration;
   bool native_video_output;
   bool av1_encoding;
@@ -141,9 +135,13 @@ class PeerConnection {
 
   void ProcessSignal(const std::string& signal);
   bool ApplyTurnCredentials(const nlohmann::json& message);
+  bool BuildConnectionInfo(const nlohmann::json& message,
+                           const std::string& transmission_id,
+                           const std::string& remote_user_id,
+                           ConnectionInfo& info);
   bool IsTerminalConnectionStatus(ConnectionStatus status) const;
   std::shared_ptr<ConnectionInterface> CreateManagedPeerConnection(
-      const std::string& remote_user_id);
+      const std::string& remote_user_id, const ConnectionInfo& info);
   bool RetirePeerConnection(
       const std::string& remote_user_id,
       const std::shared_ptr<ConnectionInterface>& connection,
@@ -152,7 +150,8 @@ class PeerConnection {
       const std::string& remote_user_id,
       const std::shared_ptr<ConnectionInterface>& connection);
   std::shared_ptr<ConnectionInterface> ReplaceOrCreatePeerConnection(
-      const std::string& remote_user_id, const char* context);
+      const std::string& remote_user_id, const char* context,
+      const ConnectionInfo& info);
   void ClearPeerConnections(const char* reason);
 
  private:
@@ -165,13 +164,8 @@ class PeerConnection {
   std::string uri_ = "";
   std::string cfg_signal_server_ip_;
   std::string cfg_signal_server_port_;
-  std::string cfg_stun_server_ip_;
-  std::string cfg_stun_server_port_;
-  std::string cfg_turn_server_ip_;
-  std::string cfg_turn_server_port_;
-  std::string cfg_turn_server_username_;
-  std::string cfg_turn_server_password_;
-  int64_t turn_credential_expires_at_ = 0;
+  std::optional<IceServerConfiguration> legacy_turn_config_;
+  bool per_connection_ice_config_ = false;
   std::string cfg_hardware_acceleration_;
   std::string cfg_native_video_output_;
   std::string cfg_av1_encoding_;
@@ -183,8 +177,6 @@ class PeerConnection {
   std::string cfg_video_frame_rate_;
   std::string cfg_video_degradation_preference_;
   int signal_server_port_ = 0;
-  int stun_server_port_ = 0;
-  int turn_server_port_ = 0;
   bool hardware_acceleration_ = false;
   bool native_video_output_ = false;
   bool av1_encoding_ = false;

@@ -1,0 +1,344 @@
+--- a/agent/agent-priv.h
++++ b/agent/agent-priv.h
+@@ -138,6 +138,8 @@
+   GMutex agent_mutex;             /* Mutex used for thread-safe lib */
+ 
+   gboolean full_mode;             /* property: full-mode */
++  gchar *stun_servers; /* optional bounded endpoint list */
++  guint stun_probe_sequence;
+   gchar *stun_server_ip;          /* property: STUN server IP */
+   guint stun_server_port;         /* property: STUN server port */
+   gchar *proxy_ip;                /* property: Proxy server IP */
+@@ -238,6 +240,10 @@
+   guint component_id,
+   NiceComponentState state);
+ 
++void agent_signal_stun_mapping (NiceAgent *agent, guint stream_id,
++    guint component_id, const NiceAddress *base, const NiceAddress *mapped,
++    const NiceAddress *server, guint sequence);
++
+ void agent_signal_new_candidate (
+   NiceAgent *agent,
+   NiceCandidate *candidate);
+--- a/agent/agent.c
++++ b/agent/agent.c
+@@ -104,6 +104,7 @@
+   PROP_MAIN_CONTEXT,
+   PROP_STUN_SERVER,
+   PROP_STUN_SERVER_PORT,
++  PROP_STUN_SERVERS,
+   PROP_CONTROLLING_MODE,
+   PROP_FULL_MODE,
+   PROP_STUN_PACING_TIMER,
+@@ -150,6 +151,7 @@
+   SIGNAL_NEW_CANDIDATE_FULL,
+   SIGNAL_NEW_REMOTE_CANDIDATE_FULL,
+ 
++  SIGNAL_STUN_MAPPING,
+   N_SIGNALS,
+ };
+ 
+@@ -509,6 +511,15 @@
+          "corresponding candidates pair gets selected.",
+          FALSE,
+          G_PARAM_READWRITE));
++
++  g_object_class_install_property (gobject_class, PROP_STUN_SERVERS,
++      g_param_spec_string ("stun-servers", "STUN servers",
++          "Up to eight comma-separated host[:port] endpoints; overrides stun-server",
++          NULL, G_PARAM_READWRITE));
++  signals[SIGNAL_STUN_MAPPING] = g_signal_new ("stun-mapping",
++      G_OBJECT_CLASS_TYPE (gobject_class), G_SIGNAL_RUN_LAST, 0,
++      NULL, NULL, NULL, G_TYPE_NONE, 4,
++      NICE_TYPE_CANDIDATE, G_TYPE_STRING, G_TYPE_UINT, G_TYPE_UINT);
+ 
+   /* MiniRTC extension. Enable only after both peers explicitly negotiate
+    * repeated regular nomination of higher-priority direct pairs. */
+@@ -1458,6 +1469,10 @@
+       g_value_set_uint (value, agent->compatibility);
+       break;
+ 
++    case PROP_STUN_SERVERS:
++      g_value_set_string (value, agent->stun_servers);
++      break;
++
+     case PROP_STUN_SERVER:
+       g_value_set_string (value, agent->stun_server_ip);
+       break;
+@@ -1702,6 +1717,11 @@
+       nice_agent_reset_all_stun_agents (agent, FALSE);
+       break;
+ 
++    case PROP_STUN_SERVERS:
++      g_free (agent->stun_servers);
++      agent->stun_servers = g_value_dup_string (value);
++      break;
++
+     case PROP_STUN_SERVER:
+       g_free (agent->stun_server_ip);
+       agent->stun_server_ip = g_value_dup_string (value);
+@@ -2492,8 +2512,8 @@
+     }
+   }
+ 
+-  if (agent->discovery_timer_source == NULL && !upnp_running &&
+-      !dns_resolution_ongoing)
++  if (agent->discovery_timer_source == NULL && !agent->stun_resolving_list &&
++      !upnp_running && !dns_resolution_ongoing)
+     agent_signal_gathering_done (agent);
+ }
+ 
+@@ -2651,6 +2671,25 @@
+       stream_id, component_id, lcandidate->foundation, rcandidate->foundation);
+ 
+   agent_signal_socket_writable (agent, component);
++}
++
++/* Emit every successful Binding sample before candidate deduplication.
++ * Signals are queued so callbacks run outside the agent lock. */
++void agent_signal_stun_mapping (NiceAgent *agent, guint stream_id,
++    guint component_id, const NiceAddress *base, const NiceAddress *mapped,
++    const NiceAddress *server, guint sequence)
++{
++  gchar server_ip[NICE_ADDRESS_STRING_LEN];
++  NiceCandidate *sample = nice_candidate_new (NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE);
++  sample->stream_id = stream_id;
++  sample->component_id = component_id;
++  sample->transport = NICE_CANDIDATE_TRANSPORT_UDP;
++  sample->base_addr = *base;
++  sample->addr = *mapped;
++  nice_address_to_string (server, server_ip);
++  agent_queue_signal (agent, signals[SIGNAL_STUN_MAPPING], sample, server_ip,
++      nice_address_get_port (server), sequence);
++  nice_candidate_free (sample);
+ }
+ 
+ void agent_signal_new_candidate (NiceAgent *agent, NiceCandidate *candidate)
+@@ -2775,8 +2814,14 @@
+ {
+   CandidateDiscovery *cdisco;
+ 
+-  /* note: no need to check for redundant candidates, as this is
+-   *       done later on in the process */
++  GSList *item;
++  /* DNS aliases must not duplicate the same probe on the same socket. */
++  for (item = agent->discovery_list; item; item = item->next) {
++    CandidateDiscovery *existing = item->data;
++    if (existing->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE &&
++        existing->nicesock == nicesock && nice_address_equal (&existing->server, &server))
++      return;
++  }
+ 
+   cdisco = g_slice_new0 (CandidateDiscovery);
+ 
+@@ -2802,6 +2847,8 @@
+ struct StunResolverData {
+   GWeakRef agent_ref;
+   guint stream_id;
++  gchar *hostname;
++  guint port;
+ };
+ 
+ static void
+@@ -2820,9 +2867,13 @@
+   g_weak_ref_clear (&data->agent_ref);
+ 
+   stream_id = data->stream_id;
+-  g_slice_free (struct StunResolverData, data);
+-  if (agent == NULL)
++  if (agent == NULL) {
++    addresses = g_resolver_lookup_by_name_finish (resolver, result, NULL);
++    g_list_free_full (addresses, g_object_unref);
++    g_free (data->hostname);
++    g_slice_free (struct StunResolverData, data);
+     return;
++  }
+ 
+   agent_lock (agent);
+   agent->stun_resolving_list = g_slist_remove_all (agent->stun_resolving_list,
+@@ -2841,8 +2892,12 @@
+ 
+ 
+   stream = agent_find_stream (agent, stream_id);
+-
+-  for (item = addresses; item; item = item->next) {
++  if (stream == NULL)
++    goto done;
++
++  /* Bound DNS fan-out as well as the configured endpoint count. */
++  guint address_count = 0;
++  for (item = addresses; item && address_count++ < 4; item = item->next) {
+     GInetAddress *addr = item->data;
+     guint cid;
+     NiceAddress stun_server;
+@@ -2852,7 +2907,7 @@
+       char *resolved_addr = g_inet_address_to_string (addr);
+ 
+       nice_debug ("Agent %p: s:%d: Resolved STUN server %s to %s",
+-          agent, stream_id, agent->stun_server_ip, resolved_addr);
++          agent, stream_id, data->hostname, resolved_addr);
+       g_free (resolved_addr);
+     }
+ 
+@@ -2867,7 +2922,7 @@
+       /* Ignore others */
+       continue;
+     }
+-    nice_address_set_port (&stun_server, agent->stun_server_port);
++    nice_address_set_port (&stun_server, data->port);
+ 
+     for (cid = 1; cid <= stream->n_components; cid++) {
+       NiceComponent *component = nice_stream_find_component_by_id (stream,
+@@ -2902,12 +2957,14 @@
+     }
+   }
+ 
++ done:
++  /* A failed final DNS lookup must not leave gathering unfinished. */
+   if (agent->discovery_unsched_items)
+     discovery_schedule (agent);
+   else
+     agent_gathering_done (agent);
+-
+- done:
++  g_free (data->hostname);
++  g_slice_free (struct StunResolverData, data);
+   agent_unlock_and_emit (agent);
+   g_list_free_full (addresses, g_object_unref);
+   g_object_unref (agent);
+@@ -3754,10 +3811,10 @@
+   struct StunResolverData *rd = data;
+ 
+   nice_debug("Agent:%p s:%d: Resolving STUN server %s",
+-      agent, rd->stream_id, agent->stun_server_ip);
++      agent, rd->stream_id, rd->hostname);
+ 
+   g_main_context_push_thread_default (agent->main_context);
+-  g_resolver_lookup_by_name_async (resolver, agent->stun_server_ip,
++  g_resolver_lookup_by_name_async (resolver, rd->hostname,
+       agent->stun_resolving_cancellable, stun_server_resolved_cb, rd);
+   g_main_context_pop_thread_default (agent->main_context);
+ 
+@@ -3832,21 +3889,37 @@
+         agent, NICE_CANDIDATE_MAX_LOCAL_ADDRESSES);
+   }
+ 
+-  if (agent->full_mode && agent->stun_server_ip && !agent->force_relay)
+-  {
+-    struct StunResolverData *rd = g_slice_new (struct StunResolverData);
+-    GSource *source = NULL;
+-
+-    g_weak_ref_init (&rd->agent_ref, agent);
+-    rd->stream_id = stream_id;
+-
+-    nice_debug("Agent:%p s:%d: Resolving STUN server %s",
+-        agent, stream_id, agent->stun_server_ip);
+-    agent_timeout_add_with_context (agent, &source, "STUN resolution", 0,
+-        resolve_stun_in_context, rd);
+-    g_source_unref (source);
+-    agent->stun_resolving_list = g_slist_prepend (agent->stun_resolving_list,
+-        rd);
++  if (agent->full_mode && !agent->force_relay &&
++      (agent->stun_servers || agent->stun_server_ip)) {
++    gchar **endpoints = g_strsplit_set (agent->stun_servers ?
++        agent->stun_servers : agent->stun_server_ip, ",;", 9);
++    guint endpoint_index;
++    for (endpoint_index = 0; endpoints[endpoint_index] && endpoint_index < 8;
++        endpoint_index++) {
++      GError *error = NULL;
++      GSocketConnectable *endpoint;
++      struct StunResolverData *rd;
++      GSource *source = NULL;
++      gchar *text = g_strstrip (endpoints[endpoint_index]);
++      if (!*text) continue;
++      endpoint = g_network_address_parse (text, agent->stun_server_port, &error);
++      if (!endpoint) {
++        nice_debug ("Invalid STUN endpoint: %s", error->message);
++        g_clear_error (&error);
++        continue;
++      }
++      rd = g_slice_new0 (struct StunResolverData);
++      g_weak_ref_init (&rd->agent_ref, agent);
++      rd->stream_id = stream_id;
++      rd->hostname = g_strdup (g_network_address_get_hostname (G_NETWORK_ADDRESS (endpoint)));
++      rd->port = g_network_address_get_port (G_NETWORK_ADDRESS (endpoint));
++      g_object_unref (endpoint);
++      agent->stun_resolving_list = g_slist_prepend (agent->stun_resolving_list, rd);
++      agent_timeout_add_with_context (agent, &source, "STUN resolution", 0,
++          resolve_stun_in_context, rd);
++      g_source_unref (source);
++    }
++    g_strfreev (endpoints);
+   }
+ 
+   for (cid = 1; cid <= stream->n_components; cid++) {
+@@ -6258,6 +6331,7 @@
+ 
+   g_free (agent->stun_server_ip);
+   agent->stun_server_ip = NULL;
++  g_clear_pointer (&agent->stun_servers, g_free);
+ 
+   g_free (agent->proxy_ip);
+   agent->proxy_ip = NULL;
+--- a/agent/discovery.h
++++ b/agent/discovery.h
+@@ -50,6 +50,7 @@
+   NiceCandidateType type;   /* candidate type STUN or TURN */
+   NiceSocket *nicesock;  /* XXX: should be taken from local cand: existing socket to use */
+   NiceAddress server;       /* STUN/TURN server address */
++  guint probe_sequence; /* first-send order, independent of response order */
+   gint64 next_tick;       /* next tick timestamp */
+   gboolean pending;         /* is discovery in progress? */
+   gboolean done;            /* is discovery complete? */
+--- a/agent/discovery.c
++++ b/agent/discovery.c
+@@ -475,6 +475,10 @@
+ 
+     if (c->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE &&
+         candidate->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE &&
++        /* Multi-STUN mappings on the same IP can have different ports.
++         * Keep them for signaling; exact address/base duplicates above still
++         * collapse stable mappings. Preserve legacy pruning otherwise. */
++        !(agent->stun_servers && candidate->transport == NICE_CANDIDATE_TRANSPORT_UDP) &&
+         c->transport == candidate->transport &&
+         nice_address_equal_no_port (&c->addr, &candidate->addr)) {
+       nice_debug ("Agent %p : s%d/c%d : srflx cand %p redundant, ignoring.",
+@@ -1293,6 +1297,7 @@
+               cand->type == NICE_CANDIDATE_TYPE_RELAYED)) {
+ 
+         if (cand->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE) {
++          cand->probe_sequence = ++agent->stun_probe_sequence;
+           buffer_len = stun_usage_bind_create (&cand->stun_agent,
+               &cand->stun_message, cand->stun_buffer, sizeof(cand->stun_buffer));
+         } else if (cand->type == NICE_CANDIDATE_TYPE_RELAYED) {
+--- a/agent/conncheck.c
++++ b/agent/conncheck.c
+@@ -3903,7 +3903,7 @@
+     CandidateDiscovery *d = i->data;
+ 
+     if (d->type == NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE &&
+-        d->stun_message.buffer) {
++        d->stun_message.buffer && nice_address_equal (&d->server, server_address)) {
+       stun_message_id (&d->stun_message, discovery_id);
+ 
+       if (memcmp (discovery_id, response_id, sizeof(StunTransactionId)) == 0) {
+@@ -3927,6 +3927,8 @@
+             NiceAddress niceaddr;
+ 
+             nice_address_set_from_sockaddr (&niceaddr, &sockaddr.addr);
++            agent_signal_stun_mapping (agent, d->stream_id, d->component_id,
++                &d->nicesock->addr, &niceaddr, server_address, d->probe_sequence);
+             discovery_add_server_reflexive_candidate (
+                 agent,
+                 d->stream_id,
+@@ -4704,7 +4706,9 @@
+     for (i = agent->discovery_list; i; i = i->next) {
+       CandidateDiscovery *d = i->data;
+       if (d->stream_id == stream->id && d->component_id == component->id &&
+-          d->nicesock == nicesock) {
++          d->nicesock == nicesock &&
++          (d->type != NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE ||
++           nice_address_equal (&d->server, from))) {
+         valid = stun_agent_validate (&d->stun_agent, &req,
+             (uint8_t *) buf, len, conncheck_stun_validater, &validater_data);
+ 

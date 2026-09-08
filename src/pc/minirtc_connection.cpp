@@ -186,6 +186,16 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
     LOG_WARN("Ignoring ICE message for another connection");
     return;
   }
+  if ((msg.type == IceWorkMsg::Type::UserJoinTransmission ||
+       msg.type == IceWorkMsg::Type::Offer ||
+       msg.type == IceWorkMsg::Type::RetryWithTurn) &&
+      !ConnectionIceConfigFresh(info_)) {
+    LOG_WARN(
+        "ICE credentials expired before connection creation; reconnect to "
+        "obtain new credentials");
+    on_ice_status_change_("failed", info_.remote_user_id);
+    return;
+  }
   switch (msg.type) {
     case IceWorkMsg::Type::Login: {
       break;
@@ -225,10 +235,7 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       ice_transport_->SetOnReceiveNetStatusReportFunc(
           callbacks_.on_net_status_report);
 
-      if (ice_transport_->InitIceTransmission(
-          info_.stun_server_ip, info_.stun_server_port, info_.turn_server_ip,
-          info_.turn_server_port, info_.turn_server_username,
-          info_.turn_server_password) != 0) {
+      if (ice_transport_->InitIceTransmission(*info_.ice_config) != 0) {
         is_ice_transport_ready_ = false;
         ice_transport_.reset();
         pending_ice_candidates_.clear();
@@ -292,10 +299,7 @@ void MiniRtcConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       ice_transport_->SetOnReceiveNetStatusReportFunc(
           callbacks_.on_net_status_report);
 
-      if (ice_transport_->InitIceTransmission(
-          info_.stun_server_ip, info_.stun_server_port, info_.turn_server_ip,
-          info_.turn_server_port, info_.turn_server_username,
-          info_.turn_server_password) != 0) {
+      if (ice_transport_->InitIceTransmission(*info_.ice_config) != 0) {
         is_ice_transport_ready_ = false;
         ice_transport_.reset();
         pending_ice_candidates_.clear();

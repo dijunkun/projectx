@@ -288,14 +288,16 @@ typedef void (*OnNetStatusReport)(const char* peer_id,
  * @brief Peer configuration. Start with Params{} and set required values.
  *
  * Zero initialization is not an application preset: it disables TURN/SRTP and
- * leaves endpoints unset. All character arrays must be NUL-terminated. CreatePeer
- * borrows pointers into these arrays; keep Params at a stable address, and keep
- * user_id alive, until Init has finished reading them. Callbacks and user_data
- * must remain valid until peer destruction completes.
+ * leaves endpoints unset. All character arrays must be NUL-terminated.
+ * CreatePeer borrows pointers into these arrays; keep Params at a stable
+ * address, and keep user_id alive, until Init has finished reading them.
+ * Callbacks and user_data must remain valid until peer destruction completes.
  *
- * With use_cfg_file=true, the INI supplies server and media settings instead of
- * their direct fields below; missing INI values do not fall back to those fields.
- * Callbacks, user_id, user_data, and log_path still come from this structure.
+ * ICE servers and temporary credentials come only from signaling.
+ * With use_cfg_file=true, the INI supplies signaling and media settings instead
+ * of their direct fields below; missing INI values do not fall back to those
+ * fields. Callbacks, user_id, user_data, and log_path still come from this
+ * structure.
  */
 typedef struct {
   bool use_cfg_file; ///< Select INI configuration instead of direct settings.
@@ -303,16 +305,7 @@ typedef struct {
 
   /// Signaling host only: no wss:// prefix, port, or path. WSS uses system trust.
   char signal_server_ip[256];
-  int signal_server_port; ///< WSS port; no automatic default in direct mode.
-  /// STUN host/IP, without a stun: prefix. Independent of the signaling host.
-  char stun_server_ip[256];
-  int stun_server_port; ///< STUN service port.
-  /// Optional static TURN host/IP, without a turn: prefix. Current CrossDesk
-  /// signaling can replace this endpoint and credentials with temporary values.
-  char turn_server_ip[256];
-  int turn_server_port; ///< Static TURN service port, when configured.
-  char turn_server_username[256]; ///< TURN username, not a server signing key.
-  char turn_server_password[256]; ///< TURN credential, not COTURN_AUTH_SECRET.
+  int signal_server_port;  ///< WSS port; no automatic default in direct mode.
   char log_path[256]; ///< Logger directory; an empty value uses "logs".
   /// Request available hardware H.264 codecs; build/device support still applies.
   bool hardware_acceleration;

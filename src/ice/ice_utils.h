@@ -7,6 +7,9 @@
 #ifndef _ICE_UTILS_H_
 #define _ICE_UTILS_H_
 
+#include <algorithm>
+#include <cctype>
+#include <cstdint>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -15,15 +18,26 @@
 namespace minirtc {
 
 inline constexpr char kRelayUpgradeAttribute[] = "a=x-minirtc-relay-upgrade:1";
+inline constexpr char kP2pEnhancementAttribute[] =
+    "a=x-minirtc-p2p-enhancement:1";
 
-inline bool SupportsRelayUpgrade(const std::string& sdp) {
+inline bool HasIceAttribute(const std::string& sdp,
+                            const std::string& attribute) {
   std::istringstream lines(sdp);
   std::string line;
   while (std::getline(lines, line)) {
     if (!line.empty() && line.back() == '\r') line.pop_back();
-    if (line == kRelayUpgradeAttribute) return true;
+    if (line == attribute) return true;
   }
   return false;
+}
+
+inline bool SupportsRelayUpgrade(const std::string& sdp) {
+  return HasIceAttribute(sdp, kRelayUpgradeAttribute);
+}
+
+inline bool SupportsP2pEnhancement(const std::string& sdp) {
+  return HasIceAttribute(sdp, kP2pEnhancementAttribute);
 }
 
 inline std::string TrimIceWhitespace(const std::string& value) {
@@ -45,19 +59,14 @@ inline std::string GetIceUsername(const std::string& sdp) {
   return {};
 }
 
-inline std::vector<std::string> ParseStunServers(const std::string& config) {
-  std::vector<std::string> servers;
-  std::string::size_type start = 0;
-  while (start < config.size()) {
-    const auto separator = config.find_first_of(",;", start);
-    const auto end = separator == std::string::npos ? config.size() : separator;
-    auto server = TrimIceWhitespace(config.substr(start, end - start));
-    if (!server.empty()) servers.emplace_back(server);
-    if (separator == std::string::npos) break;
-    start = separator + 1;
+struct StunEndpoint {
+  std::string host;
+  uint16_t port = 0;
+  std::string ToString() const {
+    return (host.find(':') == std::string::npos ? host : "[" + host + "]") +
+           ":" + std::to_string(port);
   }
-  return servers;
-}
+};
 
 struct IceCandidateSignal {
   std::string sdp;

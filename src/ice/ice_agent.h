@@ -23,7 +23,9 @@
 
 #include "gio/gnetworking.h"
 #include "glib.h"
+#include "ice_server_config.h"
 #include "minirtc.h"
+#include "nat_traversal.h"
 #include "nice/agent.h"
 
 namespace minirtc {
@@ -68,9 +70,7 @@ class IceAgent {
  public:
   IceAgent(bool offer_peer, bool use_trickle_ice, bool use_reliable_ice,
            TurnMode turn_mode, bool enable_srtp,
-           std::string& stun_ip, uint16_t stun_port, std::string& turn_ip,
-           uint16_t turn_port, std::string& turn_username,
-           std::string& turn_password);
+           const IceServerConfiguration& ice_config);
   ~IceAgent();
 
   int CreateIceAgent(nice_cb_state_changed_t on_state_changed,
@@ -110,12 +110,7 @@ class IceAgent {
   TurnMode turn_mode_ = TurnMode::TurnDisabled;
   bool enable_srtp_ = true;
 
-  std::string stun_ip_ = "";
-  uint16_t stun_port_ = 0;
-  std::string turn_ip_ = "";
-  uint16_t turn_port_ = 0;
-  std::string turn_username_ = "";
-  std::string turn_password_ = "";
+  IceServerConfiguration ice_config_;
 
   bool has_video_stream_ = true;
   uint32_t n_video_streams_ = 1;
@@ -165,6 +160,16 @@ class IceAgent {
   FILE* file_out_ = nullptr;
 
  private:
+  static void OnStunMappingStatic(NiceAgent* agent, NiceCandidate* sample,
+                                  const gchar* server_ip, guint server_port,
+                                  guint sequence, gpointer data);
+  void ProbePredictedRemoteCandidates();
+  std::atomic<bool> p2p_enhancement_enabled_{false};
+  std::mutex nat_mutex_;
+  std::map<std::string, std::vector<NatMappingSample>> nat_samples_;
+  std::mutex prediction_mutex_;
+  RemotePortPredictor port_predictor_;
+
   // dtls
   SSL_CTX* ssl_ctx_ = nullptr;
   SSL* ssl_ = nullptr;

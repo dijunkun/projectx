@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "common.h"
+#include "ice_server_resolver.h"
 #include "ice_utils.h"
 #include "log.h"
 #include "nlohmann/json.hpp"
@@ -58,29 +59,11 @@ DataChannelConnection::DataChannelConnection(
 DataChannelConnection::~DataChannelConnection() { ResetDataChannelTransport(); }
 
 int DataChannelConnection::Init() {
-  if (!info_.stun_server_ip.empty() && info_.stun_server_port > 0 &&
-      info_.stun_server_port <= 65535) {
-    for (const auto& server : ParseStunServers(info_.stun_server_ip)) {
-      peer_connection_config_.iceServers.emplace_back(
-          server, static_cast<uint16_t>(info_.stun_server_port));
-    }
-  }
-  if (info_.turn_mode != TurnMode::TurnDisabled &&
-      !info_.turn_server_ip.empty() && info_.turn_server_port > 0 &&
-      info_.turn_server_port <= 65535 &&
-      !info_.turn_server_username.empty() &&
-      !info_.turn_server_password.empty()) {
-    if (info_.turn_mode != TurnMode::TurnForceTcp) {
-      peer_connection_config_.iceServers.emplace_back(
-          info_.turn_server_ip, static_cast<uint16_t>(info_.turn_server_port),
-          info_.turn_server_username, info_.turn_server_password,
-          ::rtc::IceServer::RelayType::TurnUdp);
-    }
-    if (info_.turn_mode != TurnMode::TurnForceUdp) {
-      peer_connection_config_.iceServers.emplace_back(
-          info_.turn_server_ip, static_cast<uint16_t>(info_.turn_server_port),
-          info_.turn_server_username, info_.turn_server_password,
-          ::rtc::IceServer::RelayType::TurnTcp);
+  if (!ConnectionIceConfigFresh(info_)) return -1;
+  peer_connection_config_.iceServers.clear();
+  for (const auto& server : info_.ice_config->servers) {
+    if (!server.turn) {
+      peer_connection_config_.iceServers.emplace_back(server.host, server.port);
     }
   }
   if (info_.turn_mode == TurnMode::TurnForceUdp ||
@@ -172,6 +155,16 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
     LOG_WARN("Ignoring DataChannel ICE message for another connection");
     return;
   }
+  if ((msg.type == IceWorkMsg::Type::UserJoinTransmission ||
+       msg.type == IceWorkMsg::Type::Offer ||
+       msg.type == IceWorkMsg::Type::RetryWithTurn) &&
+      !ConnectionIceConfigFresh(info_)) {
+    LOG_WARN("ICE credentials expired before data connection creation");
+    callbacks_.on_connection_status(
+        ConnectionStatus::Failed, info_.remote_user_id.data(),
+        info_.remote_user_id.size(), callbacks_.user_data);
+    return;
+  }
   switch (msg.type) {
     case IceWorkMsg::Type::Login: {
       break;
@@ -212,6 +205,7 @@ void DataChannelConnection::ProcessIceWorkMsg(const IceWorkMsg& msg) {
       dc_transport_ = CreateDataChannelConnection(
           peer_connection_config_, clock_, make_weak_ptr(ws_), false,
           transmission_id, remote_user_id);
+      if (!dc_transport_) break;
 
       ::rtc::Description remote_sdp(msg.remote_sdp,
                                     ::rtc::Description::Type::Offer);
@@ -372,7 +366,25 @@ DataChannelConnection::CreateDataChannelConnection(
     std::string remote_user_id) {
   offer_peer_ = offer_peer;
   active_transmission_id_ = transmission_id;
-  auto peer_connection = std::make_shared<::rtc::PeerConnection>(config);
+  auto resolved_config = config;
+  const auto relays =
+      ResolveTurnServerEndpoints(*info_.ice_config, info_.turn_mode);
+  const bool forced = info_.turn_mode == TurnMode::TurnForceUdp ||
+                      info_.turn_mode == TurnMode::TurnForceTcp;
+  if (!ConnectionIceConfigFresh(info_) || (forced && relays.empty())) {
+    callbacks_.on_connection_status(
+        ConnectionStatus::Failed, remote_user_id.data(), remote_user_id.size(),
+        callbacks_.user_data);
+    return nullptr;
+  }
+  for (const auto& server : relays) {
+    resolved_config.iceServers.emplace_back(
+        server.host, server.port, server.username, server.password,
+        server.tcp ? ::rtc::IceServer::RelayType::TurnTcp
+                   : ::rtc::IceServer::RelayType::TurnUdp);
+  }
+  auto peer_connection =
+      std::make_shared<::rtc::PeerConnection>(resolved_config);
   auto dc_transport = std::make_shared<DataChannelTransport>(
       clock, peer_connection, info_.user_id, remote_user_id, offer_peer_);
   dc_transport->SetVideoConfig(

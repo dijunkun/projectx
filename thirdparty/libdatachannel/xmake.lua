@@ -16,6 +16,7 @@ package("libdatachannel")
     add_configs("gnutls", {description = "Use GnuTLS instead of OpenSSL", default = false, type = "boolean", readonly = true})
     add_configs("mbedtls", {description = "Use Mbed TLS instead of OpenSSL", default = false, type = "boolean"})
     add_configs("nice", {description = "Use libnice instead of libjuice", default = true, type = "boolean"})
+    add_configs("multi_stun", {description = "Use MiniRTC multi-endpoint STUN extension", default = true, type = "boolean", readonly = true})
     add_configs("websocket", {description = "Enable WebSocket support", default = false, type = "boolean"})
     add_configs("media", {description = "Enable media transport support", default = true, type = "boolean"})
     add_configs("capi_stdcall", {description = "Set calling convention of C API callbacks stdcall", default = false, type = "boolean"})
@@ -80,6 +81,28 @@ package("libdatachannel")
         -- Upstream explicitly disables UPnP even when libnice includes GUPnP.
         -- Match the native transport, while respecting relay-only privacy.
         if package:config("nice") then
+            io.replace("src/impl/icetransport.cpp",
+                "// Add one STUN server\n\tbool success = false;\n\tfor (auto &server : servers) {",
+                [[// Use every configured STUN endpoint on each libnice UDP socket.
+    const bool multiStun = g_object_class_find_property(
+        G_OBJECT_GET_CLASS(mNiceAgent.get()), "stun-servers") != nullptr;
+    if (multiStun) {
+        std::string endpoints;
+        unsigned count = 0;
+        for (const auto &server : config.iceServers) {
+            if (server.type != IceServer::Type::Stun || server.hostname.empty()) continue;
+            if (count++ == 8) break;
+            if (!endpoints.empty()) endpoints += ',';
+            const auto &host = server.hostname;
+            endpoints += (host.find(':') == std::string::npos ? host : "[" + host + "]");
+            endpoints += ":" + std::to_string(server.port ? server.port : 3478);
+        }
+        if (!endpoints.empty())
+            g_object_set(G_OBJECT(mNiceAgent.get()), "stun-servers", endpoints.c_str(), nullptr);
+    }
+    bool success = false;
+    for (auto &server : servers) {
+        if (multiStun) break;]], {plain = true})
             io.replace("src/impl/icetransport.cpp", '"upnp", FALSE, nullptr',
                 '"upnp", config.iceTransportPolicy == TransportPolicy::Relay ? FALSE : TRUE, nullptr',
                 {plain = true})

@@ -1,6 +1,5 @@
 #include "ice_agent.h"
 
-#include <gio/gio.h>
 #include <glib.h>
 
 #include <algorithm>
@@ -8,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "ice_server_resolver.h"
 #include "ice_utils.h"
 #include "log.h"
 
@@ -16,78 +16,6 @@
 namespace minirtc {
 
 namespace {
-
-// libnice probes every A/AAAA result returned for a STUN hostname, but its
-// public API accepts only one hostname per agent. Allow a comma/semicolon
-// separated pool and rotate the selected hostname across connection attempts.
-// This provides endpoint redundancy without changing the wire protocol.
-std::string SelectStunServer(const std::string& configured_servers) {
-  const auto servers = ParseStunServers(configured_servers);
-
-  if (servers.empty()) {
-    return "";
-  }
-
-  static std::atomic<size_t> next_server{0};
-  const size_t selected = next_server.fetch_add(1) % servers.size();
-  if (servers.size() > 1) {
-    LOG_INFO("Selected STUN endpoint [{}] from a pool of {}",
-             servers[selected], servers.size());
-  }
-  return servers[selected];
-}
-
-// libnice requires a numeric address in nice_agent_set_relay_info().  The
-// application configuration normally uses the same hostname for signaling,
-// STUN and TURN, so resolve it before registering relay servers.  Keep the
-// address list bounded so candidate gathering does not fan out indefinitely.
-std::vector<std::string> ResolveTurnServerAddresses(const std::string& server) {
-  constexpr size_t kMaxAddresses = 4;
-  std::vector<std::string> addresses;
-
-  if (server.empty()) {
-    return addresses;
-  }
-
-  GInetAddress* literal = g_inet_address_new_from_string(server.c_str());
-  if (literal != nullptr) {
-    addresses.push_back(server);
-    g_object_unref(literal);
-    return addresses;
-  }
-
-  GResolver* resolver = g_resolver_get_default();
-  GError* error = nullptr;
-  GList* resolved =
-      g_resolver_lookup_by_name(resolver, server.c_str(), nullptr, &error);
-
-  for (GList* item = resolved;
-       item != nullptr && addresses.size() < kMaxAddresses; item = item->next) {
-    auto* address = G_INET_ADDRESS(item->data);
-    gchar* numeric_address = g_inet_address_to_string(address);
-    if (numeric_address == nullptr) {
-      continue;
-    }
-
-    if (std::find(addresses.begin(), addresses.end(), numeric_address) ==
-        addresses.end()) {
-      addresses.emplace_back(numeric_address);
-    }
-    g_free(numeric_address);
-  }
-
-  if (resolved != nullptr) {
-    g_resolver_free_addresses(resolved);
-  }
-  g_object_unref(resolver);
-
-  if (error != nullptr) {
-    LOG_ERROR("Failed to resolve TURN server [{}]: {}", server, error->message);
-    g_error_free(error);
-  }
-
-  return addresses;
-}
 
 bool AddTurnRelay(NiceAgent* agent, guint stream_id, const std::string& address,
                   guint port, const std::string& username,
@@ -127,14 +55,6 @@ bool IsTurnForced(TurnMode mode) {
   return mode == TurnMode::TurnForceUdp || mode == TurnMode::TurnForceTcp;
 }
 
-bool UsesTurnUdp(TurnMode mode) {
-  return mode == TurnMode::TurnAutoUdpTcp || mode == TurnMode::TurnForceUdp;
-}
-
-bool UsesTurnTcp(TurnMode mode) {
-  return mode == TurnMode::TurnAutoUdpTcp || mode == TurnMode::TurnForceTcp;
-}
-
 }  // namespace
 
 auto log_openssl_errors = []() {
@@ -152,19 +72,13 @@ static int DtlsVerifyCallback(X509_STORE_CTX* ctx, void* arg) {
 }
 
 IceAgent::IceAgent(bool offer_peer, bool use_trickle_ice, bool use_reliable_ice,
-                   TurnMode turn_mode, bool enable_srtp, std::string& stun_ip,
-                   uint16_t stun_port, std::string& turn_ip, uint16_t turn_port,
-                   std::string& turn_username, std::string& turn_password)
-    : stun_ip_(SelectStunServer(stun_ip)),
-      use_trickle_ice_(use_trickle_ice),
+                   TurnMode turn_mode, bool enable_srtp,
+                   const IceServerConfiguration& ice_config)
+    : use_trickle_ice_(use_trickle_ice),
       use_reliable_ice_(use_reliable_ice),
       turn_mode_(turn_mode),
       enable_srtp_(enable_srtp),
-      stun_port_(stun_port),
-      turn_ip_(turn_ip),
-      turn_port_(turn_port),
-      turn_username_(turn_username),
-      turn_password_(turn_password),
+      ice_config_(ice_config),
       controlling_(offer_peer) {}
 
 IceAgent::~IceAgent() {
@@ -203,6 +117,7 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
                              nice_cb_recv_t on_recv,
                              nice_cb_dtls_done_t on_cb_dtls_done,
                              void* user_ptr) {
+  if (!ice_config_.Fresh()) return -1;
   if (nice_thread_.joinable() || nice_inited_) {
     LOG_ERROR("Nice agent has already been created");
     return -1;
@@ -219,6 +134,15 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
   init_failed_.store(false);
   agent_closed_.store(false);
   send_disabled_.store(false);
+  p2p_enhancement_enabled_.store(false);
+  {
+    std::lock_guard<std::mutex> lock(nat_mutex_);
+    nat_samples_.clear();
+  }
+  {
+    std::lock_guard<std::mutex> lock(prediction_mutex_);
+    port_predictor_ = RemotePortPredictor{};
+  }
   stream_id_ = 0;
   agent_.store(nullptr);
   gcontext_.store(nullptr);
@@ -312,11 +236,31 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
       LOG_WARN("libnice has no relay upgrade extension; rebuild dependencies");
     }
 
-    // An empty hostname starts a failing asynchronous DNS lookup, and port 0
-    // is outside libnice's property range. Leave STUN disabled in that case.
-    if (!stun_ip_.empty() && stun_port_ != 0) {
-      g_object_set(agent, "stun-server", stun_ip_.c_str(),
-                   "stun-server-port", static_cast<guint>(stun_port_), nullptr);
+    std::vector<StunEndpoint> stun_endpoints;
+    for (const auto& server : ice_config_.servers) {
+      if (!server.turn) stun_endpoints.push_back({server.host, server.port});
+    }
+    if (!stun_endpoints.empty() && !IsTurnForced(turn_mode_)) {
+      if (g_object_class_find_property(G_OBJECT_GET_CLASS(agent),
+                                       "stun-servers")) {
+        std::string endpoints;
+        for (const auto& endpoint : stun_endpoints) {
+          if (!endpoints.empty()) endpoints += ',';
+          endpoints += endpoint.ToString();
+        }
+        g_object_set(agent, "stun-servers", endpoints.c_str(), nullptr);
+        g_signal_connect(agent, "stun-mapping", G_CALLBACK(OnStunMappingStatic),
+                         this);
+        LOG_INFO("ICE same-socket STUN endpoints [{}]", endpoints);
+      } else {
+        const auto& endpoint = stun_endpoints.front();
+        g_object_set(agent, "stun-server", endpoint.host.c_str(),
+                     "stun-server-port", static_cast<guint>(endpoint.port),
+                     nullptr);
+        LOG_WARN(
+            "libnice lacks multi-STUN support; using first endpoint; rebuild "
+            "dependencies");
+      }
     }
     g_object_set(agent, "controlling-mode", controlling_, nullptr);
     // Enable port mapping unless the caller explicitly requires relay-only ICE.
@@ -356,29 +300,22 @@ int IceAgent::CreateIceAgent(nice_cb_state_changed_t on_state_changed,
     }
 
     if (IsTurnEnabled(turn_mode_)) {
-      const std::vector<std::string> relay_addresses =
-          ResolveTurnServerAddresses(turn_ip_);
       bool relay_registered = false;
-
-      for (const std::string& address : relay_addresses) {
-        if (UsesTurnUdp(turn_mode_)) {
-          relay_registered |= AddTurnRelay(
-              agent, stream_id_, address, turn_port_, turn_username_,
-              turn_password_, NICE_RELAY_TYPE_TURN_UDP);
-        }
-        if (UsesTurnTcp(turn_mode_)) {
-          relay_registered |= AddTurnRelay(
-              agent, stream_id_, address, turn_port_, turn_username_,
-              turn_password_, NICE_RELAY_TYPE_TURN_TCP);
-        }
+      for (const auto& server :
+           ResolveTurnServerEndpoints(ice_config_, turn_mode_)) {
+        const auto type =
+            server.tcp ? NICE_RELAY_TYPE_TURN_TCP : NICE_RELAY_TYPE_TURN_UDP;
+        relay_registered |=
+            AddTurnRelay(agent, stream_id_, server.host, server.port,
+                         server.username, server.password, type);
       }
 
-      if (!relay_registered) {
-        LOG_ERROR(
-            "TURN is enabled but no relay endpoint could be registered for "
-            "[{}:{}]",
-            turn_ip_, turn_port_);
-        if (IsTurnForced(turn_mode_)) {
+      if (!relay_registered || !ice_config_.Fresh()) {
+        LOG_WARN(
+            "No TURN endpoint could be registered from signaling configuration "
+            "[{}]",
+            ice_config_.id);
+        if (IsTurnForced(turn_mode_) || !ice_config_.Fresh()) {
           init_failed_.store(true);
           g_object_unref(agent);
           agent_.store(nullptr);
@@ -596,6 +533,10 @@ std::string IceAgent::GenerateLocalSdp() {
       g_object_class_find_property(G_OBJECT_GET_CLASS(agent_.load()),
                                    "relay-upgrade-timeout") != nullptr) {
     local_sdp_ += std::string(kRelayUpgradeAttribute) + "\r\n";
+    if (g_object_class_find_property(G_OBJECT_GET_CLASS(agent_.load()),
+                                     "stun-servers") != nullptr) {
+      local_sdp_ += std::string(kP2pEnhancementAttribute) + "\r\n";
+    }
   }
   return local_sdp_;
 }
@@ -652,6 +593,10 @@ int IceAgent::SetRemoteSdp(const std::string& remote_sdp) {
   const bool upgrade = has_upgrade_extension && !use_reliable_ice_ &&
                        SupportsRelayUpgrade(remote_sdp) &&
                        !IsTurnForced(turn_mode_);
+  p2p_enhancement_enabled_.store(
+      upgrade && SupportsP2pEnhancement(remote_sdp) &&
+      g_object_class_find_property(G_OBJECT_GET_CLASS(agent_.load()),
+                                   "stun-servers"));
   if (has_upgrade_extension) {
     g_object_set(agent_.load(), "relay-upgrade-timeout", upgrade ? 30000u : 0u,
                  nullptr);
@@ -661,6 +606,7 @@ int IceAgent::SetRemoteSdp(const std::string& remote_sdp) {
            use_reliable_ice_, upgrade ? 30000 : 0);
   int ret = nice_agent_parse_remote_sdp(agent_, sdp_no_fingerprint.c_str());
   if (ret >= 0) {
+    ProbePredictedRemoteCandidates();
     return 0;
   } else {
     LOG_ERROR("Failed to parse remote sdp: [{}]", sdp_no_fingerprint);
@@ -708,7 +654,122 @@ int IceAgent::AddRemoteCandidate(const std::string& candidate_sdp) {
     return -1;
   }
 
+  ProbePredictedRemoteCandidates();
   return 0;
+}
+
+void IceAgent::OnStunMappingStatic(NiceAgent*, NiceCandidate* sample,
+                                   const gchar* server_ip, guint server_port,
+                                   guint sequence, gpointer data) {
+  auto* self = static_cast<IceAgent*>(data);
+  if (!sample || !server_ip || self->destroyed_) return;
+  char base[NICE_ADDRESS_STRING_LEN] = {}, mapped[NICE_ADDRESS_STRING_LEN] = {};
+  nice_address_to_string(&sample->base_addr, base);
+  nice_address_to_string(&sample->addr, mapped);
+  const std::string key =
+      std::to_string(sample->stream_id) + "/" +
+      std::to_string(sample->component_id) + "/" + base + ":" +
+      std::to_string(nice_address_get_port(&sample->base_addr));
+  NatMappingAnalysis analysis;
+  {
+    std::lock_guard<std::mutex> lock(self->nat_mutex_);
+    if (!self->nat_samples_.count(key) && self->nat_samples_.size() >= 64)
+      return;
+    auto& samples = self->nat_samples_[key];
+    if (samples.size() >= 32) return;
+    samples.push_back(
+        {server_ip, static_cast<uint16_t>(server_port), mapped,
+         static_cast<uint16_t>(nice_address_get_port(&sample->addr)),
+         sequence});
+    analysis = AnalyzeNatMappings(samples);
+  }
+  LOG_INFO(
+      "ICE STUN sample base={} server={}:{} mapped={}:{} sequence={} "
+      "samples={} mapping={} port_pattern={} step={}",
+      key, server_ip, server_port, mapped, nice_address_get_port(&sample->addr),
+      sequence, analysis.samples, analysis.mapping, analysis.port_pattern,
+      analysis.port_step);
+}
+
+void IceAgent::ProbePredictedRemoteCandidates() {
+  NiceAgent* agent = agent_.load();
+  if (!agent || destroyed_ || !p2p_enhancement_enabled_) return;
+  NiceCandidate *selected_local = nullptr, *selected_remote = nullptr;
+  if (nice_agent_get_selected_pair(agent, stream_id_, NICE_COMPONENT_TYPE_RTP,
+                                   &selected_local, &selected_remote) &&
+      selected_local && selected_remote &&
+      selected_local->type != NICE_CANDIDATE_TYPE_RELAYED &&
+      selected_remote->type != NICE_CANDIDATE_TYPE_RELAYED)
+    return;
+
+  GSList* remote = nice_agent_get_remote_candidates(agent, stream_id_,
+                                                    NICE_COMPONENT_TYPE_RTP);
+  GSList* predicted = nullptr;
+  std::set<std::string> known_addresses;
+  for (GSList* item = remote; item; item = item->next) {
+    auto* c = static_cast<NiceCandidate*>(item->data);
+    if (c->transport != NICE_CANDIDATE_TRANSPORT_UDP) continue;
+    char ip[NICE_ADDRESS_STRING_LEN] = {};
+    nice_address_to_string(&c->addr, ip);
+    known_addresses.insert(std::string(ip) + ":" +
+                           std::to_string(nice_address_get_port(&c->addr)));
+  }
+  {
+    std::lock_guard<std::mutex> lock(prediction_mutex_);
+    for (GSList* item = remote; item; item = item->next) {
+      auto* candidate = static_cast<NiceCandidate*>(item->data);
+      if (candidate->type != NICE_CANDIDATE_TYPE_SERVER_REFLEXIVE ||
+          candidate->transport != NICE_CANDIDATE_TRANSPORT_UDP ||
+          strncmp(candidate->foundation, "px-", 3) == 0 ||
+          !nice_address_is_valid(&candidate->base_addr) ||
+          nice_address_get_port(&candidate->base_addr) == 0)
+        continue;
+      char ip[NICE_ADDRESS_STRING_LEN] = {}, base[NICE_ADDRESS_STRING_LEN] = {};
+      nice_address_to_string(&candidate->addr, ip);
+      if (!IsPublicIpv4ForPrediction(ip)) continue;
+      nice_address_to_string(&candidate->base_addr, base);
+      const std::string group =
+          std::string(ip) + "/" + base + ":" +
+          std::to_string(nice_address_get_port(&candidate->base_addr));
+      const auto ports = port_predictor_.Observe(
+          group, nice_address_get_port(&candidate->addr));
+      for (uint16_t port : ports) {
+        // set_remote_candidates updates existing candidates by address. A
+        // hypothesis must never overwrite a real candidate from another group.
+        if (!known_addresses
+                 .insert(std::string(ip) + ":" + std::to_string(port))
+                 .second)
+          continue;
+        NiceCandidate* hypothesis = nice_candidate_copy(candidate);
+        nice_address_set_port(&hypothesis->addr, port);
+        g_snprintf(hypothesis->foundation, sizeof(hypothesis->foundation),
+                   "px-%u", port);
+        // Preserve the normal preference for observed srflx and host
+        // candidates.
+        if (hypothesis->priority > 256) hypothesis->priority -= 256;
+        predicted = g_slist_prepend(predicted, hypothesis);
+      }
+      if (!ports.empty()) {
+        LOG_INFO("ICE bounded port prediction group={} new={} total={}/{}",
+                 group, ports.size(), port_predictor_.predictions(),
+                 RemotePortPredictor::kMaxPredictions);
+      }
+    }
+  }
+  g_slist_free_full(remote,
+                    reinterpret_cast<GDestroyNotify>(nice_candidate_free));
+  if (predicted) {
+    // Normal libnice checks provide pacing, credentials, peer-reflexive
+    // learning and nomination. Never send application traffic to an unvalidated
+    // guess.
+    const int added = nice_agent_set_remote_candidates(
+        agent, stream_id_, NICE_COMPONENT_TYPE_RTP, predicted);
+    LOG_INFO(
+        "ICE added {} predicted remote candidates for authenticated checks",
+        added);
+    g_slist_free_full(predicted,
+                      reinterpret_cast<GDestroyNotify>(nice_candidate_free));
+  }
 }
 
 int IceAgent::SetRemoteCandidateGatheringDone() {
