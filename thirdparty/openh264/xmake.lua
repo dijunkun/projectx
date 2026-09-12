@@ -59,6 +59,15 @@ package("openh264")
                     "add_project_arguments('-DHAVE_AVX2', '-DX86_ASM', language: 'c')",
                     "add_project_arguments('-DHAVE_AVX2', '-DX86_ASM', language: ['c', 'cpp'])",
                     {plain = true})
+                if package:is_plat("macosx") then
+                    -- Mach-O C symbols have a leading underscore. Match the
+                    -- upstream Darwin Makefile so SIMD calls resolve to the
+                    -- NASM objects when C++ dispatch is enabled.
+                    io.replace("meson.build",
+                        "    asm_format64 = 'macho64'",
+                        "    asm_format64 = 'macho64'\n    asm_args += ['-DPREFIX']",
+                        {plain = true})
+                end
             end
 
             local opt = {}
