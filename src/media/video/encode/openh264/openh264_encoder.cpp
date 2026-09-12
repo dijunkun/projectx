@@ -45,7 +45,7 @@ OpenH264Encoder::OpenH264Encoder(std::shared_ptr<SystemClock> clock)
 
 OpenH264Encoder::~OpenH264Encoder() {
   if (encoded_frame_) {
-    delete encoded_frame_;
+    delete[] encoded_frame_;
     encoded_frame_ = nullptr;
   }
 
@@ -279,7 +279,9 @@ int OpenH264Encoder::Encode(
   raw_frame_.iPicWidth = encoder_params_.iPicWidth;
   raw_frame_.iPicHeight = encoder_params_.iPicHeight;
   raw_frame_.iColorFormat = EVideoFormatType::videoFormatI420;
-  raw_frame_.uiTimeStamp = raw_frame.CapturedTimestamp();
+  // MiniRTC timestamps are microseconds; OpenH264 rate control expects ms.
+  // Keep the original timestamp on EncodedFrame for RTP and latency tracking.
+  raw_frame_.uiTimeStamp = raw_frame.CapturedTimestamp() / 1000;
 
   raw_frame_.iStride[0] = encoder_params_.iPicWidth;
   raw_frame_.iStride[1] = raw_frame_.iStride[2] =

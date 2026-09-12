@@ -766,10 +766,15 @@ int IceTransportController::SendVideo(const MiniRtcVideoFrame* video_frame,
     std::weak_ptr<IceTransportController> weak_self = shared_from_this();
     std::weak_ptr<StreamContext> weak_context = context;
     std::shared_ptr<TaskQueueLockFree> encode_queue = task_queue_encode_;
+
+    const int target_width = context->target_width.value_or(0);
+    const int target_height = context->target_height.value_or(0);
     auto post_encode = [weak_self, weak_context, encode_queue, channel_name,
-                        force_i_frame](RawFrame&& frame) mutable {
+                        force_i_frame, target_width,
+                        target_height](RawFrame&& frame) mutable {
       encode_queue->PostTask([weak_self, weak_context, encode_queue,
-                              channel_name, force_i_frame,
+                              channel_name, force_i_frame, target_width,
+                              target_height,
                               frame = std::move(frame)]() mutable {
         auto self = weak_self.lock();
         auto context = weak_context.lock();
@@ -780,14 +785,31 @@ int IceTransportController::SendVideo(const MiniRtcVideoFrame* video_frame,
         if (!context->codec) {
           return;
         }
+        const bool needs_scaling =
+            target_width > 0 && target_height > 0 &&
+            target_width < frame.Width() && target_height < frame.Height();
         if (const auto* native_frame = frame.NativeFrame();
             native_frame &&
-            !context->codec->SupportsNativeFrameInput(native_frame->type)) {
+            (needs_scaling ||
+             !context->codec->SupportsNativeFrameInput(native_frame->type))) {
           if (!frame.MaterializeNativeFrame()) {
             LOG_ERROR("Failed to materialize native video frame for stream [{}]",
                       channel_name);
             return;
           }
+        }
+        if (needs_scaling) {
+          RawFrame scaled_frame(static_cast<size_t>(target_width) *
+                                    target_height * 3 / 2);
+          scaled_frame.SetCapturedTimestamp(frame.CapturedTimestamp());
+          if (self->resolution_adapter_->ResolutionDowngrade(
+                  frame, target_width, target_height, scaled_frame) != 0) {
+            LOG_ERROR("Failed to scale video frame from [{}x{}] to [{}x{}]",
+                      frame.Width(), frame.Height(), target_width,
+                      target_height);
+            return;
+          }
+          frame = std::move(scaled_frame);
         }
         int64_t queue_delay_ms = encode_queue->CurrentTaskQueueDelayMs();
         if (force_i_frame) {
@@ -822,36 +844,7 @@ int IceTransportController::SendVideo(const MiniRtcVideoFrame* video_frame,
       });
     };
 
-    if (context->target_width.has_value() &&
-        context->target_height.has_value() &&
-        context->target_width.value() < raw_frame.Width() &&
-        context->target_height.value() < raw_frame.Height()) {
-      if (raw_frame.NativeFrame() && !raw_frame.MaterializeNativeFrame()) {
-        LOG_ERROR("Failed to materialize native frame before scaling [{}x{}]",
-                  raw_frame.Width(), raw_frame.Height());
-        return -1;
-      }
-      RawFrame scaled_frame(context->target_width.value() *
-                            context->target_height.value() * 3 / 2);
-
-      scaled_frame.SetWidth(context->target_width.value());
-      scaled_frame.SetHeight(context->target_height.value());
-      scaled_frame.SetCapturedTimestamp(raw_frame.CapturedTimestamp());
-
-      if (resolution_adapter_->ResolutionDowngrade(
-              raw_frame, context->target_width.value(),
-              context->target_height.value(), scaled_frame) != 0) {
-        LOG_ERROR("Failed to scale video frame from [{}x{}] to [{}x{}]",
-                  raw_frame.Width(), raw_frame.Height(),
-                  context->target_width.value(),
-                  context->target_height.value());
-        return -1;
-      }
-
-      post_encode(std::move(scaled_frame));
-    } else {
-      post_encode(std::move(raw_frame));
-    }
+    post_encode(std::move(raw_frame));
   }
 
   return 0;
@@ -1031,6 +1024,10 @@ void IceTransportController::MaybeDegradeResolutionOnEncodeTime(
       context->frame_admission_capture_samples,
       context->frame_admission_pacer_rejected_samples,
       context->frame_admission_encode_queue_dropped_samples);
+  const bool capture_limited = VideoAdaptationPolicy::IsCaptureLimited(
+      media_config_.max_frame_rate, context->frame_admission_metrics_ready,
+      context->measured_capture_input_frame_rate,
+      context->measured_encoded_frame_rate);
   const bool startup_critical_encode_backlog_candidate =
       queue_delay_ms >= kCriticalQueueDelayMs &&
       (!context->encoded_frame_rate_ready ||
@@ -1357,10 +1354,11 @@ void IceTransportController::MaybeDegradeResolutionOnEncodeTime(
   const bool should_downgrade = startup_critical_encode_backlog ||
                                 sustained_encode_backlog ||
                                 (maintain_frame_rate &&
-                                 (sustained_low_encoded_frame_rate ||
-                                  sustained_low_capture_frame_rate ||
-                                  sustained_high_pacer_rejection ||
-                                  sustained_high_encode_queue_drop));
+                                 VideoAdaptationPolicy::ShouldDowngradeForFrameHealth(
+                                     sustained_low_encoded_frame_rate,
+                                     capture_limited,
+                                     sustained_high_pacer_rejection,
+                                     sustained_high_encode_queue_drop));
 
   // Upgrade
   if (!should_downgrade) {

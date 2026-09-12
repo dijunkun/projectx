@@ -16,6 +16,14 @@ package("openh264")
 
     add_deps("meson~host", "ninja~host", "nasm~host", {host = true})
 
+    if is_plat("windows") then
+        -- Also gives fixed builds a distinct package cache key so existing
+        -- scalar-only prebuilt libraries are not silently reused.
+        add_configs("windows_x86_asm", {description = "Enable x86 SIMD dispatch on Windows", default = true, type = "boolean"})
+    elseif is_plat("linux", "macosx") and is_arch("x86", "x64", "i386", "x86_64") then
+        add_configs("unix_x86_asm", {description = "Enable C++ x86 SIMD dispatch on Linux and macOS", default = true, type = "boolean"})
+    end
+
     on_load("windows", function (package)
         if package:is_plat("windows") and package:is_arch("arm.*") and (not package:is_precompiled()) then
             package:add("deps", "strawberry-perl")
@@ -25,6 +33,33 @@ package("openh264")
     on_install("windows", "linux", "macosx", "iphoneos", function (package)
         if package:version():ge("2.4.1") then
             import("package.tools.meson")
+
+            if package:is_plat("windows") and package:is_arch("x86", "x64") and package:config("windows_x86_asm") then
+                -- OpenH264 2.6's Windows Meson branch assembles SIMD objects,
+                -- but omits the C/C++ dispatch defines. Without X86_ASM those
+                -- objects are never called and encoding uses scalar routines.
+                io.replace("meson.build",
+                    "asm_args += ['-DPREFIX', '-DX86_32']",
+                    [[asm_args += ['-DPREFIX', '-DX86_32', '-DHAVE_AVX2']
+    add_project_arguments('-DX86_ASM', '-DX86_32_ASM', '-DHAVE_AVX2', language: ['c', 'cpp'])]],
+                    {plain = true})
+                io.replace("meson.build",
+                    "asm_args += ['-DWIN64']",
+                    [[asm_args += ['-DWIN64', '-DHAVE_AVX2']
+    add_project_arguments('-DX86_ASM', '-DHAVE_AVX2', language: ['c', 'cpp'])]],
+                    {plain = true})
+            elseif package:is_plat("linux", "macosx") and package:config("unix_x86_asm") then
+                -- The Unix Meson branch defines X86_ASM for C only, while
+                -- CPU detection and SIMD dispatch are implemented in C++.
+                io.replace("meson.build",
+                    "add_project_arguments('-DHAVE_AVX2', '-DX86_ASM', '-DX86_32_ASM', language: 'c')",
+                    "add_project_arguments('-DHAVE_AVX2', '-DX86_ASM', '-DX86_32_ASM', language: ['c', 'cpp'])",
+                    {plain = true})
+                io.replace("meson.build",
+                    "add_project_arguments('-DHAVE_AVX2', '-DX86_ASM', language: 'c')",
+                    "add_project_arguments('-DHAVE_AVX2', '-DX86_ASM', language: ['c', 'cpp'])",
+                    {plain = true})
+            end
 
             local opt = {}
             opt.envs = meson.buildenvs(package)

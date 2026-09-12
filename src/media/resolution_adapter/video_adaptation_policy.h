@@ -96,6 +96,29 @@ public:
                kLowFrameRateRequiredWindows;
   }
 
+  static bool IsCaptureLimited(int configured_frame_rate,
+                               bool admission_metrics_ready,
+                               int capture_frame_rate,
+                               int encoded_frame_rate) {
+    // The independently sampled one-second windows can differ by 1-2 frames.
+    // If encoding keeps up with a slow source, reducing encoded dimensions
+    // cannot create the missing input frames.
+    constexpr int kFrameRateMeasurementTolerance = 2;
+    return admission_metrics_ready && capture_frame_rate > 0 &&
+           capture_frame_rate < MinimumFrameRate(configured_frame_rate) &&
+           encoded_frame_rate + kFrameRateMeasurementTolerance >=
+               capture_frame_rate;
+  }
+
+  static bool ShouldDowngradeForFrameHealth(
+      bool sustained_low_encoded_frame_rate, bool capture_limited,
+      bool sustained_pacer_rejection, bool sustained_encode_queue_drop) {
+    // Low capture FPS alone cannot be fixed by scaling after capture. Keep
+    // responding to real queue/network pressure even when the source is slow.
+    return (sustained_low_encoded_frame_rate && !capture_limited) ||
+           sustained_pacer_rejection || sustained_encode_queue_drop;
+  }
+
   static FrameHealthSignals EvaluateFrameHealth(
       int configured_frame_rate, bool encoded_frame_rate_persistently_low,
       bool admission_metrics_ready, int capture_frame_rate,

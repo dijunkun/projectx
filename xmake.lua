@@ -81,6 +81,13 @@ else
     add_packages("asio", "nlohmann_json", "spdlog", "libnice", "websocketpp", "libsrtp", "openfec", "libopus", "openh264", "dav1d", "libyuv", "aom", "svt-av1", "concurrentqueue")
 end
 
+if is_plat("windows") and is_arch("x64") then
+    -- MSVC x64 cannot compile libyuv's GNU-style inline assembly and silently
+    -- builds scalar conversion/scaling kernels. clang-cl keeps the MSVC ABI
+    -- while enabling the runtime-dispatched SSE/AVX kernels.
+    add_requireconfs("libyuv", {configs = {toolchains = "clang-cl"}})
+end
+
 add_requires("kcp 1.7")
 add_packages("kcp")
 add_requires("libdatachannel 0.24.5",
