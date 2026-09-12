@@ -8,6 +8,12 @@ option("USE_CUDA")
     set_description("Use CUDA for hardware codec acceleration")
 option_end()
 
+option("MINIRTC_ENABLE_AOM")
+    set_default(false)
+    set_showmenu(true)
+    set_description("Build the optional libaom codec backends (AV1 uses SVT-AV1 and dav1d by default)")
+option_end()
+
 option("CUDA_DIR")
     set_default("")
     set_showmenu(true)
@@ -69,16 +75,20 @@ if is_iphoneos then
         "concurrentqueue")
     add_requires("openh264 2.6.0", {system = false}, {configs = {shared = false}})
     add_requires("dav1d 1.4.3", {system = false}, {configs = {shared = false, tools = false}})
-    add_requires("aom 3.9.0", {system = false}, {configs = {shared = false}})
     add_requires("svt-av1 v3.0.2", {system = false}, {configs = {shared = false, tools = false}})
-    add_packages("openh264", "dav1d", "aom", "svt-av1")
+    add_packages("openh264", "dav1d", "svt-av1")
 else
-    add_requires("asio 1.32.0", "nlohmann_json 3.11.3", "spdlog 1.14.1", "websocketpp 0.8.2", "libsrtp v2.7.0", "openfec 1.4.2", "libopus 1.5.1", "openh264 2.6.0", "dav1d 1.4.3", "libyuv 2025.8.14", "aom 3.9.0", "svt-av1 v3.0.2", "concurrentqueue 1.0.4", {system = false}, {configs = {shared = false}})
+    add_requires("asio 1.32.0", "nlohmann_json 3.11.3", "spdlog 1.14.1", "websocketpp 0.8.2", "libsrtp v2.7.0", "openfec 1.4.2", "libopus 1.5.1", "openh264 2.6.0", "dav1d 1.4.3", "libyuv 2025.8.14", "svt-av1 v3.0.2", "concurrentqueue 1.0.4", {system = false}, {configs = {shared = false}})
     add_requires("libnice 0.1.24",
         {system = false, configs = libnice_configs})
     add_requireconfs("**.libnice", {version = "0.1.24", override = true,
         configs = libnice_configs})
-    add_packages("asio", "nlohmann_json", "spdlog", "libnice", "websocketpp", "libsrtp", "openfec", "libopus", "openh264", "dav1d", "libyuv", "aom", "svt-av1", "concurrentqueue")
+    add_packages("asio", "nlohmann_json", "spdlog", "libnice", "websocketpp", "libsrtp", "openfec", "libopus", "openh264", "dav1d", "libyuv", "svt-av1", "concurrentqueue")
+end
+
+if is_config("MINIRTC_ENABLE_AOM", true) then
+    add_requires("aom 3.9.0", {system = false, configs = {shared = false}})
+    add_packages("aom")
 end
 
 if is_plat("windows") and is_arch("x64") then
@@ -233,19 +243,15 @@ target("media")
         "src/media/video/decode/wmf/*.cpp",
         "src/media/video/encode/openh264/*.cpp",
         "src/media/video/decode/openh264/*.cpp",
-        "src/media/video/encode/aom/*.cpp",
         "src/media/video/encode/avt/*.cpp",
-        "src/media/video/decode/dav1d/*.cpp",
-        "src/media/video/decode/aom/*.cpp")
+        "src/media/video/decode/dav1d/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/decode/wmf",
         "src/media/video/encode/openh264",
         "src/media/video/decode/openh264",
-        "src/media/video/encode/aom",
         "src/media/video/encode/avt",
-        "src/media/video/decode/dav1d",
-        "src/media/video/decode/aom", {public = true})
+        "src/media/video/decode/dav1d", {public = true})
         if is_config("USE_CUDA", true) then
             add_files("src/media/video/encode/nvcodec/*.cpp",
             "src/media/video/decode/nvcodec/*.cpp",
@@ -261,18 +267,14 @@ target("media")
         "src/media/video/decode/*.cpp",
         "src/media/video/encode/openh264/*.cpp",
         "src/media/video/decode/openh264/*.cpp",
-        "src/media/video/encode/aom/*.cpp",
         "src/media/video/encode/avt/*.cpp",
-        "src/media/video/decode/dav1d/*.cpp",
-        "src/media/video/decode/aom/*.cpp")
+        "src/media/video/decode/dav1d/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/encode/openh264",
         "src/media/video/decode/openh264",
-        "src/media/video/encode/aom",
         "src/media/video/encode/avt",
-        "src/media/video/decode/dav1d",
-        "src/media/video/decode/aom", {public = true})
+        "src/media/video/decode/dav1d", {public = true})
         if is_arch("x86_64") and is_config("USE_CUDA", true) then
             add_files("src/media/video/encode/nvcodec/*.cpp",
             "src/media/video/decode/nvcodec/*.cpp",
@@ -291,20 +293,16 @@ target("media")
         "src/media/video/decode/openh264/*.cpp",
         "src/media/video/encode/video_toolbox/*.mm",
         "src/media/video/decode/video_toolbox/*.mm",
-        "src/media/video/encode/aom/*.cpp",
         "src/media/video/encode/avt/*.cpp",
-        "src/media/video/decode/dav1d/*.cpp",
-        "src/media/video/decode/aom/*.cpp")
+        "src/media/video/decode/dav1d/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/encode/openh264",
         "src/media/video/decode/openh264",
         "src/media/video/encode/video_toolbox",
         "src/media/video/decode/video_toolbox",
-        "src/media/video/encode/aom",
         "src/media/video/encode/avt",
-        "src/media/video/decode/dav1d",
-        "src/media/video/decode/aom", {public = true})
+        "src/media/video/decode/dav1d", {public = true})
     elseif is_iphoneos then
         add_files("src/media/video/encode/*.cpp",
         "src/media/video/decode/*.cpp",
@@ -312,20 +310,22 @@ target("media")
         "src/media/video/decode/openh264/*.cpp",
         "src/media/video/encode/video_toolbox/*.mm",
         "src/media/video/decode/video_toolbox/*.mm",
-        "src/media/video/encode/aom/*.cpp",
         "src/media/video/encode/avt/*.cpp",
-        "src/media/video/decode/dav1d/*.cpp",
-        "src/media/video/decode/aom/*.cpp")
+        "src/media/video/decode/dav1d/*.cpp")
         add_includedirs("src/media/video/encode",
         "src/media/video/decode",
         "src/media/video/encode/openh264",
         "src/media/video/decode/openh264",
         "src/media/video/encode/video_toolbox",
         "src/media/video/decode/video_toolbox",
-        "src/media/video/encode/aom",
         "src/media/video/encode/avt",
-        "src/media/video/decode/dav1d",
-        "src/media/video/decode/aom", {public = true})
+        "src/media/video/decode/dav1d", {public = true})
+    end
+    if is_config("MINIRTC_ENABLE_AOM", true) then
+        add_files("src/media/video/encode/aom/*.cpp",
+            "src/media/video/decode/aom/*.cpp")
+        add_includedirs("src/media/video/encode/aom",
+            "src/media/video/decode/aom", {public = true})
     end
     add_files("src/media/audio/encode/*.cpp",
         "src/media/audio/decode/*.cpp",

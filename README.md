@@ -35,7 +35,7 @@
 | iOS | VideoToolbox | OpenH264 | SVT-AV1 / dav1d | VideoToolbox 的 `CVPixelBufferRef` |
 
 - 硬件路径同时受构建配置、运行时 `hardware_acceleration` 和设备能力影响。H.264 硬件编码初始化失败时，初始化工厂会尝试回退到 OpenH264。
-- 当前 AV1 工厂使用 **SVT-AV1 编码 / dav1d 解码**。libaom 也参与默认构建，但不是工厂选用的 AV1 实现；Apple 平台没有 VideoToolbox AV1 路径。
+- 当前 AV1 工厂使用 **SVT-AV1 编码 / dav1d 解码**。libaom 默认不参与构建；需要开发其后端时可通过 `xmake f --MINIRTC_ENABLE_AOM=true` 启用，这不会改变工厂的实现选择。Apple 平台没有 VideoToolbox AV1 路径。
 - 设置 `native_video_output=true` 请求原生帧。Apple 软件解码仍返回 CPU 数据；Windows / Linux 软件解码可返回 CPU NV12 描述符。原生输出不等于所有路径都零拷贝。
 
 具体选择逻辑见 [编码工厂](src/media/video/encode/video_encoder_factory.cpp) 与 [解码工厂](src/media/video/decode/video_decoder_factory.cpp)。

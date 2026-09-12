@@ -1,6 +1,5 @@
 #include "video_encoder_factory.h"
 
-#include "aom/aom_av1_encoder.h"
 #include "avt/svt_av1_encoder.h"
 #include "openh264/openh264_encoder.h"
 

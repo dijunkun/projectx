@@ -35,7 +35,7 @@ The build produces a **C++17 static library** with `extern "C"` function linkage
 | iOS | VideoToolbox | OpenH264 | SVT-AV1 / dav1d | `CVPixelBufferRef` from VideoToolbox |
 
 - Hardware use depends on build configuration, runtime `hardware_acceleration`, and device support. The initialization factory attempts an OpenH264 fallback when hardware H.264 encoder initialization fails.
-- The AV1 factories select **SVT-AV1 encoding / dav1d decoding**. libaom is also built by default but is not selected by the factories. There is no VideoToolbox AV1 path on Apple platforms.
+- The AV1 factories select **SVT-AV1 encoding / dav1d decoding**. libaom is excluded by default; use `xmake f --MINIRTC_ENABLE_AOM=true` to build its optional backends for development. This does not change the factories' selection. There is no VideoToolbox AV1 path on Apple platforms.
 - Set `native_video_output=true` to request native frames. Apple software decoders still return CPU data; Windows / Linux software decoders can return CPU NV12 descriptors. Native output does not guarantee zero copies throughout every path.
 
 See the [encoder factory](src/media/video/encode/video_encoder_factory.cpp) and [decoder factory](src/media/video/decode/video_decoder_factory.cpp) for selection logic.
